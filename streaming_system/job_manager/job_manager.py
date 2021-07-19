@@ -26,8 +26,13 @@ class JobManagerServicer(job_manager_pb2_grpc.JobManagerServiceServicer):
             cls = serializator.Serializator.from_proto(task)
             a = cls()
             a.run()
-        resp = job_manager_pb2.Response(err_no=0)
+        resp = job_manager_pb2.SubmitJobResponse(err_no=0)
         return resp
+
+    def resetHeartbeat(self, request, context):
+        addr = request.addr
+        timestamp = request.timestamp
+        return job_manager_pb2.NilResponse()
 
 
 class JobManager(object):

@@ -1,11 +1,11 @@
 syntax = "proto2";
 
-message Request {
+message SubmitJobRequest {
   optional int64 logid = 1;
   repeated TaskClass tasks = 2;
 };
 
-message Response {
+message SubmitJobResponse {
   optional int32 err_no = 1;
   optional string err_msg = 2;
   repeated string key = 3;
@@ -18,6 +18,19 @@ message TaskClass {
   required string cls_name = 3;
 }
 
+message HeartbeatRequest {
+  required string addr = 1;
+  required double timestamp = 2;
+  required string task_id = 3;
+}
+
+message NilResponse {}
+
 service JobManagerService {
-  rpc submitJob(Request) returns (Response) {}
+  // from client
+  rpc submitJob(SubmitJobRequest) returns (SubmitJobResponse) {}
+  // from task manager
+  rpc resetHeartbeat(HeartbeatRequest) returns (NilResponse) {}
+  // from heartbeat manager
+  rpc notifyHeartbeatTimeout(HeartbeatRequest) returns (NilResponse) {}
 };

@@ -15,7 +15,7 @@ from utils import util
 _LOGGER = logging.getLogger(__name__)
 
 
-class Client(object):
+class ClientBase(object):
 
     def __init__(self, self_port=None):
         self.stub = None
@@ -40,42 +40,3 @@ class Client(object):
         raise NotImplementedError("")
 
 
-class UserClient(Client):
-
-    def __init__(self):
-        super(UserClient, self).__init__()
-
-    def submitJob(self, cls):
-        filename = inspect.getsourcefile(cls)
-        with open(filename) as f:
-            file_str = f.read()
-        req = job_manager_pb2.SubmitJobRequest(
-                logid=100,
-                tasks=[serializator.Serializator.to_proto(cls)])
-        resp = self.stub.submitJob(req)
-        print(str(resp))
-
-
-class TaskManagerClient(Client):
-
-    def __init__(self):
-        super(UserClient, self).__init__()
-
-    def resetHeartbeat(self, task_id):
-        req = job_manager_pb2.HeartbeatRequest(
-                addr="{}:{}".format(self.ip, self.self_port),
-                timestamp=time.time(),
-                task_id=task_id)
-        resp = self.stub.resetHeartbeat(req)
-        print(str(resp))
-
-
-class HeartbeatManagerClient(Client):
-
-    def __init__(self):
-        super(HeartbeatManagerClient, self).__init__()
-        pass
-
-    def notifyHeartbeatTimeout(self, task_id):
-        # TODO
-        pass
