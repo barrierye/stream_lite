@@ -6,7 +6,7 @@ import inspect
 import os
 import importlib
 
-from proto import job_manager_pb2
+from stream_lite.proto import job_manager_pb2
 
 class Serializator(object):
 

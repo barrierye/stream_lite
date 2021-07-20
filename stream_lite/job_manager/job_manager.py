@@ -8,9 +8,10 @@ import logging
 import pickle
 import inspect
 
-import proto.job_manager_pb2 as job_manager_pb2
-import proto.job_manager_pb2_grpc as job_manager_pb2_grpc
-from network import serializator
+import stream_lite.proto.job_manager_pb2 as job_manager_pb2
+import stream_lite.proto.job_manager_pb2_grpc as job_manager_pb2_grpc
+from stream_lite.network import serializator
+from stream_lite.utils import heartbeat_util
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -19,9 +20,10 @@ class JobManagerServicer(job_manager_pb2_grpc.JobManagerServiceServicer):
 
     def __init__(self):
         super(JobManagerServicer, self).__init__()
-        pass
+        # self.heartbeat_util = heartbeat_util.HeartbeatUtil(10000)
 
     def submitJob(self, request, context):
+        _LOGGER.debug("get req: {}".format(str(request)))
         for task in request.tasks:
             cls = serializator.Serializator.from_proto(task)
             a = cls()
@@ -30,9 +32,14 @@ class JobManagerServicer(job_manager_pb2_grpc.JobManagerServiceServicer):
         return resp
 
     def resetHeartbeat(self, request, context):
+        # TODO
         addr = request.addr
         timestamp = request.timestamp
         return job_manager_pb2.NilResponse()
+
+    def notifyHeartbeatTimeout(self, request, context):
+        # TODO
+        pass
 
 
 class JobManager(object):

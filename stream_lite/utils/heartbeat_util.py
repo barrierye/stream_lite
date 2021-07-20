@@ -3,16 +3,17 @@
 # Python release: 3.7.0
 # Create time: 2021-07-19
 import multiprocessing
-import time.time as current_timestamp
+from time import time as current_timestamp
 import time
 import threading
+import logging
 
-from client import heartbeat_manager_client
+from stream_lite.client import heartbeat_client
 
 _LOGGER = logging.getLogger(__name__)
 
 
-class HeartbeatManager(object):
+class HeartbeatUtil(object):
 
     def __init__(self, timeout):
         self.lock = threading.Lock()
@@ -35,12 +36,14 @@ class HeartbeatManager(object):
                         "Failed to set heartbeat: tm_addr({}) not register".format(tm_addr))
             self.table[tm_addr] = current_timestamp()
 
-    def start(self):
-        self._thread = threading.Thread(target=self._inner_check_func, args=(self.timeout, ))
+    def start(self, callback):
+        self._thread = threading.Thread(
+                target=self._inner_check_func, 
+                args=(self.timeout, callback))
         self._thread.start()
         _LOGGER.info("Succ to start heartbeat thread")
 
-    def _inner_check_func(self, interval):
+    def _inner_check_func(self, interval, callback):
         while True:
             ctime = current_timestamp()
             with self.lock:

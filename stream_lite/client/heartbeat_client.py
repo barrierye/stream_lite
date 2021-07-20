@@ -8,18 +8,18 @@ import pickle
 import inspect
 import time
 
-from proto import job_manager_pb2, job_manager_pb2_grpc
-from network import serializator
-from utils import util
-from .client import ClientBase
+from stream_lite.proto import job_manager_pb2, job_manager_pb2_grpc
+from stream_lite.network import serializator
+from stream_lite.utils import util
+from stream_lite.client.client_base import ClientBase
 
 _LOGGER = logging.getLogger(__name__)
 
 
-class HeartbeatManagerClient(ClientBase):
+class HeartbeatClient(ClientBase):
 
     def __init__(self):
-        super(HeartbeatManagerClient, self).__init__()
+        super(HeartbeatClient, self).__init__()
         pass
 
     def notifyHeartbeatTimeout(self, task_id):

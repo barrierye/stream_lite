@@ -1,0 +1,12 @@
+syntax = "proto2";
+
+message MessageRequest {
+  optional string logid = 1;
+};
+
+message NilResponse {}
+
+service TaskService {
+  // from task to task
+  rpc push_message(MessageRequest) returns (NilResponse) {}
+};
