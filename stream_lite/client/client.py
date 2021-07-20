@@ -8,9 +8,9 @@ import pickle
 import inspect
 import time
 
-from proto import job_manager_pb2, job_manager_pb2_grpc
-from network import serializator
-from utils import util
+from stream_lite.proto import job_manager_pb2, job_manager_pb2_grpc
+from stream_lite.network import serializator
+from stream_lite.utils import util
 
 _LOGGER = logging.getLogger(__name__)
 
