@@ -18,4 +18,11 @@ message File {
 
 message NilRequest {}
 
-message NilResponse {}
+message NilResponse {
+  optional Status status = 1;
+}
+
+message Status {
+  optional int32 status = 1 [default = 0];
+  optional string message = 2 [default = ""];
+}

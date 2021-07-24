@@ -11,14 +11,20 @@ message SubmitJobRequest {
 };
 
 message SubmitJobResponse {
-  optional int32 err_no = 1;
-  optional string err_msg = 2;
-  repeated string key = 3;
-  repeated string value = 4;
+  optional common.Status status = 1;
+  repeated string key = 2;
+  repeated string value = 3;
 };
+
+message RegisterTaskManagerRequest {
+  required string enpoint = 1;
+}
 
 
 service JobManagerService {
-  // from client
+  // from user front client
   rpc submitJob(SubmitJobRequest) returns (SubmitJobResponse) {}
+  
+  // from task manager
+  rpc registerTaskManager(RegisterTaskManagerRequest) returns (common.NilResponse) {}
 };

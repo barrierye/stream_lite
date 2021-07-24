@@ -25,26 +25,5 @@ class JobManagerServicer(job_manager_pb2_grpc.JobManagerServiceServicer):
         for task in request.tasks:
             seri_task = serializator.SerializableTask.from_proto(task)
             seri_task.task_file.persistence_to_localfs("./_tmp/server/task_files")
-        resp = job_manager_pb2.SubmitJobResponse(err_no=0)
+        resp = job_manager_pb2.SubmitJobResponse()
         return resp
-
-
-class JobManager(object):
-
-    def __init__(self, rpc_port, worker_num):
-        self.rpc_port = rpc_port
-        self.worker_num = worker_num
-
-    def run(self):
-        server = grpc.server(
-                futures.ThreadPoolExecutor(max_workers=self.worker_num),
-                options=[('grpc.max_send_message_length', 256 * 1024 * 1024),
-                    ('grpc.max_receive_message_length', 256 * 1024 * 1024)])
-        job_manager_pb2_grpc.add_JobManagerServiceServicer_to_server(
-                JobManagerServicer(), server)
-        server.add_insecure_port('[::]:{}'.format(self.rpc_port))
-        _LOGGER.info("Run on port: {}".format(self.rpc_port))
-        server.start()
-        server.wait_for_termination()
-
-
