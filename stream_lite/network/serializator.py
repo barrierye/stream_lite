@@ -5,9 +5,13 @@
 import inspect
 import os
 import importlib
+import logging
 
 from stream_lite.proto import job_manager_pb2
 from stream_lite.utils import util
+
+
+_LOGGER = logging.getLogger(__name__)
 
 
 class SerializableObject(object):
@@ -72,3 +76,12 @@ class SerializableFile(SerializableObject):
         return SerializableFile(
                 name=proto.name, 
                 content=proto.content)
+
+    def persistence_to_localfs(self, prefix_path: str) -> bool:
+        os.system("mkdir -p {}".format(prefix_path))
+        filename = os.path.join(prefix_path, self.name)
+        with open(filename, "w") as f:
+            f.write(self.content)
+        _LOGGER.debug(
+                "Success persistence to localfs: {}".format(filename))
+        return True
