@@ -7,7 +7,7 @@ import os
 import importlib
 import logging
 
-from stream_lite.proto import job_manager_pb2
+from stream_lite.proto import common_pb2
 from stream_lite.utils import util
 
 
@@ -34,9 +34,9 @@ class SerializableTask(SerializableObject):
         super(SerializableTask, self).__init__(**kwargs)
 
     @staticmethod
-    def to_proto(task_dict: dict, task_dir: str) -> job_manager_pb2.Task:
+    def to_proto(task_dict: dict, task_dir: str) -> common_pb2.Task:
         task_filename = "{}.py".format(task_dict["name"])
-        task_proto = job_manager_pb2.Task(
+        task_proto = common_pb2.Task(
                 cls_name=task_dict["name"],
                 currency=task_dict["currency"],
                 input_tasks=task_dict["input_tasks"],
@@ -48,7 +48,7 @@ class SerializableTask(SerializableObject):
         return task_proto
 
     @staticmethod
-    def from_proto(proto: job_manager_pb2.Task):
+    def from_proto(proto: common_pb2.Task):
         return SerializableTask(
                 cls_name=proto.cls_name,
                 currency=proto.currency,
@@ -63,16 +63,16 @@ class SerializableFile(SerializableObject):
         super(SerializableFile, self).__init__(**kwargs)
     
     @staticmethod
-    def to_proto(path: str, name: str) -> job_manager_pb2.File:
+    def to_proto(path: str, name: str) -> common_pb2.File:
         with open(path) as f:
             file_str = f.read()
-        file_proto = job_manager_pb2.File(
+        file_proto = common_pb2.File(
                 name=name,
                 content=file_str)
         return file_proto
 
     @staticmethod
-    def from_proto(proto: job_manager_pb2.File):
+    def from_proto(proto: common_pb2.File):
         return SerializableFile(
                 name=proto.name, 
                 content=proto.content)

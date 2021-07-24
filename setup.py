@@ -4,16 +4,10 @@
 # Create time: 2020-04-04
 from setuptools import setup, find_packages
 from grpc_tools import protoc
+from stream_lite.proto import gen_code
 
 # run proto codegen
-proto_files = ["stream_lite/proto/job_manager.proto"]
-for f in proto_files:
-    protoc.main((
-        '',
-        '-I.',
-        '--python_out=.',
-        '--grpc_python_out=.',
-        f, ))
+gen_code.gen_proto_codes()
 
 setup(
     name='stream_lite',

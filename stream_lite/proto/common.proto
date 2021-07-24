@@ -1,0 +1,21 @@
+syntax = "proto2";
+
+package common;
+
+
+message Task {
+  required string cls_name = 1;
+  required int32 currency = 2;
+  repeated string input_tasks = 3;
+  repeated File resources = 4;
+  required File task_file = 5;
+}
+
+message File {
+  required string name = 1;
+  required string content = 2;
+}
+
+message NilRequest {}
+
+message NilResponse {}

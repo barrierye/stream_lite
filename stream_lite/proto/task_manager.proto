@@ -1,12 +1,16 @@
 syntax = "proto2";
 
+import "stream_lite/proto/common.proto";
+
+package task_manager;
+
+
 message MessageRequest {
   optional string logid = 1;
 };
 
-message NilResponse {}
 
-service TaskService {
+service TaskManagerService {
   // from task to task
-  rpc push_message(MessageRequest) returns (NilResponse) {}
+  rpc push_message(MessageRequest) returns (common.NilResponse) {}
 };
