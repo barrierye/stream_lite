@@ -24,7 +24,7 @@ class JobManagerServicer(job_manager_pb2_grpc.JobManagerServiceServicer):
         _LOGGER.debug("get req: {}".format(request.logid))
         for task in request.tasks:
             seri_task = serializator.SerializableTask.from_proto(task)
-            seri_task.task_file.persistence_to_localfs("./server/task_files")
+            seri_task.task_file.persistence_to_localfs("./_tmp/server/task_files")
         resp = job_manager_pb2.SubmitJobResponse(err_no=0)
         return resp
 
