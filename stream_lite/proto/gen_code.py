@@ -9,5 +9,5 @@ protoc.main((
     '-I.',
     '--python_out=.',
     '--grpc_python_out=.',
-    'proto/job_manager.proto', ))
+    'stream_lite/proto/job_manager.proto', ))
 

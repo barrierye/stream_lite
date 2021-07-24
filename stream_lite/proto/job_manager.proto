@@ -2,7 +2,7 @@ syntax = "proto2";
 
 message SubmitJobRequest {
   optional int64 logid = 1;
-  repeated TaskClass tasks = 2;
+  repeated Task tasks = 2;
 };
 
 message SubmitJobResponse {
@@ -12,16 +12,17 @@ message SubmitJobResponse {
   repeated string value = 4;
 };
 
-message TaskClass {
-  required string filename = 1;
-  required string file_str = 2;
-  required string cls_name = 3;
+message Task {
+  required string cls_name = 1;
+  required int32 currency = 2;
+  repeated string input_tasks = 3;
+  repeated File resources = 4;
+  required File task_file = 5;
 }
 
-message HeartbeatRequest {
-  required string addr = 1;
-  required double timestamp = 2;
-  required string task_id = 3;
+message File {
+  required string name = 1;
+  required string content = 2;
 }
 
 message NilResponse {}
@@ -29,8 +30,4 @@ message NilResponse {}
 service JobManagerService {
   // from client
   rpc submitJob(SubmitJobRequest) returns (SubmitJobResponse) {}
-  // from task manager
-  rpc resetHeartbeat(HeartbeatRequest) returns (NilResponse) {}
-  // from heartbeat util
-  rpc notifyHeartbeatTimeout(HeartbeatRequest) returns (NilResponse) {}
 };

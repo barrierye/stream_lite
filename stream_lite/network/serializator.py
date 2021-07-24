@@ -7,34 +7,68 @@ import os
 import importlib
 
 from stream_lite.proto import job_manager_pb2
+from stream_lite.utils import util
 
-class Serializator(object):
 
-    def __init__(self):
-        pass
+class SerializableObject(object):
+    def __init__(self, **kwargs):
+        for k, v in kwargs.items():
+            setattr(self, k, v)
+    
+    @staticmethod
+    def to_proto(*args, **kwargs):
+        raise NotImplementedError("Failed: function not implemented")
 
     @staticmethod
-    def to_proto(cls):
-        filename = inspect.getsourcefile(cls)
-        with open(filename) as f:
-            file_str = f.read()
-        task_proto = job_manager_pb2.TaskClass(
-                filename=filename,
-                file_str=file_str,
-                cls_name=cls.__name__)
+    def from_proto(proto: object):
+        raise NotImplementedError("Failed: function not implemented")
+
+
+class SerializableTask(SerializableObject):
+
+    def __init__(self, **kwargs):
+        super(SerializableTask, self).__init__(**kwargs)
+
+    @staticmethod
+    def to_proto(task_dict: dict, task_dir: str) -> job_manager_pb2.Task:
+        task_filename = "{}.py".format(task_dict["name"])
+        task_proto = job_manager_pb2.Task(
+                cls_name=task_dict["name"],
+                currency=task_dict["currency"],
+                input_tasks=task_dict["input_tasks"],
+                resources=[
+                    SerializableFile.to_proto(
+                        r, util.get_filename(r)) for r in task_dict["resources"]],
+                task_file=SerializableFile.to_proto(
+                    os.path.join(task_dir, task_filename), task_filename))
         return task_proto
 
     @staticmethod
-    def from_proto(proto):
-        tmp_dir = "tmp"
-        os.system("mkdir -p {} && touch {}/__init__.py"
-                .format(tmp_dir, tmp_dir))
-        filename = proto.filename
-        file_str = proto.file_str
-        cls_name = proto.cls_name
-        with open(os.path.join(tmp_dir, filename), "w") as f:
-            f.write(file_str)
-        modellib = importlib.import_module(
-                "{}.{}".format(tmp_dir, filename.split('.')[0]))
-        cls = getattr(modellib, cls_name)
-        return cls
+    def from_proto(proto: job_manager_pb2.Task):
+        return SerializableTask(
+                cls_name=proto.cls_name,
+                currency=proto.currency,
+                input_tasks=list(proto.input_tasks),
+                resources=list(proto.resources),
+                task_file=SerializableFile.from_proto(proto.task_file))
+
+
+class SerializableFile(SerializableObject):
+
+    def __init__(self, **kwargs):
+        super(SerializableFile, self).__init__(**kwargs)
+    
+    @staticmethod
+    def to_proto(path: str, name: str) -> job_manager_pb2.File:
+        with open(path) as f:
+            file_str = f.read()
+        file_proto = job_manager_pb2.File(
+                name=name,
+                content=file_str)
+        return file_proto
+
+    @staticmethod
+    def from_proto(proto: job_manager_pb2.File):
+        return SerializableFile(
+                name=proto.name, 
+                content=proto.content)

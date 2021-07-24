@@ -31,12 +31,4 @@ class ClientBase(object):
         self.stub = job_manager_pb2_grpc.JobManagerServiceStub(channel)
 
     def submitJob(self, cls):
-        raise NotImplementedError("")
-
-    def resetHeartbeat(self, task_id):
-        raise NotImplementedError("")
-
-    def notifyHeartbeatTimeout(self, task_id):
-        raise NotImplementedError("")
-
-
+        raise NotImplementedError("Failed: function not implemented")

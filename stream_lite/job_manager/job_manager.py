@@ -11,7 +11,6 @@ import inspect
 import stream_lite.proto.job_manager_pb2 as job_manager_pb2
 import stream_lite.proto.job_manager_pb2_grpc as job_manager_pb2_grpc
 from stream_lite.network import serializator
-from stream_lite.utils import heartbeat_util
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -20,26 +19,14 @@ class JobManagerServicer(job_manager_pb2_grpc.JobManagerServiceServicer):
 
     def __init__(self):
         super(JobManagerServicer, self).__init__()
-        # self.heartbeat_util = heartbeat_util.HeartbeatUtil(10000)
 
     def submitJob(self, request, context):
-        _LOGGER.debug("get req: {}".format(str(request)))
+        _LOGGER.debug("get req: {}".format(request.logid))
         for task in request.tasks:
-            cls = serializator.Serializator.from_proto(task)
-            a = cls()
-            a.run()
+            tk = serializator.SerializableTask.from_proto(task)
+            print(tk.cls_name)
         resp = job_manager_pb2.SubmitJobResponse(err_no=0)
         return resp
-
-    def resetHeartbeat(self, request, context):
-        # TODO
-        addr = request.addr
-        timestamp = request.timestamp
-        return job_manager_pb2.NilResponse()
-
-    def notifyHeartbeatTimeout(self, request, context):
-        # TODO
-        pass
 
 
 class JobManager(object):

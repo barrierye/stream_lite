@@ -1,0 +1,10 @@
+tasks:
+  - name: SimpleSource
+    currency: 1
+    input_tasks: []
+    resources: [./resource.data]
+  - name: SimpleSink
+    currency: 1
+    input_tasks: [SimpleSource]
+    resources: []
+task_files: ./task_files
