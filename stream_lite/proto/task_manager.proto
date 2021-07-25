@@ -18,9 +18,14 @@ message DeployTaskRequest {
   required common.ExecuteTask exec_task = 1;
 };
 
+message StartTaskRequest {
+
+}
+
 
 service TaskManagerService {
   // from job manager
   rpc requestSlot(RequiredSlotRequest) returns (RequiredSlotResponse) {}
   rpc deployTask(DeployTaskRequest) returns (common.NilResponse) {}
+  rpc startTask(StartTaskRequest) returns (common.NilResponse) {}
 };

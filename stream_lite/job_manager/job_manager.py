@@ -35,38 +35,29 @@ class JobManagerServicer(job_manager_pb2_grpc.JobManagerServiceServicer):
             seri_task = serializator.SerializableTask.from_proto(task)
             seri_task.task_file.persistence_to_localfs(persistence_dir)
             seri_tasks.append(seri_task)
-        resp = self._innerSubmitJob(seri_tasks)
+        
+        try:
+            resp = self._innerSubmitJob(seri_tasks)
+        except Exception as e:
+            _LOGGER.error(e, exc_info=True)
+            return gen_nil_response(err_code=1, message=e)
         return resp 
         
     def _innerSubmitJob(self, seri_tasks):
         # schedule
-        try:
-            schedule_map = self.scheduler.schedule(seri_tasks)
-        except Exception as e:
-            _LOGGER.error(e, exc_info=True)
-            return gen_nil_response(err_code=1, message=e)
+        execute_map = self.scheduler.schedule(seri_tasks)
         
-        # require slot
-        for task_manager_name, seri_tasks in schedule_map.items():
-            client = self.registered_task_manager_table.get_client(task_manager_name)
-            resp = client.requestSlot(
-                    task_manager_pb2.RequiredSlotRequest(
-                        slot_descs=[
-                            serializator.SerializableRequiredSlotDesc.to_proto()
-                            for task in seri_tasks]))
-            if resp.status.err_code != 0:
-                _LOGGER.error(resp.status.message, exc_info=True)
-                return gen_nil_response(err_code=1, message=resp.status.message)
-
         # deploy
-        for task_manager_name, seri_tasks in schedule_map.items():
+        for task_manager_name, seri_execute_tasks in execute_map.items():
             client = self.registered_task_manager_table.get_client(task_manager_name)
-            for task in seri_tasks:
-                client.deployTask(
+            for execute_task in seri_execute_tasks:
+                resp = client.deployTask(
                         task_manager_pb2.DeployTaskRequest(
-                            exec_task=serializator.SerializableExectueTask.to_proto(
-                                cls_name=task.cls_name,
-                                )))
+                            exec_task=execute_task.to_proto()))
+                if resp.status.err_code != 0:
+                    raise Exception(resp.status.message)
+
+        # TODO: start: 从末尾往前 start, 确保 output 的 rpc 服务已经起来
 
         return gen_nil_response()
 

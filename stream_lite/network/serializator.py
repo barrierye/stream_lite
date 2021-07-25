@@ -179,11 +179,13 @@ class SerializableExectueTask(SerializableObject):
 
     def to_proto(self) -> common_pb2.ExectueTask:
         return SerializableExectueTask.to_proto(
-                self.cls_name,
-                self.input_endpoints,
-                self.output_endpoints,
-                self.resources,
-                self.task_file)
+                cls_name=self.cls_name,
+                input_endpoints=self.input_endpoints,
+                output_endpoints=self.output_endpoints,
+                resources=self.resources,
+                task_file=self.task_file,
+                subtask_name=self.subtask_name,
+                partition_idx=self.partition_idx)
 
     @staticmethod
     def to_proto(
@@ -191,13 +193,17 @@ class SerializableExectueTask(SerializableObject):
             input_endpoints: List[str],
             output_endpoints: List[str],
             resources: List[SerializableFile],
-            task_file: SerializableFile) -> common_pb2.ExectueTask:
+            task_file: SerializableFile,
+            subtask_name: str,
+            partition_idx: int) -> common_pb2.ExectueTask:
         return common_pb2.ExectueTask(
                 cls_name=cls_name,
                 input_endpoints=input_endpoints,
                 output_endpoints=output_endpoints,
                 resources=[res.to_proto() for res in resources],
-                task_file=task_file.to_proto())
+                task_file=task_file.to_proto(),
+                subtask_name=subtask_name,
+                partition_idx=partition_idx)
 
     @staticmethod
     def from_proto(proto: common_pb2.ExectueTask):
@@ -206,4 +212,6 @@ class SerializableExectueTask(SerializableObject):
                 input_endpoints=list(proto.input_endpoints),
                 output_endpoints=list(proto.output_endpoints),
                 resources=[SerializableFile.from_proto(res) for res in proto.resources],
-                task_file=SerializableFile.from_proto(proto.task_file))
+                task_file=SerializableFile.from_proto(proto.task_file),
+                subtask_name=proto.subtask_name,
+                partition_idx=proto.partition_idx)

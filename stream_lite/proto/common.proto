@@ -9,6 +9,8 @@ message ExecuteTask {
   repeated string output_endpoints = 3;
   repeated File resources = 4;
   required File task_file = 5;
+  required string subtask_name = 6;
+  required int32 partition_idx = 7;
 }
 
 message Task {
