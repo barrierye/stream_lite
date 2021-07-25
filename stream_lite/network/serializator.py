@@ -102,12 +102,14 @@ class SerializableTaskManagerDesc(SerializableObject):
 
     @staticmethod
     def to_proto(
+            host: str,
             endpoint: str,
             name: str,
             coord_x: float,
             coord_y: float,
             resource: dict) -> common_pb2.TaskManagerDescription:
         return common_pb2.TaskManagerDescription(
+                host=host,
                 endpoint=endpoint,
                 name=name,
                 coord=SerializableCoordinate.to_proto(
@@ -118,6 +120,7 @@ class SerializableTaskManagerDesc(SerializableObject):
     @staticmethod
     def from_proto(proto: common_pb2.TaskManagerDescription):
         return SerializableTaskManagerDesc(
+                host=host,
                 endpoint=proto.endpoint,
                 name=proto.name,
                 coord=SerializableCoordinate.from_proto(

@@ -30,6 +30,7 @@ class JobManagerClient(ClientBase):
         resp = self.stub.registerTaskManager(
                 job_manager_pb2.RegisterTaskManagerRequest(
                     task_manager_desc=serializator.SerializableTaskManagerDesc.to_proto(
+                        host=endpoint.split(":")[0],
                         endpoint=endpoint,
                         name=conf["name"],
                         coord_x=conf["coord"]["x"],

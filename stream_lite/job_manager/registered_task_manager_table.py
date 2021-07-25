@@ -37,8 +37,15 @@ class RegisteredTaskManagerTable(object):
         with self.rw_lock_pair.gen_rlock():
             if name not in self.table:
                 raise KeyError(
-                        "Failed: task_manager(name={}) not registered".format(nam))
+                        "Failed: task_manager(name={}) not registered".format(name))
             return self.table[name].get_client()
+
+    def get_host(self, name: str) -> str:
+        with self.rw_lock_pair.gen_rlock():
+            if name not in self.table:
+                raise KeyError(
+                        "Failed: task_manager(name={}) not registered".format(name))
+            return self.table[name].get_host()
 
 
 class RegisteredTaskManager(object):
@@ -57,3 +64,6 @@ class RegisteredTaskManager(object):
 
     def get_client(self) -> TaskManagerClient:
         return self.client
+
+    def get_host(self) -> str:
+        return self.task_manager_desc.host
