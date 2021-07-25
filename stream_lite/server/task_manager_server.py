@@ -19,4 +19,4 @@ class TaskManager(ServerBase):
 
     def init_service(self, server):
         task_manager_pb2_grpc.add_TaskManagerServiceServicer_to_server(
-                 TaskManagerServicer(self.conf_yaml_path), server)
+                 TaskManagerServicer(self.rpc_port, self.conf_yaml_path), server)

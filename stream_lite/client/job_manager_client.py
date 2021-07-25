@@ -25,12 +25,12 @@ class JobManagerClient(ClientBase):
     def _init_stub(self, channel):
         return job_manager_pb2_grpc.JobManagerServiceStub(channel)
 
-    def registerTaskManager(self, conf: dict):
+    def registerTaskManager(self, endpoint, conf: dict):
         job_manager_enpoint = conf["job_manager_enpoint"]
         resp = self.stub.registerTaskManager(
                 job_manager_pb2.RegisterTaskManagerRequest(
                     task_manager_desc=serializator.SerializableTaskManagerDesc.to_proto(
-                        endpoint=job_manager_enpoint,
+                        endpoint=endpoint,
                         name=conf["name"],
                         coord_x=conf["coord"]["x"],
                         coord_y=conf["coord"]["y"],

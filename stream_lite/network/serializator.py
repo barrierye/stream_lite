@@ -44,7 +44,8 @@ class SerializableTask(SerializableObject):
                     SerializableFile.to_proto(
                         r, util.get_filename(r)) for r in task_dict["resources"]],
                 task_file=SerializableFile.to_proto(
-                    os.path.join(task_dir, task_filename), task_filename))
+                    os.path.join(task_dir, task_filename), task_filename),
+                locate=task_dict["locate"])
         return task_proto
 
     @staticmethod
@@ -54,7 +55,8 @@ class SerializableTask(SerializableObject):
                 currency=proto.currency,
                 input_tasks=list(proto.input_tasks),
                 resources=list(proto.resources),
-                task_file=SerializableFile.from_proto(proto.task_file))
+                task_file=SerializableFile.from_proto(proto.task_file),
+                locate=proto.locate)
 
 
 class SerializableFile(SerializableObject):
@@ -144,5 +146,18 @@ class SerializableCoordinate(SerializableObject):
     @staticmethod
     def from_proto(proto: common_pb2.Coordinate):
         return SerializableCoordinate(
-                x=proto.x,
-                y=proto.y)
+                x=proto.x, y=proto.y)
+
+
+class SerializableRequiredSlotDesc(SerializableObject):
+
+    def __init__(self, **kwargs):
+        super(SerializableRequiredSlotDesc, self).__init__(**kwargs)
+
+    @staticmethod
+    def to_proto() -> common_pb2.RequiredSlotDescription:
+        return common_pb2.RequiredSlotDescription()
+
+    @staticmethod
+    def from_proto(proto: common_pb2.RequiredSlotDescription):
+        return SerializableRequiredSlotDesc()

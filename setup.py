@@ -19,5 +19,6 @@ setup(
     url='',
     install_requires=[
         'protobuf>=3.12.2',
+        'readerwriterlock',
     ],
 )

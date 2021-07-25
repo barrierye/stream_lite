@@ -5,8 +5,8 @@ import "stream_lite/proto/common.proto";
 package task_manager;
 
 
-message RequestSlotRequest {
-  
+message RequiredSlotRequest {
+  repeated common.RequiredSlotDescription slot_descs = 1;
 }
 
 message DeployTaskRequest {
@@ -16,6 +16,6 @@ message DeployTaskRequest {
 
 service TaskManagerService {
   // from job manager
-  rpc requestSlot(RequestSlotRequest) returns (common.NilResponse) {}
+  rpc requestSlot(RequiredSlotRequest) returns (common.NilResponse) {}
   rpc deployTask(DeployTaskRequest) returns (common.NilResponse) {}
 };

@@ -10,12 +10,6 @@ message SubmitJobRequest {
   repeated common.Task tasks = 2;
 };
 
-message SubmitJobResponse {
-  optional common.Status status = 1;
-  repeated string key = 2;
-  repeated string value = 3;
-};
-
 message RegisterTaskManagerRequest {
   required common.TaskManagerDescription task_manager_desc = 1;
 }
@@ -23,7 +17,7 @@ message RegisterTaskManagerRequest {
 
 service JobManagerService {
   // from user front client
-  rpc submitJob(SubmitJobRequest) returns (SubmitJobResponse) {}
+  rpc submitJob(SubmitJobRequest) returns (common.NilResponse) {}
   
   // from task manager
   rpc registerTaskManager(RegisterTaskManagerRequest) returns (common.NilResponse) {}

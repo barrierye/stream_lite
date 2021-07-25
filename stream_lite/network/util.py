@@ -6,7 +6,7 @@
 import stream_lite.proto.common_pb2 as common_pb2
 
 
-def gen_uil_response(err_code: int = 0, message: str = "") -> common_pb2.NilResponse:
+def gen_nil_response(err_code: int = 0, message: str = "") -> common_pb2.NilResponse:
     return common_pb2.NilResponse(
             status=common_pb2.Status(
                 err_code=err_code,

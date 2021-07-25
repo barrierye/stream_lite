@@ -10,6 +10,7 @@ import time
 
 from stream_lite.proto import job_manager_pb2, job_manager_pb2_grpc
 from stream_lite.proto import task_manager_pb2, task_manager_pb2_grpc
+from stream_lite.proto import common_pb2
 from stream_lite.network import serializator
 from stream_lite.utils import util
 from .client_base import ClientBase
@@ -24,3 +25,12 @@ class TaskManagerClient(ClientBase):
 
     def _init_stub(self, channel):
         return task_manager_pb2_grpc.TaskManagerServiceStub(channel)
+
+    def requestSlot(self, slot_desc):
+        resp = self.stub.requestSlot(
+                task_manager_pb2.RequestSlotRequest(
+                    slot_desc=common_pb2.RequiredSlotDescription()))
+        if resp.status.err_code != 0:
+            raise Exception(resp.status.message)
+        _LOGGER.debug(
+                "Success request slot from task manager(name={})".format(conf["name"]))
