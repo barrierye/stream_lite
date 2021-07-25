@@ -23,6 +23,9 @@ class UserClient(ClientBase):
     def __init__(self):
         super(UserClient, self).__init__()
 
+    def _init_stub(self, channel):
+        return job_manager_pb2_grpc.JobManagerServiceStub(channel)
+
     def submitJob(self, yaml_path):
         with open(yaml_path) as f:
             conf = yaml.load(f.read(), Loader=yaml.FullLoader)

@@ -8,23 +8,19 @@ import pickle
 import inspect
 import time
 
-from proto import job_manager_pb2, job_manager_pb2_grpc
-from network import serializator
-from utils import util
-from .client import ClientBase
+from stream_lite.proto import job_manager_pb2, job_manager_pb2_grpc
+from stream_lite.proto import task_manager_pb2, task_manager_pb2_grpc
+from stream_lite.network import serializator
+from stream_lite.utils import util
+from .client_base import ClientBase
 
 _LOGGER = logging.getLogger(__name__)
 
 
-class TaskManagerClient(Client):
+class TaskManagerClient(ClientBase):
 
     def __init__(self):
-        super(UserClient, self).__init__()
+        super(TaskManagerClient, self).__init__()
 
-    def resetHeartbeat(self, task_id):
-        req = job_manager_pb2.HeartbeatRequest(
-                addr="{}:{}".format(self.ip, self.self_port),
-                timestamp=time.time(),
-                task_id=task_id)
-        resp = self.stub.resetHeartbeat(req)
-        print(str(resp))
+    def _init_stub(self, channel):
+        return task_manager_pb2_grpc.TaskManagerServiceStub(channel)

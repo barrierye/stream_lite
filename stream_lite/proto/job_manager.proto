@@ -17,7 +17,7 @@ message SubmitJobResponse {
 };
 
 message RegisterTaskManagerRequest {
-  required string enpoint = 1;
+  required common.TaskManagerDescription task_manager_desc = 1;
 }
 
 
