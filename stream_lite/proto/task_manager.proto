@@ -19,7 +19,7 @@ message DeployTaskRequest {
 };
 
 message StartTaskRequest {
-
+  required string subtask_name = 1;
 }
 
 

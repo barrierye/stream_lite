@@ -7,6 +7,7 @@ import grpc
 import logging
 import pickle
 import inspect
+from typing import List, Dict, Tuple, Set
 
 import stream_lite.proto.job_manager_pb2 as job_manager_pb2
 import stream_lite.proto.common_pb2 as common_pb2
@@ -28,6 +29,7 @@ class JobManagerServicer(job_manager_pb2_grpc.JobManagerServiceServicer):
         self.scheduler = scheduler.UserDefinedScheduler(
                 self.registered_task_manager_table)
 
+    # --------------------------- submit job ----------------------------
     def submitJob(self, request, context):
         persistence_dir = "./_tmp/server/task_files"
         seri_tasks = []
@@ -48,6 +50,17 @@ class JobManagerServicer(job_manager_pb2_grpc.JobManagerServiceServicer):
         execute_map = self.scheduler.schedule(seri_tasks)
         
         # deploy
+        self._deployExecuteTasks(execute_map)
+        _LOGGER.info("Success deploy all task.")
+
+        # start
+        self._startExecuteTasks(execute_map)
+        _LOGGER.info("Success start all task.")
+
+        return gen_nil_response()
+ 
+    def _deployExecuteTasks(self, 
+            execute_map: Dict[str, List[serializator.SerializableExectueTask]]):
         for task_manager_name, seri_execute_tasks in execute_map.items():
             client = self.registered_task_manager_table.get_client(task_manager_name)
             for execute_task in seri_execute_tasks:
@@ -57,10 +70,83 @@ class JobManagerServicer(job_manager_pb2_grpc.JobManagerServiceServicer):
                 if resp.status.err_code != 0:
                     raise Exception(resp.status.message)
 
-        # TODO: start: 从末尾往前 start, 确保 output 的 rpc 服务已经起来
+    def _startExecuteTasks(self, 
+            logical_map: Dict[str, List[serializator.SerializableTask]],
+            execute_map: Dict[str, List[serializator.SerializableExectueTask]]):
+        """
+        从末尾往前 start, 确保 output 的 rpc 服务已经起来
+        """
+        # cls_name -> serializator.SerializableTask
+        task_name_inverted_index = {}
+        for seri_tasks in logical_map.values():
+            for seri_task in seri_tasks:
+                if seri_task not in task_name_inverted_index:
+                    task_name_inverted_index[seri_task.cls_name] = seri_task
 
-        return gen_nil_response()
+        # cls_name -> output_task: List[str]
+        next_logical_tasks = {}
+        for seri_tasks in logical_map.values():
+            for seri_task in seri_tasks:
+                for pre_task in seri_task.input_tasks:
+                    if pre_task not in next_logical_tasks:
+                        next_logical_tasks[pre_task] = []
+                    next_logical_tasks[pre_task].append(seri_task.cls_name)
 
+        # subtask_name -> (task_manager_name, serializator.SerializableExecuteTask)
+        subtask_name_inverted_index = {}
+        for task_manager_name, exec_task in execute_map.items():
+            subtask_name_inverted_index[exec_task.subtask_name] = \
+                    (subtask_name_inverted_index, exec_task)
+
+        started_tasks = set()
+        for cls_name in subtask_name_inverted_index.keys():
+            if cls_name not in started_tasks:
+                self._dfsToStartExecuteTask(
+                        cls_name, 
+                        next_logical_tasks,
+                        task_name_inverted_index, 
+                        subtask_name_inverted_index,
+                        started_tasks)
+
+    def _dfsToStartExecuteTask(self, 
+            cls_name: str,
+            next_logical_tasks: Dict[str, List[str]],
+            logicaltask_name_inverted_index: Dict[str, serializator.SerializableTask],
+            subtask_name_inverted_index: Dict[str, Tuple[str, serializator.SerializableExectueTask]],
+            started_tasks: Set[str]):
+        if cls_name in started_tasks:
+            return
+        started_tasks.add(cls_name)
+        for next_logical_task_name in next_logical_tasks[cls_name]:
+            if next_logical_task_name not in started_tasks:
+                self._dfsToStartExecuteTask(
+                        next_logical_task_name,
+                        next_logical_tasks,
+                        logicaltask_name_inverted_index,
+                        subtask_name_inverted_index,
+                        started_tasks)
+        logical_task = logicaltask_name_inverted_index[cls_name]
+        for i in range(logical_task.currency):
+            subtask_name = self._get_subtask_name(
+                    cls_name, i, logical_task.currency)
+            execute_task = subtask_name_inverted_index[subtask_name]
+            self._innerDfsToStartExecuteTask(
+                    task_manager_name,
+                    execute_task)
+
+    def _innerDfsToStartExecuteTask(self, 
+            task_manager_name: str,
+            execute_task: serializator.SerializableExectueTask):
+        client = self.registered_task_manager_table.get_client(task_manager_name)
+        resp = client.startTask(task_manager_pb2.StartTaskRequest(
+            subtask_name=execute_task.subtask_name))
+        if resp.status.err_code != 0:
+            raise Exception(resp.status.message)
+
+    def _get_subtask_name(self, cls_name: str, idx: int, currency: int) -> str:
+        return "{}#({}/{})".format(cls_name, idx, currency)
+
+    # --------------------------- register task manager ----------------------------
     def registerTaskManager(self, request, context):
         try:
             self.registered_task_manager_table.register(
