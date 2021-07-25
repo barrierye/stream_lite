@@ -6,6 +6,7 @@ import inspect
 import os
 import importlib
 import logging
+from typing import List, Dict
 
 from stream_lite.proto import common_pb2
 from stream_lite.utils import util
@@ -64,6 +65,11 @@ class SerializableFile(SerializableObject):
     def __init__(self, **kwargs):
         super(SerializableFile, self).__init__(**kwargs)
     
+    def to_proto(self) -> common_pb2.File:
+        return common_pb2.File(
+                name=self.name,
+                content=self.content)
+
     @staticmethod
     def to_proto(path: str, name: str) -> common_pb2.File:
         with open(path) as f:
@@ -161,3 +167,40 @@ class SerializableRequiredSlotDesc(SerializableObject):
     @staticmethod
     def from_proto(proto: common_pb2.RequiredSlotDescription):
         return SerializableRequiredSlotDesc()
+
+
+class SerializableExectueTask(SerializableObject):
+
+    def __init__(self, **kwargs):
+        super(SerializableExect, self).__init__(**kwargs)
+
+    def to_proto(self) -> common_pb2.ExectueTask:
+        return SerializableExectueTask.to_proto(
+                self.cls_name,
+                self.input_endpoints,
+                self.output_endpoints,
+                self.resources,
+                self.task_file)
+
+    @staticmethod
+    def to_proto(
+            cls_name: str,
+            input_endpoints: List[str],
+            output_endpoints: List[str],
+            resources: List[SerializableFile],
+            task_file: SerializableFile) -> common_pb2.ExectueTask:
+        return common_pb2.ExectueTask(
+                cls_name=cls_name,
+                input_endpoints=input_endpoints,
+                output_endpoints=output_endpoints,
+                resources=[res.to_proto() for res in resources],
+                task_file=task_file.to_proto())
+
+    @staticmethod
+    def from_proto(proto: common_pb2.ExectueTask):
+        return SerializableExectueTask(
+                cls_name=proto.cls_name,
+                input_endpoints=list(proto.input_endpoints),
+                output_endpoints=list(proto.output_endpoints),
+                resources=[SerializableFile.from_proto(res) for res in proto.resources],
+                task_file=SerializableFile.from_proto(proto.task_file))

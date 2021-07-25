@@ -59,6 +59,14 @@ class JobManagerServicer(job_manager_pb2_grpc.JobManagerServiceServicer):
                 return gen_nil_response(err_code=1, message=resp.status.message)
 
         # deploy
+        for task_manager_name, seri_tasks in schedule_map.items():
+            client = self.registered_task_manager_table.get_client(task_manager_name)
+            for task in seri_tasks:
+                client.deployTask(
+                        task_manager_pb2.DeployTaskRequest(
+                            exec_task=serializator.SerializableExectueTask.to_proto(
+                                cls_name=task.cls_name,
+                                )))
 
         return gen_nil_response()
 

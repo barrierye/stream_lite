@@ -3,6 +3,14 @@ syntax = "proto2";
 package common;
 
 
+message ExecuteTask {
+  required string cls_name = 1;
+  repeated string input_endpoints = 2;
+  repeated string output_endpoints = 3;
+  repeated File resources = 4;
+  required File task_file = 5;
+}
+
 message Task {
   required string cls_name = 1;
   required int32 currency = 2;

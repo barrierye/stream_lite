@@ -9,13 +9,18 @@ message RequiredSlotRequest {
   repeated common.RequiredSlotDescription slot_descs = 1;
 }
 
+message RequiredSlotResponse {
+  required common.Status status = 1;
+  repeated int32 available_ports = 2;
+}
+
 message DeployTaskRequest {
-  optional string logid = 1;
+  required common.ExecuteTask exec_task = 1;
 };
 
 
 service TaskManagerService {
   // from job manager
-  rpc requestSlot(RequiredSlotRequest) returns (common.NilResponse) {}
+  rpc requestSlot(RequiredSlotRequest) returns (RequiredSlotResponse) {}
   rpc deployTask(DeployTaskRequest) returns (common.NilResponse) {}
 };
