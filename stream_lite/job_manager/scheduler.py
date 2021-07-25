@@ -103,7 +103,7 @@ class UserDefinedScheduler(Scheduler):
                                 port=port,
                                 host=task_manager_host,
                                 subtask_name=subtask_name,
-                                partition_idx=i))
+                                partition_idx=i)
                     execute_map[task_manager_name].append(execute_task)
                     name_to_executetask[subtask_name] = execute_task
     

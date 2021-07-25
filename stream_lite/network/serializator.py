@@ -120,7 +120,7 @@ class SerializableTaskManagerDesc(SerializableObject):
     @staticmethod
     def from_proto(proto: common_pb2.TaskManagerDescription):
         return SerializableTaskManagerDesc(
-                host=host,
+                host=proto.host,
                 endpoint=proto.endpoint,
                 name=proto.name,
                 coord=SerializableCoordinate.from_proto(
@@ -177,7 +177,7 @@ class SerializableExectueTask(SerializableObject):
     def __init__(self, **kwargs):
         super(SerializableExect, self).__init__(**kwargs)
 
-    def to_proto(self) -> common_pb2.ExectueTask:
+    def to_proto(self) -> common_pb2.ExecuteTask:
         return SerializableExectueTask.to_proto(
                 cls_name=self.cls_name,
                 input_endpoints=self.input_endpoints,
@@ -195,8 +195,8 @@ class SerializableExectueTask(SerializableObject):
             resources: List[SerializableFile],
             task_file: SerializableFile,
             subtask_name: str,
-            partition_idx: int) -> common_pb2.ExectueTask:
-        return common_pb2.ExectueTask(
+            partition_idx: int) -> common_pb2.ExecuteTask:
+        return common_pb2.ExecuteTask(
                 cls_name=cls_name,
                 input_endpoints=input_endpoints,
                 output_endpoints=output_endpoints,
@@ -206,7 +206,7 @@ class SerializableExectueTask(SerializableObject):
                 partition_idx=partition_idx)
 
     @staticmethod
-    def from_proto(proto: common_pb2.ExectueTask):
+    def from_proto(proto: common_pb2.ExecuteTask):
         return SerializableExectueTask(
                 cls_name=proto.cls_name,
                 input_endpoints=list(proto.input_endpoints),

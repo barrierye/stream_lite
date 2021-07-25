@@ -15,5 +15,5 @@ if __name__ == '__main__':
     conf_path = "conf/user.yaml"
     # for debug
     client = UserClient()
-    client.connect(['0.0.0.0:8970'])
+    client.connect('0.0.0.0:8970')
     client.submitJob(conf_path)

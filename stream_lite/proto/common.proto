@@ -48,6 +48,7 @@ message TaskManagerDescription {
   required string name = 2;
   optional common.Coordinate coord = 3;
   optional common.MachineResource resource = 4;
+  optional string host = 5;
 }
 
 message RequiredSlotDescription {
