@@ -35,14 +35,12 @@ class JobManagerServicer(job_manager_pb2_grpc.JobManagerServiceServicer):
 
     def registerTaskManager(self, request, context):
         try:
-            task_manager_name = self.registered_task_manager_table.register(
+            self.registered_task_manager_table.register(
                     request.task_manager_desc)
         except Exception as e:
             err_msg = "Failed to register task manager: {}".format(e)
             _LOGGER.error(err_msg, exc_info=True)
             return gen_uil_response(
                     err_code=1, message=err_msg)
-        _LOGGER.info(
-                "Succ register task manager(name={})".format(task_manager_name))
         return gen_uil_response()
 

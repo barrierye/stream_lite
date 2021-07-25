@@ -87,10 +87,10 @@ class SerializableFile(SerializableObject):
         return True
 
 
-class SerializableTaskManagerDescriptor(SerializableObject):
+class SerializableTaskManagerDesc(SerializableObject):
 
     def __init__(self, **kwargs):
-        super(SerializableTaskManagerDescriptor, self).__init__(**kwargs)
+        super(SerializableTaskManagerDesc, self).__init__(**kwargs)
 
     @staticmethod
     def to_proto(
@@ -109,7 +109,7 @@ class SerializableTaskManagerDescriptor(SerializableObject):
 
     @staticmethod
     def from_proto(proto: common_pb2.TaskManagerDescription):
-        return SerializableTaskManagerDescriptor(
+        return SerializableTaskManagerDesc(
                 endpoint=proto.endpoint,
                 name=proto.name,
                 coord=SerializableCoordinate.from_proto(
