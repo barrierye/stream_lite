@@ -7,3 +7,4 @@ dist/
 stream_lite.egg-info/
 .DS_Store
 conf/
+*.swp
