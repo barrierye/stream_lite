@@ -29,13 +29,12 @@ class JobManagerClient(ClientBase):
         job_manager_enpoint = conf["job_manager_enpoint"]
         resp = self.stub.registerTaskManager(
                 job_manager_pb2.RegisterTaskManagerRequest(
-                    task_manager_desc=common_pb2.TaskManagerDescription(
+                    task_manager_desc=serializator.SerializableTaskManagerDescriptor.to_proto(
                         endpoint=job_manager_enpoint,
                         name=conf["name"],
-                        coord=common_pb2.Coordinate(
-                            x=conf["coord"]["x"],
-                            y=conf["coord"]["y"]),
-                        resource=common_pb2.MachineResource())))
+                        coord_x=conf["coord"]["x"],
+                        coord_y=conf["coord"]["y"],
+                        resource=conf["resource"])))
         if resp.status.err_code != 0:
             raise Exception(resp.status.message)
         _LOGGER.info(

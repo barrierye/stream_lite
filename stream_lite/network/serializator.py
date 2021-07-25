@@ -85,3 +85,64 @@ class SerializableFile(SerializableObject):
         _LOGGER.debug(
                 "Success persistence to localfs: {}".format(filename))
         return True
+
+
+class SerializableTaskManagerDescriptor(SerializableObject):
+
+    def __init__(self, **kwargs):
+        super(SerializableTaskManagerDescriptor, self).__init__(**kwargs)
+
+    @staticmethod
+    def to_proto(
+            endpoint: str,
+            name: str,
+            coord_x: float,
+            coord_y: float,
+            resource: dict) -> common_pb2.TaskManagerDescription:
+        return common_pb2.TaskManagerDescription(
+                endpoint=endpoint,
+                name=name,
+                coord=SerializableCoordinate.to_proto(
+                    x=coord_x, y=coord_y),
+                resource=SerializableMachineResource.to_proto(
+                    resource))
+
+    @staticmethod
+    def from_proto(proto: common_pb2.TaskManagerDescription):
+        return SerializableTaskManagerDescriptor(
+                endpoint=proto.endpoint,
+                name=proto.name,
+                coord=SerializableCoordinate.from_proto(
+                    proto.coord),
+                resource=SerializableMachineResource.from_proto(
+                    proto.resource))
+
+
+class SerializableMachineResource(SerializableObject):
+
+    def __init__(self, **kwargs):
+        super(SerializableMachineResource, self).__init__(**kwargs)
+
+    @staticmethod
+    def to_proto(resource: dict) -> common_pb2.MachineResource:
+        return common_pb2.MachineResource()
+
+    @staticmethod
+    def from_proto(proto: common_pb2.MachineResource):
+        return SerializableMachineResource()
+
+
+class SerializableCoordinate(SerializableObject):
+
+    def __init__(self, **kwargs):
+        super(SerializableCoordinate, self).__init__(**kwargs)
+
+    @staticmethod
+    def to_proto(x: float, y: float) -> common_pb2.Coordinate:
+        return common_pb2.Coordinate(x=x, y=y)
+
+    @staticmethod
+    def from_proto(proto: common_pb2.Coordinate):
+        return SerializableCoordinate(
+                x=proto.x,
+                y=proto.y)

@@ -14,6 +14,8 @@ import stream_lite.proto.job_manager_pb2_grpc as job_manager_pb2_grpc
 from stream_lite.network.util import gen_uil_response
 from stream_lite.network import serializator
 
+from .registered_task_manager_table import RegisteredTaskManagerTable
+
 _LOGGER = logging.getLogger(__name__)
 
 
@@ -44,12 +46,3 @@ class JobManagerServicer(job_manager_pb2_grpc.JobManagerServiceServicer):
                 "Succ register task manager(name={})".format(task_manager_name))
         return gen_uil_response()
 
-
-
-class RegisteredTaskManagerTable(object):
-
-    def __init__(self):
-        pass
-
-    def register(self, proto: common_pb2.TaskManagerDescription) -> None:
-        pass
