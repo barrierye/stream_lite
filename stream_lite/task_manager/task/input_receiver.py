@@ -26,7 +26,8 @@ class InputReceiver(object):
             input_channel: multiprocessing.Queue,
             input_endpoints: List[str]):
         self.channel = input_channel
-        self.event_barrier = EventBarrier(len(input_endpoints))
+        self.event_barrier = multiprocessing.Barrier(
+                parties=len(input_endpoints))
         self.partitions = []
         for _ in input_endpoints:
             input_partition_receiver = InputPartitionReceiver(
@@ -39,19 +40,12 @@ class InputReceiver(object):
         self.partitions[partition_idx].recv_data(data)
 
 
-class EventBarrier(object):
-
-    def __init__(self, worker_num: int):
-        self.worker_num = worker_num
-        self._cv = multiprocessing.Condition()
-
-
 class InputPartitionReceiver(object):
 
     def __init__(self, 
             channel: multiprocessing.Queue, 
             endpoint: str,
-            event_barrier: EventBarrier):
+            event_barrier: multiprocessing.Barrier):
         self.queue = multiprocessing.Queue()
         self.channel = channel
         self.event_barrier = event_barrier
@@ -63,14 +57,18 @@ class InputPartitionReceiver(object):
     def _prase_data_and_carry_to_channel(self, 
             input_queue: multiprocessing.Queue,
             output_channel: multiprocessing.Queue,
-            event_barrier: EventBarrier):
+            event_barrier: multiprocessing.Barrier):
         while True:
             proto_data = input_queue.get()
             seri_data = serializator.SerializableStreamData.from_proto(proto_data)
             if seri_data.data_type == common_pb2.StreamData.DataType.NORMAL:
                 output_channel.put(seri_data)
             elif seri_data.data_type == common_pb2.StreamData.DataType.CHECKPOINT:
-                pass
+                order = event_barrier.wait()
+                if order == 0:
+                    # only order == 0 push event to output channel
+                    output_channel.put(seri_data)
+                    event_barrier.reset()
             else:
                 raise SystemExit(
                         "Fatal: unknow data type({})".format(seri_data.data_type))
