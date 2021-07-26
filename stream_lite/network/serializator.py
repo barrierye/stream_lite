@@ -187,7 +187,8 @@ class SerializableExectueTask(SerializableObject):
                 resources=self.resources,
                 task_file=self.task_file,
                 subtask_name=self.subtask_name,
-                partition_idx=self.partition_idx)
+                partition_idx=self.partition_idx,
+                port=self.port)
 
     @staticmethod
     def to_proto(
@@ -197,7 +198,8 @@ class SerializableExectueTask(SerializableObject):
             resources: List[SerializableFile],
             task_file: SerializableFile,
             subtask_name: str,
-            partition_idx: int) -> common_pb2.ExecuteTask:
+            partition_idx: int,
+            port: int) -> common_pb2.ExecuteTask:
         return common_pb2.ExecuteTask(
                 cls_name=cls_name,
                 input_endpoints=input_endpoints,
@@ -205,7 +207,8 @@ class SerializableExectueTask(SerializableObject):
                 resources=[res.to_proto() for res in resources],
                 task_file=task_file.to_proto(),
                 subtask_name=subtask_name,
-                partition_idx=partition_idx)
+                partition_idx=partition_idx,
+                port=port)
 
     @staticmethod
     def from_proto(proto: common_pb2.ExecuteTask):
@@ -216,4 +219,5 @@ class SerializableExectueTask(SerializableObject):
                 resources=[SerializableFile.from_proto(res) for res in proto.resources],
                 task_file=SerializableFile.from_proto(proto.task_file),
                 subtask_name=proto.subtask_name,
-                partition_idx=proto.partition_idx)
+                partition_idx=proto.partition_idx,
+                port=port)

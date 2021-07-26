@@ -15,8 +15,11 @@ from stream_lite.proto import task_manager_pb2
 
 from stream_lite.client import JobManagerClient
 from stream_lite.network import serializator
+from stream_lite.network.util import gen_nil_response
 import stream_lite.utils.util
 from stream_lite.utils import AvailablePortGenerator
+
+from .slot_table import SlotTable
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -30,6 +33,7 @@ class TaskManagerServicer(task_manager_pb2_grpc.TaskManagerServiceServicer):
                 stream_lite.utils.util.get_ip(), rpc_port)
         self.conf = self._init_by_yaml(conf_yaml_path)
         self._register(self.conf)
+        self.slot_table = SlotTable(self.resource.slot_number)
 
     def _init_by_yaml(self, conf_yaml_path: str) -> dict:
         with open(conf_yaml_path) as f:
@@ -85,7 +89,19 @@ class TaskManagerServicer(task_manager_pb2_grpc.TaskManagerServiceServicer):
 
     # --------------------------- deploy task ----------------------------
     def deployTask(self, request, context):
-        pass
+        if self.remain_resource.slot_number <= 0:
+            err_msg = "Failed: available slot not enough"
+            _LOGGER.error(err_msg)
+            return gen_nil_response(
+                    err_code=1, message=err_msg)
+        try:
+            self.slot_table.deployExecuteTask(request.execute_task)
+        except Exception as e:
+            _LOGGER.error(e, exc_info=True)
+            return gen_nil_response(
+                    err_code=1, message=str(e))
+        self.remain_resource.slot_number -= 1
+        return gen_nil_response()
 
     # --------------------------- start task ----------------------------
     def startTask(self, request, context):

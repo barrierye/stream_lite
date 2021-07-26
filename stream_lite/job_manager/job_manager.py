@@ -12,10 +12,11 @@ from typing import List, Dict, Tuple, Set
 import stream_lite.proto.job_manager_pb2 as job_manager_pb2
 import stream_lite.proto.common_pb2 as common_pb2
 import stream_lite.proto.job_manager_pb2_grpc as job_manager_pb2_grpc
+
 from stream_lite.network.util import gen_nil_response
 from stream_lite.network import serializator
-from . import scheduler
 
+from . import scheduler
 from .registered_task_manager_table import RegisteredTaskManagerTable
 
 _LOGGER = logging.getLogger(__name__)
@@ -64,11 +65,7 @@ class JobManagerServicer(job_manager_pb2_grpc.JobManagerServiceServicer):
         for task_manager_name, seri_execute_tasks in execute_map.items():
             client = self.registered_task_manager_table.get_client(task_manager_name)
             for execute_task in seri_execute_tasks:
-                resp = client.deployTask(
-                        task_manager_pb2.DeployTaskRequest(
-                            exec_task=execute_task.to_proto()))
-                if resp.status.err_code != 0:
-                    raise Exception(resp.status.message)
+                client.deployTask(execute_task)
 
     def _startExecuteTasks(self, 
             logical_map: Dict[str, List[serializator.SerializableTask]],
