@@ -28,7 +28,7 @@ class ServerBase(object):
 
     def update_rpc_port(self, port):
         self.rpc_port = port
-        _LOGGER.warn(
+        _LOGGER.info(
                 "Attention: rpc_port has been updated({})".format(self.rpc_port))
 
     def run(self):

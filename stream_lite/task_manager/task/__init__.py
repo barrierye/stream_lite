@@ -3,3 +3,4 @@
 # Python release: 3.7.0
 # Create time: 2021-07-26
 from .subtask import SubTaskServicer
+from .task import Task
