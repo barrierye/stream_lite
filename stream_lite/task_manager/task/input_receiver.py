@@ -7,6 +7,8 @@ import logging
 from typing import List, Dict
 import queue
 
+from stream_lite.network import serializator
+
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -24,6 +26,10 @@ class InputReceiver(object):
         self.channel = input_channel
         self.partitions = [InputPartitionReceiver(endpoint)
                 for endpoint in range(input_endpoints)]
+
+    def recv_data(self, partition_idx: int, 
+            data: serializator.SerializableStreamData):
+        pass
 
 
 class InputPartitionReceiver(object):

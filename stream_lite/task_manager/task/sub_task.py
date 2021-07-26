@@ -12,6 +12,7 @@ from typing import List, Dict
 from stream_lite.proto import subtask_pb2_grpc
 
 from stream_lite.network import serializator
+from stream_lite.network.util import gen_nil_response
 from stream_lite.client import SubTaskClient
 
 from .input_receiver import InputReceiver
@@ -22,11 +23,11 @@ _LOGGER = logging.getLogger(__name__)
 
 class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
     """
-    rpc   == data ==>  InputReceiver  
-          == data ==>  channel 
-          == data ==>  Core  
-          == data ==>  channel 
-          == data ==>  OutputDispenser
+    rpc   == data ==>  InputReceiver (rpc service process) 
+          == data ==>  channel (multiprocessing.Queue)
+          == data ==>  compute core (standalone process)
+          == data ==>  channel (multiprocessing.Queue)
+          == data ==>  OutputDispenser (standalone process)
           == data ==>  rpc
     """
 
@@ -42,17 +43,17 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
         self.subtask_name = execute_task.subtask_name
         self.partition_idx = execute_task.partition_idx
         self.port = execute_task.port
-        self.input_channel = None
         self.input_receiver = None
-        self.output_channel = None
         self.output_dispenser = None
 
     # --------------------------- init for start service ----------------------------
     def init_for_start_service(self):
         self._save_resources(list(execute_task.resources))
         self._save_task_file(execute_task.task_file)
-        self._init_input_receiver(input_endpoints)
-        self._init_output_dispenser(output_endpoints)
+        input_channel = self._init_input_receiver(input_endpoints)
+        output_channel = self._init_output_dispenser(output_endpoints)
+        self._start_compute_on_standleton_process(
+                input_channel, output_channel)
 
     def _save_resources(self, resources: List[serializator.SerializableFile]) -> None:
         # _tmp/tm/<task_manager_name>/<subtask_id>/resources/<resource_filename>
@@ -65,15 +66,36 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
         dirpath = "_tmp/tm/{}/{}/taskfile".format(self.tm_name, self.subtask_id)
         task_file.persistence_to_localfs(dirpath)
 
-    def _init_output_dispenser(self, output_endpoints: List[str]):
-        self.input_channel = multiprocessing.Queue()
-        self.output_dispenser = OutputDispenser(output_endpoints)
+    def _init_input_receiver(self, input_endpoints: List[str]) \
+            -> multiprocessing.Queue:
+        input_channel = multiprocessing.Queue()
+        self.input_receiver = InputReceiver(
+                input_channel, input_endpoints)
+        return input_channel
 
-    def _init_input_receiver(self, input_endpoints: List[str]):
-        self.input_receiver = InputReceiver(input_endpoints)
+    def _init_output_dispenser(self, output_endpoints: List[str]) \
+            -> multiprocessing.Queue:
+        output_channel = multiprocessing.Queue()
+        self.output_dispenser = OutputDispenser(
+                output_channel, output_endpoints)
+        return output_channel
 
-    # --------------------------- start ----------------------------
-    def start(self):
+    def _start_compute_on_standleton_process(self,
+            input_channel: multiprocess.Queue,
+            output_channel: multiprocessing.Queue):
+        """
+        具体执行逻辑
+        """
         pass
+
+    # --------------------------- pushStreamData (recv) ----------------------------
+    def pushStreamData(self, request, context):
+        data = serializator.SerializableStreamData.from_proto(request.data)
+        pre_subtask = request.from
+        partition_idx = request.partition_idx
+        _LOGGER.debug("Recv data(from={}): {}".format(
+            pre_subtask, str(request)))
+        self.input_receiver.recv_data(partition_idx, data)
+        return gen_nil_response()
 
 
