@@ -105,5 +105,12 @@ class TaskManagerServicer(task_manager_pb2_grpc.TaskManagerServiceServicer):
 
     # --------------------------- start task ----------------------------
     def startTask(self, request, context):
-        pass
+        subtask_name = request.subtask_name
+        try:
+            self.slot_table.startExecuteTask(subtask_name)
+        except Exception as e:
+            _LOGGER.error(e, exc_info=True)
+            return gen_nil_response(
+                    err_code=1, message=str(e))
+        return gen_nil_response()
     

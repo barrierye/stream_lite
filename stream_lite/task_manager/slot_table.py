@@ -36,6 +36,11 @@ class SlotTable(object):
             self.table[subtask_name] = Slot(execute_task)
             _LOGGER.debug("Succ deploy task: {}".format(subtask_name))
 
+    def startExecuteTask(self, subtask_name: str) -> None:
+        slot = self.getSlot(subtask_name)
+        slot.start()
+        _LOGGER.debug("Succ start task: {}".format(subtask_name))
+
     def hasSlot(self, name: str) -> bool:
         with self.rw_lock_pair.gen_rlock():
             return name in self.table
@@ -53,6 +58,9 @@ class Slot(object):
     def __init__(self, execute_task: serializator.SerializableExectueTask):
         self.execute_task = execute_task
         self.status = "DEPLOYED"
+
+    def start(self):
+        pass
 
     def __str__(self):
         return "[{}] subtask_name: {}, status: {}".format(
