@@ -36,7 +36,7 @@ class Scheduler(object):
             
             available_ports = client.requestSlot(seri_tasks)
             _LOGGER.debug(
-                    "Success request slot from task manager(name={})"
+                    "Success request required slot from task manager(name={})"
                     .format(task_manager_name))
             available_ports_map[task_manager_name] = available_ports
         return available_ports_map
