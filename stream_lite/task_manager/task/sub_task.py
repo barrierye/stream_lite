@@ -45,6 +45,7 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
         self.port = execute_task.port
         self.input_receiver = None
         self.output_dispenser = None
+        self._core_process = None
 
     # --------------------------- init for start service ----------------------------
     def init_for_start_service(self):
@@ -80,13 +81,23 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
                 output_channel, output_endpoints)
         return output_channel
 
-    def _start_compute_on_standleton_process(self,
+    def _compute_core(self, 
             input_channel: multiprocess.Queue,
             output_channel: multiprocessing.Queue):
         """
         具体执行逻辑
         """
         pass
+
+    def _start_compute_on_standleton_process(self,
+            input_channel: multiprocess.Queue,
+            output_channel: multiprocessing.Queue):
+        if self._core_process is not None:
+            raise SystemExit("Failed: process already running")
+        self._core_process = multiprocessing.Process(
+                target=self._compute_core, args=(input_channel, output_channel))
+        self._core_process.daemon = True
+        self._core_process.start()
 
     # --------------------------- pushStreamData (recv) ----------------------------
     def pushStreamData(self, request, context):
