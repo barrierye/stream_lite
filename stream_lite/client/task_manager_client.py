@@ -43,5 +43,10 @@ class TaskManagerClient(ClientBase):
 
         return list(resp.available_ports)
 
-    def deployTask(self):
-        pass
+    def deployTask(self, exec_task: serializator.SerializableExectueTask):
+        resp = self.stub.deployTask(
+                task_manager_pb2.DeployTaskRequest(
+                    exec_task=execute_task.to_proto()))
+        
+        if resp.status.err_code != 0:
+            raise RuntimeError(resp.status.message)

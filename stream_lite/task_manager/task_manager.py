@@ -61,6 +61,7 @@ class TaskManagerServicer(task_manager_pb2_grpc.TaskManagerServiceServicer):
                 continue
             break
 
+    # --------------------------- request slot ----------------------------
     def requestSlot(self, request, context):
         slot_descs = [serializator.SerializableRequiredSlotDesc.from_proto(p)
                 for p in request.slot_descs]
@@ -82,7 +83,11 @@ class TaskManagerServicer(task_manager_pb2_grpc.TaskManagerServiceServicer):
             status=common_pb2.Status(),
             available_ports=available_ports)
 
+    # --------------------------- deploy task ----------------------------
     def deployTask(self, request, context):
         pass
 
+    # --------------------------- start task ----------------------------
+    def startTask(self, request, context):
+        pass
     
