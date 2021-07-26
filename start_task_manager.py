@@ -3,8 +3,11 @@
 # Python release: 3.7.0
 # Create time: 2021-07-19
 import logging
+import sys
 
 from stream_lite import TaskManager
+
+_LOGGER = logging.getLogger(__name__)
 
 if __name__ == '__main__':
     logging.basicConfig(
@@ -12,5 +15,9 @@ if __name__ == '__main__':
             datefmt='%Y-%m-%d %H:%M', 
             level=logging.DEBUG)
     # for debug
-    server = TaskManager("conf/task_manager1.yaml", 8971)
+    if len(sys.argv) != 2:
+        _LOGGER.fatal("usage: python start_task_manager.py <conf.yaml>")
+        exit(1)
+    task_manager_conf = sys.argv[1]
+    server = TaskManager(task_manager_conf)
     server.run()

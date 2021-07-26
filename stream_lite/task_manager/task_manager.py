@@ -6,6 +6,7 @@ from concurrent import futures
 import grpc
 import logging
 import yaml
+import time
 
 import stream_lite.proto.task_manager_pb2_grpc as task_manager_pb2_grpc
 import stream_lite.proto.common_pb2 as common_pb2
@@ -29,11 +30,21 @@ class TaskManagerServicer(task_manager_pb2_grpc.TaskManagerServiceServicer):
     def _register(self):
         job_manager_enpoint = self.conf["job_manager_enpoint"]
         self.job_manager_client = JobManagerClient()
-        _LOGGER.debug("Try connect to job manager: {}".format(job_manager_enpoint))
+        _LOGGER.debug(
+                "Try connect to job manager({}) from task manager(name={})"
+                .format(job_manager_enpoint, self.conf["name"]))
         self.job_manager_client.connect(job_manager_enpoint)
-        _LOGGER.debug("Try register task manager")
-        self.job_manager_client.registerTaskManager(
-                self.endpoint, self.conf)
+        while True:
+            try:
+                self.job_manager_client.registerTaskManager(
+                        self.endpoint, self.conf)
+            except grpc._channel._InactiveRpcError as e:
+                _LOGGER.debug(
+                    "Failed to register task manager: connections to job manager"
+                    "failing, waiting for 5 sec...")
+                time.sleep(5)
+                continue
+            break
 
     def requestSlot(self, request, context):
         pass

@@ -20,9 +20,3 @@ def get_filename(url: str) -> str:
     """
     path, filename = os.path.split(url)
     return filename
-
-def port_is_available(port):
-    with closing(socket.socket(socket.AF_INET, socket.SOCK_STREAM)) as sock:
-        sock.settimeout(2)
-        result = sock.connect_ex(('0.0.0.0', port))
-    return result != 0

@@ -6,7 +6,7 @@ from concurrent import futures
 import grpc
 import logging
 
-from stream_lite.utils import util
+from stream_lite.utils import AvailablePortGenerator
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -16,7 +16,7 @@ class ServerBase(object):
     def __init__(self, rpc_port, worker_num):
         self.rpc_port = rpc_port
         self.worker_num = worker_num
-        if not util.port_is_available(rpc_port):
+        if not AvailablePortGenerator.port_is_available(rpc_port):
             raise ValueError(
                     "Failed: port({}) is not available".format(rpc_port))
 

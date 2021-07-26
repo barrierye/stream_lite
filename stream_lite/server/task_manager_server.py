@@ -7,13 +7,16 @@ import logging
 import stream_lite.proto.task_manager_pb2_grpc as task_manager_pb2_grpc
 from stream_lite.server.server_base import ServerBase
 from stream_lite.task_manager.task_manager import TaskManagerServicer
+from stream_lite.utils import AvailablePortGenerator
 
 _LOGGER = logging.getLogger(__name__)
 
 
 class TaskManager(ServerBase):
 
-    def __init__(self, conf_yaml_path: str, rpc_port: int, worker_num=1):
+    def __init__(self, conf_yaml_path: str, rpc_port: int = -1, worker_num: int = 1):
+        if rpc_port == -1:
+            rpc_port = AvailablePortGenerator().next()
         super(TaskManager, self).__init__(rpc_port, worker_num)
         self.conf_yaml_path = conf_yaml_path
 

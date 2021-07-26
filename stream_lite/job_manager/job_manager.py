@@ -42,7 +42,7 @@ class JobManagerServicer(job_manager_pb2_grpc.JobManagerServiceServicer):
             resp = self._innerSubmitJob(seri_tasks)
         except Exception as e:
             _LOGGER.error(e, exc_info=True)
-            return gen_nil_response(err_code=1, message=e)
+            return gen_nil_response(err_code=1, message=str(e))
         return resp 
         
     def _innerSubmitJob(self, seri_tasks):
@@ -154,6 +154,6 @@ class JobManagerServicer(job_manager_pb2_grpc.JobManagerServiceServicer):
         except Exception as e:
             _LOGGER.error(e, exc_info=True)
             return gen_nil_response(
-                    err_code=1, message=e)
+                    err_code=1, message=str(e))
         return gen_nil_response()
 
