@@ -23,7 +23,7 @@ _LOGGER = logging.getLogger(__name__)
 
 class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
     """
-    rpc   == data ==>  InputReceiver (rpc service process) 
+    rpc   == data ==>  InputReceiver (rpc service process & standalone process) 
           == data ==>  channel (multiprocessing.Queue)
           == data ==>  compute core (standalone process)
           == data ==>  channel (multiprocessing.Queue)

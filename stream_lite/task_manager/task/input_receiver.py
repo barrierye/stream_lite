@@ -7,6 +7,8 @@ import logging
 from typing import List, Dict
 import queue
 
+from stream_lite.proto import common_pb2
+
 from stream_lite.network import serializator
 
 
@@ -24,15 +26,63 @@ class InputReceiver(object):
             input_channel: multiprocessing.Queue,
             input_endpoints: List[str]):
         self.channel = input_channel
-        self.partitions = [InputPartitionReceiver(endpoint)
-                for endpoint in range(input_endpoints)]
+        self.event_barrier = EventBarrier(len(input_endpoints))
+        self.partitions = []
+        for _ in input_endpoints:
+            input_partition_receiver = InputPartitionReceiver(
+                    self.channel, endpoint, self.event_barrier)
+            input_partition_receiver.start_standleton_process()
+            self.partitions.append(input_partition_receiver)
 
     def recv_data(self, partition_idx: int, 
-            data: serializator.SerializableStreamData):
-        pass
+            data: common_pb2.StreamData) -> None:
+        self.partitions[partition_idx].recv_data(data)
+
+
+class EventBarrier(object):
+
+    def __init__(self, worker_num: int):
+        self.worker_num = worker_num
+        self._cv = multiprocessing.Condition()
 
 
 class InputPartitionReceiver(object):
 
-    def __init__(self, endpoint: str):
-        self.queue = queue.Queue()
+    def __init__(self, 
+            channel: multiprocessing.Queue, 
+            endpoint: str,
+            event_barrier: EventBarrier):
+        self.queue = multiprocessing.Queue()
+        self.channel = channel
+        self.event_barrier = event_barrier
+        self._process = None
+
+    def recv_data(self, data: common_pb2.StreamData) -> None:
+        self.queue.put(data)
+
+    def _prase_data_and_carry_to_channel(self, 
+            input_queue: multiprocessing.Queue,
+            output_channel: multiprocessing.Queue,
+            event_barrier: EventBarrier):
+        while True:
+            proto_data = input_queue.get()
+            seri_data = serializator.SerializableStreamData.from_proto(proto_data)
+            if seri_data.data_type == common_pb2.StreamData.DataType.NORMAL:
+                output_channel.put(seri_data)
+            elif seri_data.data_type == common_pb2.StreamData.DataType.CHECKPOINT:
+                pass
+            else:
+                raise SystemExit(
+                        "Fatal: unknow data type({})".format(seri_data.data_type))
+
+    def start_standleton_process(self):
+        """
+        起一个独立进程，不断处理数据到 channel 中
+        """
+        if self._process is not None:
+            raise ValueError("Failed: process already running")
+        self._process = multiprocessing.Process(
+                target=self._prase_data_and_carry_to_channel,
+                args=(self.queue, self.channel, self.event_barrier))
+        self._process.daemon = True
+        self._process.start()
