@@ -30,11 +30,14 @@ class UserClient(ClientBase):
         with open(yaml_path) as f:
             conf = yaml.load(f.read(), Loader=yaml.FullLoader)
 
-        req = job_manager_pb2.SubmitJobRequest(
-                logid=100,
-                tasks=[
+        seri_tasks = []
+        for task_dict in conf["tasks"]:
+            seri_tasks.append(
                     serializator.SerializableTask.to_proto(
-                        task_dict, conf["task_files"]) 
-                    for task_dict in conf["tasks"]])
+                        task_dict, conf["task_files_dir"]))
+
+        req = job_manager_pb2.SubmitJobRequest(tasks=seri_tasks)
         resp = self.stub.submitJob(req)
+        if resp.status.err_code != 0:
+            raise Exception(resp.status.message)
         print(str(resp))

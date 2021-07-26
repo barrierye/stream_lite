@@ -136,11 +136,13 @@ class SerializableMachineResource(SerializableObject):
 
     @staticmethod
     def to_proto(resource: dict) -> common_pb2.MachineResource:
-        return common_pb2.MachineResource()
+        return common_pb2.MachineResource(
+                slot_number=resource["slot_number"])
 
     @staticmethod
     def from_proto(proto: common_pb2.MachineResource):
-        return SerializableMachineResource()
+        return SerializableMachineResource(
+                slot_number=proto.slot_number)
 
 
 class SerializableCoordinate(SerializableObject):
@@ -175,7 +177,7 @@ class SerializableRequiredSlotDesc(SerializableObject):
 class SerializableExectueTask(SerializableObject):
 
     def __init__(self, **kwargs):
-        super(SerializableExect, self).__init__(**kwargs)
+        super(SerializableExectueTask, self).__init__(**kwargs)
 
     def to_proto(self) -> common_pb2.ExecuteTask:
         return SerializableExectueTask.to_proto(

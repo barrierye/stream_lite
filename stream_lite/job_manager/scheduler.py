@@ -32,18 +32,12 @@ class Scheduler(object):
         available_ports_map = {} # taskmanager.name -> List[int]
         for task_manager_name, seri_tasks in logical_map.items():
             client = self.registered_task_manager_table.get_client(task_manager_name)
-            slot_desc_protos = []
-            for task in seri_tasks:
-                slot_desc_protos.extend(
-                        [serializator.SerializableRequiredSlotDesc.to_proto()
-                            for i in range(task.currency)])
-            resp = client.requestSlot(
-                    task_manager_pb2.RequiredSlotRequest(
-                        slot_descs=slot_desc_protos))
-            if resp.status.err_code != 0:
-                raise RuntimeError(resp.status.message)
-            available_ports_map[task_manager_name] = \
-                    list(resp.available_ports)
+            
+            available_ports = client.requestSlot(seri_tasks)
+            _LOGGER.debug(
+                    "Success request slot from task manager(name={})"
+                    .format(task_manager_name))
+            available_ports_map[task_manager_name] = available_ports
         return available_ports_map
 
     def _get_subtask_name(self, cls_name: str, idx: int, currency: int) -> str:
@@ -111,7 +105,7 @@ class UserDefinedScheduler(Scheduler):
             for logical_task in logical_tasks:
                 cls_name = logical_task.cls_name
                 # TODO
-                assert(len(logical_task.input_tasks) == 1)
+                assert(len(logical_task.input_tasks) <= 1)
                 for input_task_name in logical_task.input_tasks:
                     # 找前继节点: 获取并发数
                     predecessor = None

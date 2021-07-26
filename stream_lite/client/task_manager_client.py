@@ -7,6 +7,7 @@ import logging
 import pickle
 import inspect
 import time
+from typing import List, Dict
 
 from stream_lite.proto import job_manager_pb2, job_manager_pb2_grpc
 from stream_lite.proto import task_manager_pb2, task_manager_pb2_grpc
@@ -26,11 +27,21 @@ class TaskManagerClient(ClientBase):
     def _init_stub(self, channel):
         return task_manager_pb2_grpc.TaskManagerServiceStub(channel)
 
-    def requestSlot(self, slot_desc):
+    def requestSlot(self, seri_tasks: List[serializator.SerializableTask]) -> List[int]:
+        slot_desc_protos = []
+        for task in seri_tasks:
+            slot_desc_protos.extend(
+                    [serializator.SerializableRequiredSlotDesc.to_proto()
+                        for i in range(task.currency)])
+
         resp = self.stub.requestSlot(
-                task_manager_pb2.RequestSlotRequest(
-                    slot_desc=common_pb2.RequiredSlotDescription()))
+                task_manager_pb2.RequiredSlotRequest(
+                    slot_descs=slot_desc_protos))
+
         if resp.status.err_code != 0:
-            raise Exception(resp.status.message)
-        _LOGGER.debug(
-                "Success request slot from task manager(name={})".format(conf["name"]))
+            raise RuntimeError(resp.status.message)
+
+        return list(resp.available_ports)
+
+    def deployTask(self):
+        pass

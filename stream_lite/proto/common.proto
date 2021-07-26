@@ -19,7 +19,7 @@ message Task {
   repeated string input_tasks = 3;
   repeated File resources = 4;
   required File task_file = 5;
-  required string locale = 6;
+  required string locate = 6;
 }
 
 message File {
@@ -47,7 +47,7 @@ message TaskManagerDescription {
   required string endpoint = 1;
   required string name = 2;
   optional common.Coordinate coord = 3;
-  optional common.MachineResource resource = 4;
+  required common.MachineResource resource = 4;
   optional string host = 5;
 }
 
@@ -56,5 +56,5 @@ message RequiredSlotDescription {
 }
 
 message MachineResource {
-
+  required int32 slot_number = 1;
 }

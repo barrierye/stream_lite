@@ -6,8 +6,7 @@ package job_manager;
 
 
 message SubmitJobRequest {
-  optional int64 logid = 1;
-  repeated common.Task tasks = 2;
+  repeated common.Task tasks = 1;
 };
 
 message RegisterTaskManagerRequest {
