@@ -8,18 +8,21 @@ import logging
 
 import stream_lite.proto.common_pb2 as common_pb2
 from stream_lite.network import serializator
+from stream_lite.server.subtask_server import SubTaskServer
 
 _LOGGER = logging.getLogger(__name__)
 
 
 class Slot(object):
 
-    def __init__(self, execute_task: serializator.SerializableExectueTask):
-        self.execute_task = execute_task
+    def __init__(self, tm_name: str,
+            execute_task: serializator.SerializableExectueTask):
+        self.tm_name = tm_name
+        self.subtask = SubTaskServer(tm_name, execute_task)
         self.status = "DEPLOYED"
 
     def start(self):
-        pass
+        self.subtask.run_on_standalone_process()
 
     def __str__(self):
         return "[{}] subtask_name: {}, status: {}".format(
@@ -30,8 +33,9 @@ class Slot(object):
 
 class SlotTable(object):
 
-    def __init__(self, capacity: int):
+    def __init__(self, tm_name: str, capacity: int):
         self.rw_lock_pair = rwlock.RWLockFair()
+        self.tm_name = tm_name
         self.capacity = capacity
         self.table = {} # subtask_name -> Slot
 
@@ -49,7 +53,7 @@ class SlotTable(object):
                 raise KeyError(
                         "Failed to deploy task: subtask_name({}) already exists"
                         .format(subtask_name))
-            self.table[subtask_name] = Slot(execute_task)
+            self.table[subtask_name] = Slot(self.tm_name, execute_task)
             _LOGGER.debug("Succ deploy task: {}".format(subtask_name))
 
     def startExecuteTask(self, subtask_name: str) -> None:

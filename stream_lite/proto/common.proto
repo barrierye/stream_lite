@@ -60,3 +60,12 @@ message RequiredSlotDescription {
 message MachineResource {
   required int32 slot_number = 1;
 }
+
+message StreamData {
+  repeated KeyValueData kv = 1;
+
+  message KeyValueData {
+    required string key = 1;
+    required string value = 2;
+  }
+}
