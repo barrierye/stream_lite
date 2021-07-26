@@ -32,7 +32,7 @@ class JobManagerServicer(job_manager_pb2_grpc.JobManagerServiceServicer):
 
     # --------------------------- submit job ----------------------------
     def submitJob(self, request, context):
-        persistence_dir = "./_tmp/server/task_files"
+        persistence_dir = "./_tmp/jm/task_files"
         seri_tasks = []
         for task in request.tasks:
             seri_task = serializator.SerializableTask.from_proto(task)

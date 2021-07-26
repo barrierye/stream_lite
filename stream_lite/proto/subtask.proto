@@ -1,0 +1,20 @@
+syntax = "proto2";
+
+import "stream_lite/proto/common.proto";
+
+package subtask;
+
+
+message PushStreamDataRequest {
+  required int64 timestamp = 1;
+  required StreamData data = 2;
+  required string from = 3; // upstream subtask name
+  optional string data_id = 4; // for filter
+  required int32 partition_idx = 5;
+}
+
+
+service SubTaskService {
+  // from other subtask
+  rpc pushStreamData(PushStreamDataRequest) returns (common.NilResponse) {}
+};

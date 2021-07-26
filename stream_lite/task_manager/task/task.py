@@ -1,15 +1,12 @@
 #-*- coding:utf8 -*-
 # Copyright (c) 2021 barriery
 # Python release: 3.7.0
-# Create time: 2021-07-19
+# Create time: 2021-07-26
+"""
+用户自定义算子的基类
+"""
 
 class Task(object):
 
     def __init__(self):
-        pass
-
-    def init_task(self):
-        pass
-
-    def run(self):
         pass

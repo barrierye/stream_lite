@@ -5,6 +5,7 @@
 from concurrent import futures
 import grpc
 import logging
+import multiprocessing
 
 from stream_lite.utils import AvailablePortGenerator
 
@@ -19,9 +20,13 @@ class ServerBase(object):
         if not AvailablePortGenerator.port_is_available(rpc_port):
             raise ValueError(
                     "Failed: port({}) is not available".format(rpc_port))
+        self._process = None
 
     def init_service(self, server):
         raise NotImplemented("Failed: function not implemented")
+
+    def update_rpc_port(self, port):
+        self.rpc_port = port
 
     def run(self):
         server = grpc.server(
@@ -33,3 +38,13 @@ class ServerBase(object):
         _LOGGER.info("Run on port: {}".format(self.rpc_port))
         server.start()
         server.wait_for_termination()
+
+    def run_on_standalone_process(self):
+        if self._process is not None:
+            raise RuntimeError(
+                    "Failed: process already running")
+        self._process = multiprocessing.Process(
+                target=self.run, args=(, ))
+        # stop self when main process stop
+        self._process.darmon = True
+        self._process.start()
