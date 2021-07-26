@@ -78,7 +78,7 @@ class InputPartitionReceiver(object):
         起一个独立进程，不断处理数据到 channel 中
         """
         if self._process is not None:
-            raise ValueError("Failed: process already running")
+            raise SystemExit("Failed: process already running")
         self._process = multiprocessing.Process(
                 target=self._prase_data_and_carry_to_channel,
                 args=(self.queue, self.channel, self.event_barrier))

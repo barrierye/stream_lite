@@ -78,7 +78,8 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
             -> multiprocessing.Queue:
         output_channel = multiprocessing.Queue()
         self.output_dispenser = OutputDispenser(
-                output_channel, output_endpoints)
+                output_channel, output_endpoints,
+                self.subtask_name, self.partition_idx)
         return output_channel
 
     def _compute_core(self, 
@@ -108,5 +109,3 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
             pre_subtask, str(request)))
         self.input_receiver.recv_data(partition_idx, data)
         return gen_nil_response()
-
-
