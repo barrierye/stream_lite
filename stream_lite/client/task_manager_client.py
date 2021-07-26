@@ -46,7 +46,14 @@ class TaskManagerClient(ClientBase):
     def deployTask(self, exec_task: serializator.SerializableExectueTask):
         resp = self.stub.deployTask(
                 task_manager_pb2.DeployTaskRequest(
-                    exec_task=execute_task.to_proto()))
+                    exec_task=exec_task.instance_to_proto()))
         
         if resp.status.err_code != 0:
             raise RuntimeError(resp.status.message)
+
+    def startTask(self, subtask_name: str):
+        resp = self.stub.startTask(
+                task_manager_pb2.StartTaskRequest(
+                    subtask_name=subtask_name))
+        if resp.status.err_code != 0:
+            raise Exception(resp.status.message)

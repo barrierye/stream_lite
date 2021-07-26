@@ -55,7 +55,7 @@ class SerializableTask(SerializableObject):
                 cls_name=proto.cls_name,
                 currency=proto.currency,
                 input_tasks=list(proto.input_tasks),
-                resources=list(proto.resources),
+                resources=[SerializableFile.from_proto(f) for f in proto.resources],
                 task_file=SerializableFile.from_proto(proto.task_file),
                 locate=proto.locate)
 
@@ -65,7 +65,7 @@ class SerializableFile(SerializableObject):
     def __init__(self, **kwargs):
         super(SerializableFile, self).__init__(**kwargs)
     
-    def to_proto(self) -> common_pb2.File:
+    def instance_to_proto(self) -> common_pb2.File:
         return common_pb2.File(
                 name=self.name,
                 content=self.content)
@@ -179,7 +179,7 @@ class SerializableExectueTask(SerializableObject):
     def __init__(self, **kwargs):
         super(SerializableExectueTask, self).__init__(**kwargs)
 
-    def to_proto(self) -> common_pb2.ExecuteTask:
+    def instance_to_proto(self) -> common_pb2.ExecuteTask:
         return SerializableExectueTask.to_proto(
                 cls_name=self.cls_name,
                 input_endpoints=self.input_endpoints,
@@ -204,8 +204,8 @@ class SerializableExectueTask(SerializableObject):
                 cls_name=cls_name,
                 input_endpoints=input_endpoints,
                 output_endpoints=output_endpoints,
-                resources=[res.to_proto() for res in resources],
-                task_file=task_file.to_proto(),
+                resources=[f.instance_to_proto() for f in resources],
+                task_file=task_file.instance_to_proto(),
                 subtask_name=subtask_name,
                 partition_idx=partition_idx,
                 port=port)
@@ -220,4 +220,4 @@ class SerializableExectueTask(SerializableObject):
                 task_file=SerializableFile.from_proto(proto.task_file),
                 subtask_name=proto.subtask_name,
                 partition_idx=proto.partition_idx,
-                port=port)
+                port=proto.port)

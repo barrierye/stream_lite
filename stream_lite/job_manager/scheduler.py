@@ -3,7 +3,7 @@
 # Python release: 3.7.0
 # Create time: 2021-07-25
 import logging
-from typing import List, Dict
+from typing import List, Dict, Tuple
 
 from .registered_task_manager_table import RegisteredTaskManagerTable
 from stream_lite.proto import task_manager_pb2
@@ -18,7 +18,8 @@ class Scheduler(object):
         self.registered_task_manager_table = registered_task_manager_table
 
     def schedule(self, serializable_tasks: List[serializator.SerializableTask]) \
-            -> Dict[str, List[serializator.SerializableTask]]:
+            -> Tuple[Dict[str, List[serializator.SerializableTask]],
+                    Dict[str, List[serializator.SerializableExectueTask]]]:
         raise NotImplementedError("Failed: function not implemented")
  
     def transform_logical_map_to_execute_map(self, 
@@ -54,7 +55,8 @@ class UserDefinedScheduler(Scheduler):
         super(UserDefinedScheduler, self).__init__(registered_task_manager_table)
 
     def schedule(self, serializable_tasks: List[serializator.SerializableTask]) \
-            -> Dict[str, List[serializator.SerializableExectueTask]]:
+            -> Tuple[Dict[str, List[serializator.SerializableTask]],
+                    Dict[str, List[serializator.SerializableExectueTask]]]:
         """
         logical_map: 每个 TaskManager 里有哪些 logical_task (with currency)
         execute_map: 每个 TaskManager 里有哪些 execute_task (subTask)
@@ -69,7 +71,7 @@ class UserDefinedScheduler(Scheduler):
                 logical_map[name] = []
             logical_map[name].append(task)
         execute_map = self.transform_logical_map_to_execute_map(logical_map)
-        return execute_map
+        return (logical_map, execute_map)
 
     def transform_logical_map_to_execute_map(self,
             logical_map: Dict[str, List[serializator.SerializableTask]]) \

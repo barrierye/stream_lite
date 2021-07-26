@@ -12,6 +12,22 @@ from stream_lite.network import serializator
 _LOGGER = logging.getLogger(__name__)
 
 
+class Slot(object):
+
+    def __init__(self, execute_task: serializator.SerializableExectueTask):
+        self.execute_task = execute_task
+        self.status = "DEPLOYED"
+
+    def start(self):
+        pass
+
+    def __str__(self):
+        return "[{}] subtask_name: {}, status: {}".format(
+                self.cls_name, 
+                self.execute_task.subtask_name, 
+                self.status)
+
+
 class SlotTable(object):
 
     def __init__(self, capacity: int):
@@ -52,18 +68,3 @@ class SlotTable(object):
                         "Failed: task(subtask_name={}) not deployed".format(name))
             return self.table[name]
 
-
-class Slot(object):
-
-    def __init__(self, execute_task: serializator.SerializableExectueTask):
-        self.execute_task = execute_task
-        self.status = "DEPLOYED"
-
-    def start(self):
-        pass
-
-    def __str__(self):
-        return "[{}] subtask_name: {}, status: {}".format(
-                self.cls_name, 
-                self.execute_task.subtask_name, 
-                self.status)

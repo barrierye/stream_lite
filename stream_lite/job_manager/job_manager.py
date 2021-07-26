@@ -48,14 +48,14 @@ class JobManagerServicer(job_manager_pb2_grpc.JobManagerServiceServicer):
         
     def _innerSubmitJob(self, seri_tasks):
         # schedule
-        execute_map = self.scheduler.schedule(seri_tasks)
+        logical_map, execute_map = self.scheduler.schedule(seri_tasks)
         
         # deploy
         self._deployExecuteTasks(execute_map)
         _LOGGER.info("Success deploy all task.")
 
         # start
-        self._startExecuteTasks(execute_map)
+        self._startExecuteTasks(logical_map, execute_map)
         _LOGGER.info("Success start all task.")
 
         return gen_nil_response()
@@ -91,12 +91,13 @@ class JobManagerServicer(job_manager_pb2_grpc.JobManagerServiceServicer):
 
         # subtask_name -> (task_manager_name, serializator.SerializableExecuteTask)
         subtask_name_inverted_index = {}
-        for task_manager_name, exec_task in execute_map.items():
-            subtask_name_inverted_index[exec_task.subtask_name] = \
-                    (subtask_name_inverted_index, exec_task)
+        for task_manager_name, exec_tasks in execute_map.items():
+            for exec_task in exec_tasks:
+                subtask_name_inverted_index[exec_task.subtask_name] = \
+                        (task_manager_name, exec_task)
 
         started_tasks = set()
-        for cls_name in subtask_name_inverted_index.keys():
+        for cls_name in task_name_inverted_index.keys():
             if cls_name not in started_tasks:
                 self._dfsToStartExecuteTask(
                         cls_name, 
@@ -114,7 +115,7 @@ class JobManagerServicer(job_manager_pb2_grpc.JobManagerServiceServicer):
         if cls_name in started_tasks:
             return
         started_tasks.add(cls_name)
-        for next_logical_task_name in next_logical_tasks[cls_name]:
+        for next_logical_task_name in next_logical_tasks.get(cls_name, []):
             if next_logical_task_name not in started_tasks:
                 self._dfsToStartExecuteTask(
                         next_logical_task_name,
@@ -126,19 +127,15 @@ class JobManagerServicer(job_manager_pb2_grpc.JobManagerServiceServicer):
         for i in range(logical_task.currency):
             subtask_name = self._get_subtask_name(
                     cls_name, i, logical_task.currency)
-            execute_task = subtask_name_inverted_index[subtask_name]
+            task_manager_name, execute_task = subtask_name_inverted_index[subtask_name]
             self._innerDfsToStartExecuteTask(
-                    task_manager_name,
-                    execute_task)
+                    task_manager_name, execute_task)
 
     def _innerDfsToStartExecuteTask(self, 
             task_manager_name: str,
             execute_task: serializator.SerializableExectueTask):
         client = self.registered_task_manager_table.get_client(task_manager_name)
-        resp = client.startTask(task_manager_pb2.StartTaskRequest(
-            subtask_name=execute_task.subtask_name))
-        if resp.status.err_code != 0:
-            raise Exception(resp.status.message)
+        client.startTask(execute_task.subtask_name)
 
     def _get_subtask_name(self, cls_name: str, idx: int, currency: int) -> str:
         return "{}#({}/{})".format(cls_name, idx, currency)

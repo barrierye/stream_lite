@@ -95,7 +95,7 @@ class TaskManagerServicer(task_manager_pb2_grpc.TaskManagerServiceServicer):
             return gen_nil_response(
                     err_code=1, message=err_msg)
         try:
-            self.slot_table.deployExecuteTask(request.execute_task)
+            self.slot_table.deployExecuteTask(request.exec_task)
         except Exception as e:
             _LOGGER.error(e, exc_info=True)
             return gen_nil_response(
