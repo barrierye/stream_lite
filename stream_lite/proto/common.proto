@@ -66,6 +66,7 @@ message StreamData {
   repeated KeyValueData kvs = 2;
   required int64 timestamp = 3;
   required DataType date_type = 4;
+  optional string partition_key = 5 [default = ""]; // for partitioning
 
   message KeyValueData {
     required string key = 1;

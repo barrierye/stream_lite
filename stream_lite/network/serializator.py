@@ -228,6 +228,15 @@ class SerializableStreamData(SerializableObject):
     def __init__(self, **kwargs):
         super(SerializableStreamData, self).__init__(**kwargs)
 
+    def instance_to_proto(self) -> common_pb2.StreamData:
+        return common_pb2.StreamData(
+                data_id=self.data_id,
+                kvs=[kv.instance_to_proto() 
+                    for kv in self.kvs],
+                timestamp=self.timestamp,
+                date_type=self.date_type,
+                partition_key=self.partition_key)
+
     @staticmethod
     def from_proto(proto: common_pb2.StreamData):
         # date_type: common_pb2.StreamData.DataType.XX
@@ -236,13 +245,19 @@ class SerializableStreamData(SerializableObject):
                 kvs=[SerializableKeyValueData.from_proto(kv)
                     for kv in proto.kvs],
                 timestamp=proto.timestamp,
-                date_type=proto.date_type)
+                date_type=proto.date_type,
+                partition_key=proto.partition_key)
 
 
 class SerializableKeyValueData(SerializableObject):
 
     def __init__(self, **kwargs):
         super(SerializableKeyValueData, self).__init__(**kwargs)
+
+    def instance_to_proto(self) -> common_pb2.StreamData.KeyValueData:
+        return common_pb2.StreamData.KeyValueData(
+                key=self.key,
+                value=self.value)
 
     @staticmethod
     def from_proto(proto: common_pb2.StreamData.KeyValueData):

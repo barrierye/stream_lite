@@ -7,7 +7,7 @@ from typing import List, Dict
 
 from stream_lite.client import SubTaskClient
 
-from .partitioner import Partitioner
+from . import partitioner
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -53,7 +53,13 @@ class OutputDispenser(object):
             data = input_channel.get()
             if data.data_type == common_pb2.StreamData.DataType.NORMAL:
                 # partitioning
-                partition_idx = Partitioner.partitioning(data, partition_num)
+                partition_idx = -1
+                if data.partition_key:
+                    partition_idx = partitioner.KeyPartitioner.partitioning(
+                            data, partition_num)
+                else:
+                    partition_idx = partitioner.RandomPartitioner.partitioning(
+                            data, partition_num)
                 partitions[partition_idx].push_data(data)
             elif data.data_type == common_pb2.StreamData.DataType.CHECKPOINT:
                 # broadcast
