@@ -6,9 +6,16 @@ package subtask;
 
 
 message PushStreamDataRequest {
+<<<<<<< HEAD
   required StreamData data = 1;
   required string from = 2; // upstream subtask name
   required int32 partition_idx = 3;
+=======
+  required int64 timestamp = 1;
+  required StreamData data = 2;
+  required string from = 3; // upstream subtask name
+  optional string data_id = 4; // for filter
+>>>>>>> 20d17721903a80af9d15a259c46c64236f62bf48
 }
 
 
