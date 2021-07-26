@@ -62,10 +62,18 @@ message MachineResource {
 }
 
 message StreamData {
-  repeated KeyValueData kv = 1;
+  optional string data_id = 1; // for filter
+  repeated KeyValueData kvs = 2;
+  required int64 timestamp = 3;
+  required DataType date_type = 4;
 
   message KeyValueData {
     required string key = 1;
     required string value = 2;
+  }
+
+  enum DataType {
+    NORMAL = 1;
+    CHECKPOINT = 2;
   }
 }

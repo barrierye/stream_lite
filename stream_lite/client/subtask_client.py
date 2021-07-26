@@ -28,3 +28,7 @@ class SubTaskClient(ClientBase):
     def _init_stub(self, channel):
         return subtask_pb2_grpc.SubTaskServiceStub(channel)
 
+    def pushStreamData(self, proto: common_pb2.StreamData):
+        resp = self.stub.pushStreamData(proto)
+        if resp.status.err_code != 0:
+            raise SystemExit(resp.status.message)

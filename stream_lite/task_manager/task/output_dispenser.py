@@ -85,10 +85,8 @@ class OutputPartitionDispenser(object):
         self.client.connect(endpoint)
 
     def push_data(self, data: serializator.SerializableStreamData) -> None:
-        resp = self.client.pushStreamData(
+        self.client.pushStreamData(
                 subtask_pb2.PushStreamDataRequest(
                     from=self.subtask_name,
                     partition_idx=self.partition_idx,
                     data=data.instance_to_proto()))
-        if resp.status.err_code != 0:
-            raise SystemExit(resp.status.message)

@@ -221,3 +221,31 @@ class SerializableExectueTask(SerializableObject):
                 subtask_name=proto.subtask_name,
                 partition_idx=proto.partition_idx,
                 port=proto.port)
+
+
+class SerializableStreamData(SerializableObject):
+
+    def __init__(self, **kwargs):
+        super(SerializableStreamData, self).__init__(**kwargs)
+
+    @staticmethod
+    def from_proto(proto: common_pb2.StreamData):
+        # date_type: common_pb2.StreamData.DataType.XX
+        return SerializableStreamData(
+                data_id=proto.data_id,
+                kvs=[SerializableKeyValueData.from_proto(kv)
+                    for kv in proto.kvs],
+                timestamp=proto.timestamp,
+                date_type=proto.date_type)
+
+
+class SerializableKeyValueData(SerializableObject):
+
+    def __init__(self, **kwargs):
+        super(SerializableKeyValueData, self).__init__(**kwargs)
+
+    @staticmethod
+    def from_proto(proto: common_pb2.StreamData.KeyValueData):
+        return SerializableKeyValueData(
+                key=proto.key,
+                value=proto.value)
