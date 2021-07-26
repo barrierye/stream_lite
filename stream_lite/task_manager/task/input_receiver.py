@@ -29,7 +29,7 @@ class InputReceiver(object):
         self.event_barrier = multiprocessing.Barrier(
                 parties=len(input_endpoints))
         self.partitions = []
-        for _ in input_endpoints:
+        for endpoint in input_endpoints:
             input_partition_receiver = InputPartitionReceiver(
                     self.channel, endpoint, self.event_barrier)
             input_partition_receiver.start_standleton_process()

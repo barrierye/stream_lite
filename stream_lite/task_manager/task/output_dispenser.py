@@ -3,9 +3,11 @@
 # Python release: 3.7.0
 # Create time: 2021-07-26
 import logging
+import multiprocessing
 from typing import List, Dict
 
 from stream_lite.client import SubTaskClient
+from stream_lite.network import serializator
 
 from . import partitioner
 
@@ -93,6 +95,6 @@ class OutputPartitionDispenser(object):
     def push_data(self, data: serializator.SerializableStreamData) -> None:
         self.client.pushStreamData(
                 subtask_pb2.PushStreamDataRequest(
-                    from=self.subtask_name,
+                    from_subtask=self.subtask_name,
                     partition_idx=self.partition_idx,
                     data=data.instance_to_proto()))

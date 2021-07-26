@@ -17,7 +17,8 @@ def gen_proto_codes():
     dirpath = "stream_lite/proto"
     files = ["job_manager.proto", 
              "common.proto",
-             "task_manager.proto"]
+             "task_manager.proto",
+             "subtask.proto"]
     for filename in files:
         gen_proto_code(
                 os.path.join(dirpath, filename))

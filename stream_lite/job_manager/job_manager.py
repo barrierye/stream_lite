@@ -15,6 +15,7 @@ import stream_lite.proto.job_manager_pb2_grpc as job_manager_pb2_grpc
 
 from stream_lite.network.util import gen_nil_response
 from stream_lite.network import serializator
+from stream_lite.utils import IdGenerator
 
 from . import scheduler
 from .registered_task_manager_table import RegisteredTaskManagerTable
@@ -32,6 +33,7 @@ class JobManagerServicer(job_manager_pb2_grpc.JobManagerServiceServicer):
 
     # --------------------------- submit job ----------------------------
     def submitJob(self, request, context):
+        jobid = IdGenerator().next()
         persistence_dir = "./_tmp/jm/task_files"
         seri_tasks = []
         for task in request.tasks:
@@ -40,13 +42,18 @@ class JobManagerServicer(job_manager_pb2_grpc.JobManagerServiceServicer):
             seri_tasks.append(seri_task)
         
         try:
-            resp = self._innerSubmitJob(seri_tasks)
+            self._innerSubmitJob(seri_tasks)
         except Exception as e:
             _LOGGER.error(e, exc_info=True)
-            return gen_nil_response(err_code=1, message=str(e))
-        return resp 
+            return job_manager_pb2.SubmitJobResponse(
+                    status=common_pb2.Status(
+                        err_code=1, message=str(e)))
+
+        return job_manager_pb2.SubmitJobResponse(
+                status=common_pb2.Status(),
+                jobid=jobid)
         
-    def _innerSubmitJob(self, seri_tasks):
+    def _innerSubmitJob(self, seri_tasks: List[serializator.SerializableTask]):
         # schedule
         logical_map, execute_map = self.scheduler.schedule(seri_tasks)
         
@@ -57,8 +64,6 @@ class JobManagerServicer(job_manager_pb2_grpc.JobManagerServiceServicer):
         # start
         self._startExecuteTasks(logical_map, execute_map)
         _LOGGER.info("Success start all task.")
-
-        return gen_nil_response()
  
     def _deployExecuteTasks(self, 
             execute_map: Dict[str, List[serializator.SerializableExectueTask]]):

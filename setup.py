@@ -20,5 +20,7 @@ setup(
     install_requires=[
         'protobuf>=3.12.2',
         'readerwriterlock',
+        "grpcio==1.39.0",
+        "grpcio-tools==1.39.0",
     ],
 )

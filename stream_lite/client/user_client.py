@@ -40,4 +40,4 @@ class UserClient(ClientBase):
         resp = self.stub.submitJob(req)
         if resp.status.err_code != 0:
             raise Exception(resp.status.message)
-        print(str(resp))
+        _LOGGER.info("Success to submit job (jobid={})".format(resp.jobid))

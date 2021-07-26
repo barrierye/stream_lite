@@ -43,16 +43,16 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
         self.subtask_name = execute_task.subtask_name
         self.partition_idx = execute_task.partition_idx
         self.port = execute_task.port
+        self._save_resources(list(execute_task.resources))
+        self._save_task_file(execute_task.task_file)
         self.input_receiver = None
         self.output_dispenser = None
         self._core_process = None
 
     # --------------------------- init for start service ----------------------------
     def init_for_start_service(self):
-        self._save_resources(list(execute_task.resources))
-        self._save_task_file(execute_task.task_file)
-        input_channel = self._init_input_receiver(input_endpoints)
-        output_channel = self._init_output_dispenser(output_endpoints)
+        input_channel = self._init_input_receiver(self.input_endpoints)
+        output_channel = self._init_output_dispenser(self.output_endpoints)
         self._start_compute_on_standleton_process(
                 input_channel, output_channel)
 
@@ -82,8 +82,9 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
                 self.subtask_name, self.partition_idx)
         return output_channel
 
-    def _compute_core(self, 
-            input_channel: multiprocess.Queue,
+    @staticmethod
+    def _compute_core( 
+            input_channel: multiprocessing.Queue,
             output_channel: multiprocessing.Queue):
         """
         具体执行逻辑
@@ -91,19 +92,19 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
         pass
 
     def _start_compute_on_standleton_process(self,
-            input_channel: multiprocess.Queue,
+            input_channel: multiprocessing.Queue,
             output_channel: multiprocessing.Queue):
         if self._core_process is not None:
             raise SystemExit("Failed: process already running")
         self._core_process = multiprocessing.Process(
-                target=self._compute_core, args=(input_channel, output_channel))
+                target=SubTaskServicer._compute_core, args=(input_channel, output_channel))
         self._core_process.daemon = True
         self._core_process.start()
 
     # --------------------------- pushStreamData (recv) ----------------------------
     def pushStreamData(self, request, context):
         data = serializator.SerializableStreamData.from_proto(request.data)
-        pre_subtask = request.from
+        pre_subtask = request.from_subtask
         partition_idx = request.partition_idx
         _LOGGER.debug("Recv data(from={}): {}".format(
             pre_subtask, str(request)))

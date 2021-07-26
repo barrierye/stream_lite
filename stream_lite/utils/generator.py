@@ -5,6 +5,7 @@
 from contextlib import closing
 import socket
 import os
+import uuid
 
 
 class SingletonMeta(type):
@@ -26,9 +27,19 @@ class SingletonMeta(type):
         return cls._instances[cls]
 
 
-class AvailablePortGenerator(metaclass=SingletonMeta):
+class GeneratorBase(metaclass=SingletonMeta):
+
+    def __init__(self):
+        pass
+
+    def next(self):
+        raise NotImplementedError("Failed: function not implemented")
+
+
+class AvailablePortGenerator(GeneratorBase):
 
     def __init__(self, start_port=12000):
+        super(AvailablePortGenerator, self).__init__()
         self.curr_port = start_port
 
     @staticmethod
@@ -44,3 +55,13 @@ class AvailablePortGenerator(metaclass=SingletonMeta):
         available_port = self.curr_port
         self.curr_port += 1
         return available_port
+
+
+class IdGenerator(GeneratorBase):
+
+    def __init__(self):
+        super(IdGenerator, self).__init__()
+        
+    def next(self):
+        uid = uuid.uuid1()
+        return uid.hex
