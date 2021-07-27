@@ -32,7 +32,7 @@ class SubTaskClient(ClientBase):
             partition_idx: int, record: common_pb2.Record):
         resp = self.stub.pushRecord(
                 subtask_pb2.PushRecordRequest(
-                    from_subtask=subtask_name,
+                    from_subtask=from_subtask,
                     partition_idx=partition_idx,
                     record=record))
         if resp.status.err_code != 0:

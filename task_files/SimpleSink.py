@@ -10,6 +10,6 @@ class SimpleSink(SinkOperatorBase):
         print("init sink")
 
     def compute(self, inputs):
-        return inputs
+        print(inputs)
 
 

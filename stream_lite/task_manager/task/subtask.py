@@ -168,18 +168,18 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
         task_instance.init()
 
         while True:
-            data_id = -1 # TODO: 进程安全 gen
+            data_id = None
             timestamp = None
 
             input_data = None
             if not is_source_op:
                 record = input_channel.get() # SerializableRecord
-                input_data = record.data # SerializableData
+                input_data = record.data.data # SerializableData.data
                 data_id = record.data_id
                 timestamp = record.timestamp
                 _LOGGER.debug("[In] {}: {}".format(cls_name, input_data))
             else:
-                data_id = 1 # TODO: 进程安全 gen
+                data_id = "data_id" # TODO: 进程安全 gen
                 timestamp = util.get_timestamp()
             
             output_data = task_instance.compute(input_data)
@@ -208,10 +208,10 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
 
     # --------------------------- pushRecord (recv) ----------------------------
     def pushRecord(self, request, context):
-        data = serializator.SerializableRecord.from_proto(request.data)
         pre_subtask = request.from_subtask
         partition_idx = request.partition_idx
+        record = request.record
         _LOGGER.debug("Recv data(from={}): {}".format(
             pre_subtask, str(request)))
-        self.input_receiver.recv_data(partition_idx, data)
+        self.input_receiver.recv_data(partition_idx, record)
         return gen_nil_response()

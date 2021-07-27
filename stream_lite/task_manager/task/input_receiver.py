@@ -36,8 +36,8 @@ class InputReceiver(object):
             self.partitions.append(input_partition_receiver)
 
     def recv_data(self, partition_idx: int, 
-            data: common_pb2.Record) -> None:
-        self.partitions[partition_idx].recv_data(data)
+            record: common_pb2.Record) -> None:
+        self.partitions[partition_idx].recv_data(record)
 
 
 class InputPartitionReceiver(object):
@@ -51,8 +51,8 @@ class InputPartitionReceiver(object):
         self.event_barrier = event_barrier
         self._process = None
 
-    def recv_data(self, data: common_pb2.Record) -> None:
-        self.queue.put(data)
+    def recv_data(self, record: common_pb2.Record) -> None:
+        self.queue.put(record)
 
     def _prase_data_and_carry_to_channel(self, 
             input_queue: multiprocessing.Queue,

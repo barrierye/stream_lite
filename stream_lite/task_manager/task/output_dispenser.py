@@ -55,21 +55,21 @@ class OutputDispenser(object):
 
         need_broadcast_datatype = [common_pb2.Record.DataType.CHECKPOINT]
         while True:
-            data = input_channel.get()
-            if data.data_type in need_broadcast_datatype:
+            seri_record = input_channel.get()
+            if seri_record.data_type in need_broadcast_datatype:
                 # broadcast
                 for output_partition_dispenser in partitions:
-                    output_partition_dispenser.push_data(data)
+                    output_partition_dispenser.push_data(seri_record)
             else:
                 # partitioning
                 partition_idx = -1
-                if data.partition_key:
+                if seri_record.partition_key:
                     partition_idx = partitioner.KeyPartitioner.partitioning(
-                            data, partition_num)
+                            seri_record, partition_num)
                 else:
                     partition_idx = partitioner.RandomPartitioner.partitioning(
-                            data, partition_num)
-                partitions[partition_idx].push_data(data)
+                            seri_record, partition_num)
+                partitions[partition_idx].push_data(seri_record)
 
     def start_standleton_process(self):
         proc = multiprocessing.Process(

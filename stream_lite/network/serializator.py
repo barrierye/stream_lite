@@ -266,7 +266,7 @@ class SerializableRecord(SerializableObject):
         # data_type: common_pb2.Record.DataType.XX
         return SerializableRecord(
                 data_id=proto.data_id,
-                data=SerializableData.from_bytes(proto.data),
+                data=SerializableData.from_bytes(proto.data, proto.data_type),
                 timestamp=proto.timestamp,
                 data_type=proto.data_type,
                 partition_key=proto.partition_key)
