@@ -4,4 +4,4 @@
 # Create time: 2021-07-25
 from .server import JobManager, TaskManager
 from .client import UserClient, TaskManagerClient
-from .task_manager import Task
+from .task_manager.task.operator import OperatorBase, SourceOperatorBase, SinkOperatorBase

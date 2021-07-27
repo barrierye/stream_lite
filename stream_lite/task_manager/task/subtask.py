@@ -20,6 +20,7 @@ from stream_lite.utils import util
 
 from .input_receiver import InputReceiver
 from .output_dispenser import OutputDispenser
+from .operator import OperatorBase, SourceOperatorBase, SinkOperatorBase
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -60,13 +61,6 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
         self.output_dispenser = None
         self._core_process = None
 
-    # --------------------------- init for start service ----------------------------
-    def init_for_start_service(self):
-        input_channel = self._init_input_receiver(self.input_endpoints)
-        output_channel = self._init_output_dispenser(self.output_endpoints)
-        self._start_compute_on_standleton_process(
-                input_channel, output_channel)
-
     def _save_resources(self, dirpath: str,
             resources: List[serializator.SerializableFile]) -> None:
         for f in resources:
@@ -82,6 +76,33 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
                 break
             os.system("touch {}".format(
                 os.path.join(dirpath, "__init__.py")))
+
+    # --------------------------- init for start service ----------------------------
+    def init_for_start_service(self):
+        input_channel = None
+        output_channel = None
+        if not self._is_source_op():
+            input_channel = self._init_input_receiver(
+                    self.input_endpoints)
+        if not self._is_sink_op():
+            output_channel = self._init_output_dispenser(
+                    self.output_endpoints)
+        self._start_compute_on_standleton_process(
+                input_channel, output_channel)
+
+    def _is_source_op(self) -> bool:
+        module = SubTaskServicer._import_module_from_file(
+                    os.path.join(
+                        self.taskfile_dir, self.task_filename))
+        cls = getattr(module, self.cls_name)
+        return issubclass(cls, SourceOperatorBase)
+
+    def _is_sink_op(self) -> bool:
+        module = SubTaskServicer._import_module_from_file(
+                    os.path.join(
+                        self.taskfile_dir, self.task_filename))
+        cls = getattr(module, self.cls_name)
+        return issubclass(cls, SinkOperatorBase)
 
     def _init_input_receiver(self, input_endpoints: List[str]) \
             -> multiprocessing.Queue:
@@ -119,15 +140,71 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
             cls_name: str,
             input_channel: multiprocessing.Queue,
             output_channel: multiprocessing.Queue):
+        try:
+            SubTaskServicer._inner_compute_core(
+                    full_task_filename, cls_name,
+                    input_channel, output_channel)
+        except Exception as e:
+            _LOGGER.error(e, exc_info=True)
+            raise SystemExit("Failed: run {} task failed".format(cls_name))
+
+    @staticmethod
+    def _inner_compute_core( 
+            full_task_filename: str,
+            cls_name: str,
+            input_channel: multiprocessing.Queue,
+            output_channel: multiprocessing.Queue):
         """
         具体执行逻辑
         """
-        # import task
-        dirpath, filename = os.path.split(full_task_filename)
+        module = SubTaskServicer._import_module_from_file(full_task_filename)
+        cls = getattr(module, cls_name)
+        if not issubclass(cls, OperatorBase):
+            raise SystemExit(
+                    "Failed: {} is not a subclass of OperatorBase".format(cls_name))
+        is_source_op = issubclass(cls, SourceOperatorBase)
+        is_sink_op = issubclass(cls, SinkOperatorBase)
+        task_instance = cls()
+        task_instance.init()
+
+        while True:
+            data_id = -1 # TODO: 进程安全 gen
+            timestamp = None
+
+            input_data = None
+            if not is_source_op:
+                record = input_channel.get() # SerializableRecord
+                input_data = record.data # SerializableData
+                data_id = record.data_id
+                timestamp = record.timestamp
+                _LOGGER.debug("[In] {}: {}".format(cls_name, input_data))
+            else:
+                data_id = 1 # TODO: 进程安全 gen
+                timestamp = util.get_timestamp()
+            
+            output_data = task_instance.compute(input_data)
+            _LOGGER.debug("[Out] {}: {}".format(cls_name, output_data))
+            
+            if not is_sink_op:
+                output = serializator.SerializableData.from_object(output_data)
+                output_channel.put(
+                        serializator.SerializableRecord(
+                            data_id=data_id,
+                            data_type=output.data_type,
+                            data=output,
+                            timestamp=timestamp,
+                            partition_key=""))
+
+    @staticmethod
+    def _import_module_from_file(filepath: str):
+        if not filepath.endswith(".py"):
+            raise SystemExit(
+                    "Failed: can not import module '{}'".format(filepath))
+        dirpath, filename = os.path.split(filepath)
         module_path = "{}.{}".format(
                 dirpath.replace("/", "."), filename.split(".")[0])
         module = importlib.import_module(module_path)
-        #TODO
+        return module
 
     # --------------------------- pushRecord (recv) ----------------------------
     def pushRecord(self, request, context):

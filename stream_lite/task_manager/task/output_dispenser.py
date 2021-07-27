@@ -6,6 +6,7 @@ import logging
 import multiprocessing
 from typing import List, Dict
 
+from stream_lite.proto import common_pb2
 from stream_lite.client import SubTaskClient
 from stream_lite.network import serializator
 
@@ -91,9 +92,8 @@ class OutputPartitionDispenser(object):
         self.client = SubTaskClient()
         self.client.connect(endpoint)
 
-    def push_data(self, data: serializator.SerializableRecord) -> None:
+    def push_data(self, record: serializator.SerializableRecord) -> None:
         self.client.pushRecord(
-                subtask_pb2.PushRecordRequest(
                     from_subtask=self.subtask_name,
                     partition_idx=self.partition_idx,
-                    data=data.instance_to_proto()))
+                    record=record.instance_to_proto())

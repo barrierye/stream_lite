@@ -27,11 +27,20 @@ class SerializableObject(object):
     def from_proto(proto: object):
         raise NotImplementedError("Failed: function not implemented")
 
+    def check_attrs(self, required_attrs: list):
+        for attr in required_attrs:
+            if not hasattr(self, attr):
+                raise AttributeError(
+                        "Failed: {} must have attribute {}".format(
+                            type(self), attr))
 
 class SerializableTask(SerializableObject):
 
     def __init__(self, **kwargs):
         super(SerializableTask, self).__init__(**kwargs)
+        required_attrs = ["cls_name", "currency", "input_tasks",
+            "resources", "task_file", "locate"]
+        self.check_attrs(required_attrs)
 
     @staticmethod
     def to_proto(task_dict: dict, task_dir: str) -> common_pb2.Task:
@@ -63,6 +72,8 @@ class SerializableFile(SerializableObject):
 
     def __init__(self, **kwargs):
         super(SerializableFile, self).__init__(**kwargs)
+        required_attrs = ["name", "content"]
+        self.check_attrs(required_attrs)
     
     def instance_to_proto(self) -> common_pb2.File:
         return common_pb2.File(
@@ -98,6 +109,8 @@ class SerializableTaskManagerDesc(SerializableObject):
 
     def __init__(self, **kwargs):
         super(SerializableTaskManagerDesc, self).__init__(**kwargs)
+        required_attrs = ["host", "endpoint", "name", "coord", "resource"]
+        self.check_attrs(required_attrs)
 
     @staticmethod
     def to_proto(
@@ -132,6 +145,8 @@ class SerializableMachineResource(SerializableObject):
 
     def __init__(self, **kwargs):
         super(SerializableMachineResource, self).__init__(**kwargs)
+        required_attrs = ["slot_number"]
+        self.check_attrs(required_attrs)
 
     @staticmethod
     def to_proto(resource: dict) -> common_pb2.MachineResource:
@@ -148,6 +163,8 @@ class SerializableCoordinate(SerializableObject):
 
     def __init__(self, **kwargs):
         super(SerializableCoordinate, self).__init__(**kwargs)
+        required_attrs = ["x", "y"]
+        self.check_attrs(required_attrs)
 
     @staticmethod
     def to_proto(x: float, y: float) -> common_pb2.Coordinate:
@@ -163,6 +180,8 @@ class SerializableRequiredSlotDesc(SerializableObject):
 
     def __init__(self, **kwargs):
         super(SerializableRequiredSlotDesc, self).__init__(**kwargs)
+        required_attrs = []
+        self.check_attrs(required_attrs)
 
     @staticmethod
     def to_proto() -> common_pb2.RequiredSlotDescription:
@@ -177,6 +196,10 @@ class SerializableExectueTask(SerializableObject):
 
     def __init__(self, **kwargs):
         super(SerializableExectueTask, self).__init__(**kwargs)
+        required_attrs = ["cls_name", "input_endpoints", 
+                "output_endpoints", "resources", "task_file",
+                "subtask_name", "partition_idx", "port"]
+        self.check_attrs(required_attrs)
 
     def instance_to_proto(self) -> common_pb2.ExecuteTask:
         return SerializableExectueTask.to_proto(
@@ -226,24 +249,26 @@ class SerializableRecord(SerializableObject):
 
     def __init__(self, **kwargs):
         super(SerializableRecord, self).__init__(**kwargs)
+        required_attrs = ["data_id", "data", "timestamp",
+                "data_type", "partition_key"]
+        self.check_attrs(required_attrs)
 
     def instance_to_proto(self) -> common_pb2.Record:
         return common_pb2.Record(
                 data_id=self.data_id,
-                kvs=[kv.instance_to_proto() 
-                    for kv in self.kvs],
+                data=self.data.instance_to_bytes(),
                 timestamp=self.timestamp,
-                date_type=self.date_type,
+                data_type=self.data_type,
                 partition_key=self.partition_key)
 
     @staticmethod
     def from_proto(proto: common_pb2.Record):
-        # date_type: common_pb2.Record.DataType.XX
+        # data_type: common_pb2.Record.DataType.XX
         return SerializableRecord(
                 data_id=proto.data_id,
                 data=SerializableData.from_bytes(proto.data),
                 timestamp=proto.timestamp,
-                date_type=proto.date_type,
+                data_type=proto.data_type,
                 partition_key=proto.partition_key)
 
 
@@ -251,15 +276,21 @@ class SerializableData(SerializableObject):
 
     def __init__(self, **kwargs):
         super(SerializableData, self).__init__(**kwargs)
+        required_attrs = ["data_type", "data"]
+        self.check_attrs(required_attrs)
 
     def instance_to_bytes(self):
         byte_array = None
-        if self.date_type == common_pb2.Record.DataType.STRING:
-            byte_array = data.encode("utf-8")
-        elif self.date_type == common_pb2.Record.DataType.KEYVALUE:
-            byte_array = data.SerializeToString()
-        elif self.date_type == common_pb2.Record.DataType.CHECKPOINT:
-            byte_array = data.SerializeToString()
+        if self.data_type == common_pb2.Record.DataType.STRING:
+            byte_array = self.data.encode("utf-8")
+        elif self.data_type == common_pb2.Record.DataType.KEYVALUE:
+            kvs = common_pb2.Record.KeyValue()
+            for key, value in self.data.items():
+                kvs.keys.append(key)
+                kvs.values.append(value)
+            byte_array = kvs.SerializeToString()
+        elif self.data_type == common_pb2.Record.DataType.CHECKPOINT:
+            byte_array = self.data.SerializeToString()
         else:
             raise TypeError("Failed: unknow data type({})".format(data_type))
         return byte_array
@@ -270,13 +301,29 @@ class SerializableData(SerializableObject):
         if data_type == common_pb2.Record.DataType.STRING:
             data = byte_array.decode("utf-8")
         elif data_type == common_pb2.Record.DataType.KEYVALUE:
-            data = common_pb2.Record.KeyValue()
-            data.ParseFromString(byte_array)
+            kvs = common_pb2.Record.KeyValue()
+            kvs.ParseFromString(byte_array)
+            data = {}
+            for idx, key in enumerate(kvs.keys):
+                data[key] = kvs.values[idx]
         elif data_type == common_pb2.Record.CHECKPOINT:
             data = common_pb2.Record.Checkpoint()
             data.ParseFromString(byte_array)
         else:
             raise TypeError("Failed: unknow data type({})".format(data_type))
-        return SerializableKeyValueData(
+        return SerializableData(
+                data_type=data_type,
+                data=data)
+    
+    @staticmethod
+    def from_object(data):
+        data_type = None
+        if isinstance(data, str):
+            data_type = common_pb2.Record.DataType.STRING
+        elif isinstance(data, dict):
+            data_type = common_pb2.Record.DataType.KEYVALUE
+        else:
+            raise TypeError("Failed: unknow data type({})".format(type(data)))
+        return SerializableData(
                 data_type=data_type,
                 data=data)

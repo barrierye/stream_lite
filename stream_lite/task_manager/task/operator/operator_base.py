@@ -6,10 +6,13 @@
 用户自定义算子的基类
 """
 
-class Task(object):
+class OperatorBase(object):
 
     def __init__(self):
         pass
 
-    def compute(self):
+    def init(self):
         pass
+
+    def compute(self, data):
+        raise NotImplementedError("Failed: function not implemented")

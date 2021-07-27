@@ -28,7 +28,12 @@ class SubTaskClient(ClientBase):
     def _init_stub(self, channel):
         return subtask_pb2_grpc.SubTaskServiceStub(channel)
 
-    def pushRecord(self, proto: common_pb2.Record):
-        resp = self.stub.pushRecord(proto)
+    def pushRecord(self, from_subtask: str,
+            partition_idx: int, record: common_pb2.Record):
+        resp = self.stub.pushRecord(
+                subtask_pb2.PushRecordRequest(
+                    from_subtask=subtask_name,
+                    partition_idx=partition_idx,
+                    record=record))
         if resp.status.err_code != 0:
             raise SystemExit(resp.status.message)

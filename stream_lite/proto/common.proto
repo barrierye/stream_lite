@@ -75,8 +75,8 @@ message Record {
   }
   
   message KeyValue {
-    repeated string key = 1;
-    repeated string value = 2;
+    repeated string keys = 1;
+    repeated string values = 2;
   }
 
   message Checkpoint {

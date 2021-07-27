@@ -2,11 +2,15 @@
 # Copyright (c) 2021 barriery
 # Python release: 3.7.0
 # Create time: 2021-07-24
-from stream_lite import Task
+import time
 
-class SimpleSource(Task):
-    def init(self, name):
+from stream_lite import SourceOperatorBase
+
+class SimpleSource(SourceOperatorBase):
+
+    def init(self):
         print("init source")
 
-    def run(self, inputs):
+    def compute(self, inputs):
+        time.sleep(1)
         return "source"

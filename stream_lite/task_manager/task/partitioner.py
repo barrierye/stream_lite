@@ -57,5 +57,5 @@ class RandomPartitioner(PartitionerBase):
     def partitioning(
             data: serializator.SerializableRecord,
             partition_num: int) -> int:
-        random_num = random.random()
+        random_num = random.randint(0, partition_num - 1)
         return random_num % partition_num

@@ -5,6 +5,7 @@
 from contextlib import closing
 import socket
 import os
+import time
 
 def get_ip() -> str:
     hostname = socket.gethostname()
@@ -20,3 +21,6 @@ def get_filename(url: str) -> str:
     """
     path, filename = os.path.split(url)
     return filename
+
+def get_timestamp() -> int:
+    return int(time.time())
