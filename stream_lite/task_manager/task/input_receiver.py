@@ -36,7 +36,7 @@ class InputReceiver(object):
             self.partitions.append(input_partition_receiver)
 
     def recv_data(self, partition_idx: int, 
-            data: common_pb2.StreamData) -> None:
+            data: common_pb2.Record) -> None:
         self.partitions[partition_idx].recv_data(data)
 
 
@@ -51,27 +51,25 @@ class InputPartitionReceiver(object):
         self.event_barrier = event_barrier
         self._process = None
 
-    def recv_data(self, data: common_pb2.StreamData) -> None:
+    def recv_data(self, data: common_pb2.Record) -> None:
         self.queue.put(data)
 
     def _prase_data_and_carry_to_channel(self, 
             input_queue: multiprocessing.Queue,
             output_channel: multiprocessing.Queue,
             event_barrier: multiprocessing.Barrier):
+        need_barrier_datatype = [common_pb2.Record.DataType.CHECKPOINT]
         while True:
             proto_data = input_queue.get()
-            seri_data = serializator.SerializableStreamData.from_proto(proto_data)
-            if seri_data.data_type == common_pb2.StreamData.DataType.NORMAL:
-                output_channel.put(seri_data)
-            elif seri_data.data_type == common_pb2.StreamData.DataType.CHECKPOINT:
+            seri_data = serializator.SerializableRecord.from_proto(proto_data)
+            if seri_data.data_type in need_barrier_datatype:
                 order = event_barrier.wait()
                 if order == 0:
                     # only order == 0 push event to output channel
                     output_channel.put(seri_data)
                     event_barrier.reset()
             else:
-                raise SystemExit(
-                        "Fatal: unknow data type({})".format(seri_data.data_type))
+                output_channel.put(seri_data)
 
     def start_standleton_process(self):
         """

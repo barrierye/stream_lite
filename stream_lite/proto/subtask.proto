@@ -5,8 +5,8 @@ import "stream_lite/proto/common.proto";
 package subtask;
 
 
-message PushStreamDataRequest {
-  required common.StreamData data = 1;
+message PushRecordRequest {
+  required common.Record record = 1;
   required string from_subtask = 2; // upstream subtask name
   required int32 partition_idx = 3;
 }
@@ -14,5 +14,5 @@ message PushStreamDataRequest {
 
 service SubTaskService {
   // from other subtask
-  rpc pushStreamData(PushStreamDataRequest) returns (common.NilResponse) {}
+  rpc pushRecord(PushRecordRequest) returns (common.NilResponse) {}
 };

@@ -129,9 +129,9 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
         module = importlib.import_module(module_path)
         #TODO
 
-    # --------------------------- pushStreamData (recv) ----------------------------
-    def pushStreamData(self, request, context):
-        data = serializator.SerializableStreamData.from_proto(request.data)
+    # --------------------------- pushRecord (recv) ----------------------------
+    def pushRecord(self, request, context):
+        data = serializator.SerializableRecord.from_proto(request.data)
         pre_subtask = request.from_subtask
         partition_idx = request.partition_idx
         _LOGGER.debug("Recv data(from={}): {}".format(

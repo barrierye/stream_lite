@@ -17,7 +17,7 @@ class PartitionerBase(object):
 
     @staticmethod
     def partitioning(
-            data: serializator.SerializableStreamData,
+            data: serializator.SerializableRecord,
             partition_num: int) -> int:
         raise NotImplementedError("Failed: function not implemented")
 
@@ -29,7 +29,7 @@ class KeyPartitioner(PartitionerBase):
 
     @staticmethod
     def partitioning(
-            data: serializator.SerializableStreamData,
+            data: serializator.SerializableRecord,
             partition_num: int) -> int:
         partition_key = data.partition_key
         return partition_key % partition_num
@@ -42,7 +42,7 @@ class TimestampPartitioner(PartitionerBase):
 
     @staticmethod
     def partitioning(
-            data: serializator.SerializableStreamData,
+            data: serializator.SerializableRecord,
             partition_num: int) -> int:
         timestamp = data.timestamp
         return timestamp % partition_num
@@ -55,7 +55,7 @@ class RandomPartitioner(PartitionerBase):
 
     @staticmethod
     def partitioning(
-            data: serializator.SerializableStreamData,
+            data: serializator.SerializableRecord,
             partition_num: int) -> int:
         random_num = random.random()
         return random_num % partition_num

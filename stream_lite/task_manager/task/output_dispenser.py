@@ -36,7 +36,7 @@ class OutputDispenser(object):
         self.partition_idx = partition_idx
         self._process = self.start_standleton_process()
 
-    def push_data(self, data: serializator.SerializableStreamData) -> None:
+    def push_data(self, data: serializator.SerializableRecord) -> None:
         self.channel.put(data)
 
     def _partitioning_data_and_carry_to_next_subtask(self,
@@ -51,9 +51,15 @@ class OutputDispenser(object):
             partitions.append(output_partition_dispenser)
 
         partition_num = len(partitions)
+
+        need_broadcast_datatype = [common_pb2.Record.DataType.CHECKPOINT]
         while True:
             data = input_channel.get()
-            if data.data_type == common_pb2.StreamData.DataType.NORMAL:
+            if data.data_type in need_broadcast_datatype:
+                # broadcast
+                for output_partition_dispenser in partitions:
+                    output_partition_dispenser.push_data(data)
+            else:
                 # partitioning
                 partition_idx = -1
                 if data.partition_key:
@@ -63,13 +69,6 @@ class OutputDispenser(object):
                     partition_idx = partitioner.RandomPartitioner.partitioning(
                             data, partition_num)
                 partitions[partition_idx].push_data(data)
-            elif data.data_type == common_pb2.StreamData.DataType.CHECKPOINT:
-                # broadcast
-                for output_partition_dispenser in partitions:
-                    output_partition_dispenser.push_data(data)
-            else:
-                raise SystemExit(
-                        "Failed: unknow data type({})".format(data.data_type))
 
     def start_standleton_process(self):
         proc = multiprocessing.Process(
@@ -92,9 +91,9 @@ class OutputPartitionDispenser(object):
         self.client = SubTaskClient()
         self.client.connect(endpoint)
 
-    def push_data(self, data: serializator.SerializableStreamData) -> None:
-        self.client.pushStreamData(
-                subtask_pb2.PushStreamDataRequest(
+    def push_data(self, data: serializator.SerializableRecord) -> None:
+        self.client.pushRecord(
+                subtask_pb2.PushRecordRequest(
                     from_subtask=self.subtask_name,
                     partition_idx=self.partition_idx,
                     data=data.instance_to_proto()))

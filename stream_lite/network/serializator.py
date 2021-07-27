@@ -71,7 +71,7 @@ class SerializableFile(SerializableObject):
 
     @staticmethod
     def to_proto(path: str, name: str) -> common_pb2.File:
-        with open(path) as f:
+        with open(path, "rb") as f:
             file_str = f.read()
         file_proto = common_pb2.File(
                 name=name,
@@ -87,7 +87,7 @@ class SerializableFile(SerializableObject):
     def persistence_to_localfs(self, prefix_path: str) -> bool:
         os.system("mkdir -p {}".format(prefix_path))
         filename = os.path.join(prefix_path, self.name)
-        with open(filename, "w") as f:
+        with open(filename, "wb") as f:
             f.write(self.content)
         _LOGGER.debug(
                 "Success persistence to localfs: {}".format(filename))
@@ -222,13 +222,13 @@ class SerializableExectueTask(SerializableObject):
                 port=proto.port)
 
 
-class SerializableStreamData(SerializableObject):
+class SerializableRecord(SerializableObject):
 
     def __init__(self, **kwargs):
-        super(SerializableStreamData, self).__init__(**kwargs)
+        super(SerializableRecord, self).__init__(**kwargs)
 
-    def instance_to_proto(self) -> common_pb2.StreamData:
-        return common_pb2.StreamData(
+    def instance_to_proto(self) -> common_pb2.Record:
+        return common_pb2.Record(
                 data_id=self.data_id,
                 kvs=[kv.instance_to_proto() 
                     for kv in self.kvs],
@@ -237,29 +237,46 @@ class SerializableStreamData(SerializableObject):
                 partition_key=self.partition_key)
 
     @staticmethod
-    def from_proto(proto: common_pb2.StreamData):
-        # date_type: common_pb2.StreamData.DataType.XX
-        return SerializableStreamData(
+    def from_proto(proto: common_pb2.Record):
+        # date_type: common_pb2.Record.DataType.XX
+        return SerializableRecord(
                 data_id=proto.data_id,
-                kvs=[SerializableKeyValueData.from_proto(kv)
-                    for kv in proto.kvs],
+                data=SerializableData.from_bytes(proto.data),
                 timestamp=proto.timestamp,
                 date_type=proto.date_type,
                 partition_key=proto.partition_key)
 
 
-class SerializableKeyValueData(SerializableObject):
+class SerializableData(SerializableObject):
 
     def __init__(self, **kwargs):
-        super(SerializableKeyValueData, self).__init__(**kwargs)
+        super(SerializableData, self).__init__(**kwargs)
 
-    def instance_to_proto(self) -> common_pb2.StreamData.KeyValueData:
-        return common_pb2.StreamData.KeyValueData(
-                key=self.key,
-                value=self.value)
+    def instance_to_bytes(self):
+        byte_array = None
+        if self.date_type == common_pb2.Record.DataType.STRING:
+            byte_array = data.encode("utf-8")
+        elif self.date_type == common_pb2.Record.DataType.KEYVALUE:
+            byte_array = data.SerializeToString()
+        elif self.date_type == common_pb2.Record.DataType.CHECKPOINT:
+            byte_array = data.SerializeToString()
+        else:
+            raise TypeError("Failed: unknow data type({})".format(data_type))
+        return byte_array
 
     @staticmethod
-    def from_proto(proto: common_pb2.StreamData.KeyValueData):
+    def from_bytes(byte_array: bytes, data_type: common_pb2.Record.DataType):
+        data = None
+        if data_type == common_pb2.Record.DataType.STRING:
+            data = byte_array.decode("utf-8")
+        elif data_type == common_pb2.Record.DataType.KEYVALUE:
+            data = common_pb2.Record.KeyValue()
+            data.ParseFromString(byte_array)
+        elif data_type == common_pb2.Record.CHECKPOINT:
+            data = common_pb2.Record.Checkpoint()
+            data.ParseFromString(byte_array)
+        else:
+            raise TypeError("Failed: unknow data type({})".format(data_type))
         return SerializableKeyValueData(
-                key=proto.key,
-                value=proto.value)
+                data_type=data_type,
+                data=data)
