@@ -9,7 +9,6 @@ from typing import List, Dict
 
 from stream_lite.proto import common_pb2
 from stream_lite.utils import util
-from stream_lite.task_manager.task import operator
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -53,7 +52,8 @@ class SerializableTask(SerializableObject):
                     SerializableFile.to_proto(
                         r, util.get_filename(r)) for r in task_dict["resources"]],
                 locate=task_dict["locate"])
-        if task_dict["name"] not in operator.BUILDIN_OPS:
+        from stream_lite.task_manager.task.operator import BUILDIN_OPS
+        if task_dict["name"] not in BUILDIN_OPS:
             task_proto.task_file=SerializableFile.to_proto(
                     os.path.join(task_dir, task_filename), task_filename)
         return task_proto
@@ -61,7 +61,8 @@ class SerializableTask(SerializableObject):
     @staticmethod
     def from_proto(proto: common_pb2.Task):
         task_file = None
-        if proto.cls_name not in operator.BUILDIN_OPS:
+        from stream_lite.task_manager.task.operator import BUILDIN_OPS
+        if proto.cls_name not in BUILDIN_OPS:
             task_file = SerializableFile.from_proto(proto.task_file)
         return SerializableTask(
                 cls_name=proto.cls_name,

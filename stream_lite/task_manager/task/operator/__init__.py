@@ -10,9 +10,9 @@ from .sink_op_base import SinkOperatorBase
 from .key_op_base import KeyOperatorBase
 from .key_by_input_op import KeyByInputOp
 
-BUILDIN_OPS = ImmutableDict(
-        "OperatorBase": OperatorBase,
-        "SourceOperatorBase": SourceOperatorBase,
-        "SinkOperatorBase": SinkOperatorBase,
-        "KeyOperatorBase": KeyOperatorBase,
-        "KeyByInputOp": KeyByInputOp)
+BUILDIN_OPS = ImmutableDict([
+    ("OperatorBase", OperatorBase),
+    ("SourceOperatorBase", SourceOperatorBase),
+    ("SinkOperatorBase", SinkOperatorBase),
+    ("KeyOperatorBase", KeyOperatorBase),
+    ("KeyByInputOp", KeyByInputOp)])
