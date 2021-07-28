@@ -53,12 +53,28 @@ class InputPartitionReceiver(object):
 
     def recv_data(self, record: common_pb2.Record) -> None:
         self.queue.put(record)
-
+    
     def _prase_data_and_carry_to_channel(self, 
             input_queue: multiprocessing.Queue,
             output_channel: multiprocessing.Queue,
-            event_barrier: multiprocessing.Barrier):
+            event_barrier: multiprocessing.Barrier,
+            succ_start_service_event: multiprocessing.Event):
+        try:
+            self._inner_prase_data_and_carry_to_channel(
+                    input_queue, output_channel, event_barrier,
+                    succ_start_service_event)
+        except Exception as e:
+            _LOGGER.critical(
+                    "Failed: run input_partition_receiver failed ({})".format(e), exc_info=True)
+            os._exit(-1)
+
+    def _inner_prase_data_and_carry_to_channel(self,
+            input_queue: multiprocessing.Queue,
+            output_channel: multiprocessing.Queue,
+            event_barrier: multiprocessing.Barrier,
+            succ_start_service_event: multiprocessing.Event):
         need_barrier_datatype = [common_pb2.Record.DataType.CHECKPOINT]
+        succ_start_service_event.set()
         while True:
             proto_data = input_queue.get()
             seri_data = serializator.SerializableRecord.from_proto(proto_data)
@@ -77,8 +93,13 @@ class InputPartitionReceiver(object):
         """
         if self._process is not None:
             raise SystemExit("Failed: process already running")
+        succ_start_service_event = multiprocessing.Event()
         self._process = multiprocessing.Process(
                 target=self._prase_data_and_carry_to_channel,
-                args=(self.queue, self.channel, self.event_barrier))
+                args=(
+                    self.queue, self.channel, 
+                    self.event_barrier,
+                    succ_start_service_event))
         self._process.daemon = True
         self._process.start()
+        succ_start_service_event.wait()

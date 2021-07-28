@@ -38,7 +38,8 @@ class JobManagerServicer(job_manager_pb2_grpc.JobManagerServiceServicer):
         seri_tasks = []
         for task in request.tasks:
             seri_task = serializator.SerializableTask.from_proto(task)
-            seri_task.task_file.persistence_to_localfs(persistence_dir)
+            if seri_task.task_file is not None:
+                seri_task.task_file.persistence_to_localfs(persistence_dir)
             seri_tasks.append(seri_task)
         
         try:

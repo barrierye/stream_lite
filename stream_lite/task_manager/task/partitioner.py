@@ -31,8 +31,7 @@ class KeyPartitioner(PartitionerBase):
     def partitioning(
             data: serializator.SerializableRecord,
             partition_num: int) -> int:
-        partition_key = data.partition_key
-        return partition_key % partition_num
+        return data.partition_key % partition_num
 
 
 class TimestampPartitioner(PartitionerBase):

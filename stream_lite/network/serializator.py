@@ -46,16 +46,20 @@ class SerializableTask(SerializableObject):
         task_filename = "{}.py".format(task_dict["name"])
         task_proto = common_pb2.Task(
                 cls_name=task_dict["name"],
-                currency=task_dict["currency"],
-                input_tasks=task_dict["input_tasks"],
+                currency=task_dict.get("currency", 1),
+                input_tasks=task_dict.get("input_tasks", []),
                 resources=[
                     SerializableFile.to_proto(
-                        r, util.get_filename(r)) for r in task_dict["resources"]],
+                        r, util.get_filename(r)) 
+                    for r in task_dict.get("resources", [])],
                 locate=task_dict["locate"])
         from stream_lite.task_manager.task.operator import BUILDIN_OPS
         if task_dict["name"] not in BUILDIN_OPS:
-            task_proto.task_file=SerializableFile.to_proto(
-                    os.path.join(task_dir, task_filename), task_filename)
+            task_proto.task_file.CopyFrom(
+                    SerializableFile.to_proto(
+                        os.path.join(
+                            task_dir, task_filename), 
+                        task_filename))
         return task_proto
 
     @staticmethod
@@ -227,15 +231,17 @@ class SerializableExectueTask(SerializableObject):
             subtask_name: str,
             partition_idx: int,
             port: int) -> common_pb2.ExecuteTask:
-        return common_pb2.ExecuteTask(
+        proto = common_pb2.ExecuteTask(
                 cls_name=cls_name,
                 input_endpoints=input_endpoints,
                 output_endpoints=output_endpoints,
                 resources=[f.instance_to_proto() for f in resources],
-                task_file=task_file.instance_to_proto(),
                 subtask_name=subtask_name,
                 partition_idx=partition_idx,
                 port=port)
+        if task_file is not None:
+            proto.task_file.CopyFrom(task_file.instance_to_proto())
+        return proto
 
     @staticmethod
     def from_proto(proto: common_pb2.ExecuteTask):

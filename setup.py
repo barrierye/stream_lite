@@ -22,5 +22,6 @@ setup(
         'readerwriterlock',
         "grpcio==1.39.0",
         "grpcio-tools==1.39.0",
+        "xxhash",
     ],
 )

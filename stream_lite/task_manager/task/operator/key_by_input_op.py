@@ -7,13 +7,15 @@
 """
 
 from .key_op_base import KeyOperatorBase
-
+import xxhash
 
 class KeyByInputOp(KeyOperatorBase):
 
     def __init__(self):
         pass
 
-    def compute(self, data: str) -> str:
+    def compute(self, data: str) -> int:
         """ return key """
-        return data
+        hashed_key = xxhash.xxh32_intdigest(data, seed=19260817)
+        print("key: {}".format(hashed_key))
+        return hashed_key

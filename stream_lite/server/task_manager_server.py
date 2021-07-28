@@ -18,6 +18,7 @@ class TaskManager(ServerBase):
         if rpc_port == -1:
             rpc_port = AvailablePortGenerator().next()
         super(TaskManager, self).__init__(rpc_port, worker_num)
+        self.service_name = "Service@TaskManager"
         self.conf_yaml_path = conf_yaml_path
 
     def init_service(self, server):

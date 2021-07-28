@@ -15,6 +15,7 @@ class JobManager(ServerBase):
 
     def __init__(self, rpc_port, worker_num=1):
         super(JobManager, self).__init__(rpc_port, worker_num)
+        self.service_name = "Service@JobManager"
 
     def init_service(self, server):
         job_manager_pb2_grpc.add_JobManagerServiceServicer_to_server(

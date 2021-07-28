@@ -8,7 +8,7 @@ message ExecuteTask {
   repeated string input_endpoints = 2; // order by partition_idx
   repeated string output_endpoints = 3; // order by partition_idx
   repeated File resources = 4;
-  required File task_file = 5;
+  optional File task_file = 5;
   required string subtask_name = 6;
   required int32 partition_idx = 7;
   required int32 port = 8;

@@ -20,7 +20,7 @@ from stream_lite.utils import util
 
 from .input_receiver import InputReceiver
 from .output_dispenser import OutputDispenser
-import operator
+from . import operator
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -126,6 +126,7 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
             output_channel: multiprocessing.Queue):
         if self._core_process is not None:
             raise SystemExit("Failed: process already running")
+        succ_start_service_event = multiprocessing.Event()
         self._core_process = multiprocessing.Process(
                 target=SubTaskServicer._compute_core, 
                 args=(
@@ -133,9 +134,11 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
                         self.taskfile_dir, self.task_filename), 
                     self.cls_name, self.subtask_name, 
                     self.resource_path_dict, 
-                    input_channel, output_channel))
+                    input_channel, output_channel,
+                    succ_start_service_event))
         self._core_process.daemon = True
         self._core_process.start()
+        succ_start_service_event.wait()
 
     # --------------------------- compute core ----------------------------
     @staticmethod
@@ -145,14 +148,17 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
             subtask_name: str,
             resource_path_dict: Dict[str, str],
             input_channel: multiprocessing.Queue,
-            output_channel: multiprocessing.Queue):
+            output_channel: multiprocessing.Queue,
+            succ_start_service_event: multiprocessing.Event):
         try:
             SubTaskServicer._inner_compute_core(
                     full_task_filename, cls_name, subtask_name,
-                    resource_path_dict, input_channel, output_channel)
+                    resource_path_dict, input_channel, output_channel,
+                    succ_start_service_event)
         except Exception as e:
-            _LOGGER.error(e, exc_info=True)
-            raise SystemExit("Failed: run {} task failed".format(subtask_name))
+            _LOGGER.critical(
+                    "Failed: run {} task failed ({})".format(e), exc_info=True)
+            os._exit(-1)
 
     @staticmethod
     def _inner_compute_core( 
@@ -161,7 +167,8 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
             subtask_name: str,
             resource_path_dict: Dict[str, str],
             input_channel: multiprocessing.Queue,
-            output_channel: multiprocessing.Queue):
+            output_channel: multiprocessing.Queue,
+            succ_start_service_event: multiprocessing.Event):
         """
         具体执行逻辑
         """
@@ -176,31 +183,36 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
         task_instance = cls()
         task_instance.set_name(subtask_name)
         task_instance.init(resource_path_dict)
+        succ_start_service_event.set()
 
         while True:
             data_id = None
             timestamp = None
             partition_key = ""
+            output_data = None
 
             input_data = None
             if not is_source_op:
+                print("[in] {}".format(subtask_name))
                 record = input_channel.get() # SerializableRecord
                 input_data = record.data.data # SerializableData.data
                 data_id = record.data_id
                 timestamp = record.timestamp
-                _LOGGER.debug("[In] {}: {}".format(cls_name, input_data))
+                #  _LOGGER.debug("[In] {}: {}".format(cls_name, input_data))
             else:
                 data_id = "data_id" # TODO: 进程安全 gen
                 timestamp = util.get_timestamp()
             
-            output_data = task_instance.compute(input_data)
-            _LOGGER.debug("[Out] {}: {}".format(cls_name, output_data))
             if is_key_op:
-                partition_key = output_data
                 output_data = input_data
+                partition_key = task_instance.compute(input_data)
+            else:
+                output_data = task_instance.compute(input_data)
+            #  _LOGGER.debug("[Out] {}: {}".format(cls_name, output_data))
             
             if not is_sink_op:
                 output = serializator.SerializableData.from_object(output_data)
+                print("[out] {}".format(subtask_name))
                 output_channel.put(
                         serializator.SerializableRecord(
                             data_id=data_id,
@@ -225,6 +237,7 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
 
     # --------------------------- pushRecord (recv) ----------------------------
     def pushRecord(self, request, context):
+        print("recv")
         pre_subtask = request.from_subtask
         partition_idx = request.partition_idx
         record = request.record

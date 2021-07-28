@@ -27,12 +27,19 @@ class SubTaskServer(ServerBase):
         super(SubTaskServer, self).__init__(rpc_port, worker_num)
         self.tm_name = tm_name
         self.execute_task = execute_task
+        self.service_name = "Service@{}".format(self.execute_task.subtask_name)
 
     def init_service(self, server):
         subtask_service = SubTaskServicer(
                 self.tm_name, self.execute_task)
         # **Attention**: motify rpc port
         self.update_rpc_port(subtask_service.port)
-        subtask_service.init_for_start_service()
+        try:
+            subtask_service.init_for_start_service()
+        except Exception as e:
+            _LOGGER.error(e, exc_info=True)
+            raise SystemExit(
+                    "Failed: init for service({}) error".format(
+                        self.execute_task.subtask_name))
         subtask_pb2_grpc.add_SubTaskServiceServicer_to_server(
                 subtask_service, server)
