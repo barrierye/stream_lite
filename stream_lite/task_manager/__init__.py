@@ -2,4 +2,4 @@
 # Copyright (c) 2021 barriery
 # Python release: 3.7.0
 # Create time: 2021-07-27
-from .task.operator import OperatorBase, SourceOperatorBase, SinkOperatorBase
+from .task import operator

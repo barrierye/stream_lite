@@ -14,8 +14,5 @@ class SourceOperatorBase(OperatorBase):
     def __init__(self):
         pass
 
-    def init(self):
-        pass
-
     def compute(self, data):
         raise NotImplementedError("Failed: function not implemented")

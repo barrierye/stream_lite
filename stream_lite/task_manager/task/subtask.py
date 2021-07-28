@@ -20,7 +20,7 @@ from stream_lite.utils import util
 
 from .input_receiver import InputReceiver
 from .output_dispenser import OutputDispenser
-from .operator import OperatorBase, SourceOperatorBase, SinkOperatorBase
+import operator
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -52,10 +52,11 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
                 self.tm_name, self.cls_name, self.partition_idx)
         self.taskfile_dir = "_tmp/tm/{}/{}_{}/taskfile".format(
                 self.tm_name, self.cls_name, self.partition_idx)
-        self._save_resources(
+        self.resource_path_dict = self._save_resources(
                 self.resource_dir, list(execute_task.resources))
-        self._save_taskfile(
-                self.taskfile_dir, execute_task.task_file)
+        if self.cls_name not in operator.BUILDIN_OPS:
+            self._save_taskfile(
+                    self.taskfile_dir, execute_task.task_file)
 
         self.input_receiver = None
         self.output_dispenser = None
@@ -63,8 +64,11 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
 
     def _save_resources(self, dirpath: str,
             resources: List[serializator.SerializableFile]) -> None:
+        resource_path_dict = {}
         for f in resources:
             f.persistence_to_localfs(dirpath)
+            resource_path_dict[f.name] = os.path.join(dirpath, f.name)
+        return resource_path_dict
 
     def _save_taskfile(self, dirpath: str,
             taskfile: serializator.SerializableFile) -> None:
@@ -91,18 +95,16 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
                 input_channel, output_channel)
 
     def _is_source_op(self) -> bool:
-        module = SubTaskServicer._import_module_from_file(
-                    os.path.join(
-                        self.taskfile_dir, self.task_filename))
-        cls = getattr(module, self.cls_name)
-        return issubclass(cls, SourceOperatorBase)
+        cls = SubTaskServicer._import_cls_from_file(
+                self.cls_name, os.path.join(
+                    self.taskfile_dir, self.task_filename))
+        return issubclass(cls, operator.SourceOperatorBase)
 
     def _is_sink_op(self) -> bool:
-        module = SubTaskServicer._import_module_from_file(
-                    os.path.join(
-                        self.taskfile_dir, self.task_filename))
-        cls = getattr(module, self.cls_name)
-        return issubclass(cls, SinkOperatorBase)
+        cls = SubTaskServicer._import_cls_from_file(
+                self.cls_name, os.path.join(
+                    self.taskfile_dir, self.task_filename))
+        return issubclass(cls, operator.SinkOperatorBase)
 
     def _init_input_receiver(self, input_endpoints: List[str]) \
             -> multiprocessing.Queue:
@@ -129,7 +131,9 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
                 args=(
                     os.path.join(
                         self.taskfile_dir, self.task_filename), 
-                    self.cls_name, input_channel, output_channel))
+                    self.cls_name, self.subtask_name, 
+                    self.resource_path_dict, 
+                    input_channel, output_channel))
         self._core_process.daemon = True
         self._core_process.start()
 
@@ -138,38 +142,45 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
     def _compute_core( 
             full_task_filename: str,
             cls_name: str,
+            subtask_name: str,
+            resource_path_dict: Dict[str, str],
             input_channel: multiprocessing.Queue,
             output_channel: multiprocessing.Queue):
         try:
             SubTaskServicer._inner_compute_core(
-                    full_task_filename, cls_name,
-                    input_channel, output_channel)
+                    full_task_filename, cls_name, subtask_name,
+                    resource_path_dict, input_channel, output_channel)
         except Exception as e:
             _LOGGER.error(e, exc_info=True)
-            raise SystemExit("Failed: run {} task failed".format(cls_name))
+            raise SystemExit("Failed: run {} task failed".format(subtask_name))
 
     @staticmethod
     def _inner_compute_core( 
             full_task_filename: str,
             cls_name: str,
+            subtask_name: str,
+            resource_path_dict: Dict[str, str],
             input_channel: multiprocessing.Queue,
             output_channel: multiprocessing.Queue):
         """
         具体执行逻辑
         """
-        module = SubTaskServicer._import_module_from_file(full_task_filename)
-        cls = getattr(module, cls_name)
-        if not issubclass(cls, OperatorBase):
+        cls = SubTaskServicer._import_cls_from_file(
+                cls_name, full_task_filename)
+        if not issubclass(cls, operator.OperatorBase):
             raise SystemExit(
                     "Failed: {} is not a subclass of OperatorBase".format(cls_name))
-        is_source_op = issubclass(cls, SourceOperatorBase)
-        is_sink_op = issubclass(cls, SinkOperatorBase)
+        is_source_op = issubclass(cls, operator.SourceOperatorBase)
+        is_sink_op = issubclass(cls, operator.SinkOperatorBase)
+        is_key_op = issubclass(cls, operator.KeyOperatorBase)
         task_instance = cls()
-        task_instance.init()
+        task_instance.set_name(subtask_name)
+        task_instance.init(resource_path_dict)
 
         while True:
             data_id = None
             timestamp = None
+            partition_key = ""
 
             input_data = None
             if not is_source_op:
@@ -184,6 +195,9 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
             
             output_data = task_instance.compute(input_data)
             _LOGGER.debug("[Out] {}: {}".format(cls_name, output_data))
+            if is_key_op:
+                partition_key = output_data
+                output_data = input_data
             
             if not is_sink_op:
                 output = serializator.SerializableData.from_object(output_data)
@@ -193,10 +207,12 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
                             data_type=output.data_type,
                             data=output,
                             timestamp=timestamp,
-                            partition_key=""))
+                            partition_key=partition_key))
 
     @staticmethod
-    def _import_module_from_file(filepath: str):
+    def _import_cls_from_file(cls_name: str, filepath: str):
+        if cls_name in operator.BUILDIN_OPS:
+            return operator.BUILDIN_OPS[cls_name]
         if not filepath.endswith(".py"):
             raise SystemExit(
                     "Failed: can not import module '{}'".format(filepath))
@@ -204,7 +220,8 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
         module_path = "{}.{}".format(
                 dirpath.replace("/", "."), filename.split(".")[0])
         module = importlib.import_module(module_path)
-        return module
+        cls = getattr(module, cls_name)
+        return cls
 
     # --------------------------- pushRecord (recv) ----------------------------
     def pushRecord(self, request, context):

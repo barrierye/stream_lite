@@ -8,9 +8,9 @@ from stream_lite import SourceOperatorBase
 
 class SimpleSource(SourceOperatorBase):
 
-    def init(self):
-        print("init source")
+    def init(self, resource_path_dict):
+        print("init source: {}".format(resource_path_dict))
 
     def compute(self, inputs):
         time.sleep(1)
-        return "source"
+        return {"123": "123"}

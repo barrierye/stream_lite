@@ -5,13 +5,17 @@
 """
 用户自定义算子的基类
 """
+from typing import Dict
 
 class OperatorBase(object):
 
     def __init__(self):
         pass
 
-    def init(self):
+    def set_name(self, name):
+        self.name = name
+
+    def init(self, resource_path_dict: Dict[str, str]):
         pass
 
     def compute(self, data):

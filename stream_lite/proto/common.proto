@@ -20,7 +20,7 @@ message Task {
   required int32 currency = 2;
   repeated string input_tasks = 3;
   repeated File resources = 4;
-  required File task_file = 5;
+  optional File task_file = 5;
   required string locate = 6;
 }
 
