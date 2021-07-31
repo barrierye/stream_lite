@@ -320,7 +320,7 @@ class SerializableData(SerializableObject):
                 data=data)
     
     @staticmethod
-    def from_object(data):
+    def from_object(data, data_type=common_pb2.Record.DataType.PICKLE):
         return SerializableData(
-                data_type=common_pb2.Record.DataType.PICKLE,
+                data_type=data_type,
                 data=data)

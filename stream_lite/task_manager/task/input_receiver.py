@@ -77,7 +77,9 @@ class InputPartitionReceiver(object):
             output_channel: multiprocessing.Queue,
             event_barrier: multiprocessing.Barrier,
             succ_start_service_event: multiprocessing.Event):
-        need_barrier_datatype = [common_pb2.Record.DataType.CHECKPOINT]
+        need_barrier_datatype = [
+                common_pb2.Record.DataType.FINISH,
+                common_pb2.Record.DataType.CHECKPOINT]
         succ_start_service_event.set()
         while True:
             proto_data = input_queue.get()

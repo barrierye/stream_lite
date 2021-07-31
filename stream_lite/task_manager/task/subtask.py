@@ -13,6 +13,7 @@ import threading
 from typing import List, Dict
 
 from stream_lite.proto import subtask_pb2_grpc
+from stream_lite.proto import common_pb2
 
 from stream_lite.network import serializator
 from stream_lite.network.util import gen_nil_response
@@ -168,6 +169,20 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
                     full_task_filename, cls_name, subtask_name,
                     resource_path_dict, input_channel, output_channel,
                     succ_start_service_event)
+        except StopIteration as e:
+            # SourceOp 中通过 StopIteration 异常（迭代器终止）来表示
+            # 处理完成。向下游 Operator 发送 Finish Record
+            cls = SubTaskServicer._import_cls_from_file(
+                    cls_name, full_task_filename)
+            if issubclass(cls, operator.SourceOperatorBase):
+                _LOGGER.info(
+                        "[{}] finished successfully!".format(subtask_name))
+                SubTaskServicer._push_finish_record_to_output_channel(output_channel)
+            else:
+                _LOGGER.critical(
+                        "Failed: run {} task failed (reason: {})".format(
+                            subtask_name, e), exc_info=True)
+                os._exit(-1)
         except Exception as e:
             _LOGGER.critical(
                     "Failed: run {} task failed (reason: {})".format(
@@ -211,17 +226,24 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
                 input_data = record.data.data # SerializableData.data
                 data_id = record.data_id
                 timestamp = record.timestamp
-                #  _LOGGER.debug("[In] {}: {}".format(cls_name, input_data))
+
+                if record.data_type == common_pb2.Record.DataType.FINISH:
+                    _LOGGER.info(
+                            "[{}] finished successfully!".format(subtask_name))
+                    if not is_sink_op:
+                        SubTaskServicer._push_finish_record_to_output_channel(output_channel)
+                    break
             else:
                 data_id = "data_id" # TODO: 进程安全 gen
                 timestamp = util.get_timestamp()
             
+            
+
             if is_key_op:
                 output_data = input_data
                 partition_key = task_instance.compute(input_data)
             else:
                 output_data = task_instance.compute(input_data)
-            #  _LOGGER.debug("[Out] {}: {}".format(cls_name, output_data))
             
             if not is_sink_op:
                 output = serializator.SerializableData.from_object(output_data)
@@ -246,6 +268,19 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
         module = importlib.import_module(module_path)
         cls = getattr(module, cls_name)
         return cls
+
+    @staticmethod
+    def _push_finish_record_to_output_channel(
+            output_channel: multiprocessing.Queue):
+        output_channel.put(
+                serializator.SerializableRecord(
+                data_id="last_finish_data_id",
+                data_type=common_pb2.Record.DataType.FINISH,
+                data=serializator.SerializableData.from_object(
+                    data=common_pb2.Record.Finish(),
+                    data_type=common_pb2.Record.DataType.FINISH),
+                timestamp=util.get_timestamp(),
+                partition_key=-1))
 
     # --------------------------- pushRecord (recv) ----------------------------
     def pushRecord(self, request, context):

@@ -75,7 +75,9 @@ class OutputDispenser(object):
 
         partition_num = len(partitions)
 
-        need_broadcast_datatype = [common_pb2.Record.DataType.CHECKPOINT]
+        need_broadcast_datatype = [
+                common_pb2.Record.DataType.FINISH,
+                common_pb2.Record.DataType.CHECKPOINT]
         succ_start_service_event.set()
         while True:
             seri_record = input_channel.get()
