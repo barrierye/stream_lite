@@ -2,11 +2,15 @@
 # Copyright (c) 2021 barriery
 # Python release: 3.7.0
 # Create time: 2021-07-26
+import os
 import logging
+import threading
 import multiprocessing
 from typing import List, Dict
 
 from stream_lite.proto import common_pb2
+
+import stream_lite.config
 from stream_lite.client import SubTaskClient
 from stream_lite.network import serializator
 
@@ -35,7 +39,8 @@ class OutputDispenser(object):
         self.output_endpoints = output_endpoints
         self.subtask_name = subtask_name
         self.partition_idx = partition_idx
-        self._process = self.start_standleton_process()
+        self._process = self.start_standleton_process(
+                is_process=stream_lite.config.IS_PROCESS)
 
     def push_data(self, data: serializator.SerializableRecord) -> None:
         self.channel.put(data)
@@ -81,28 +86,29 @@ class OutputDispenser(object):
             else:
                 # partitioning
                 partition_idx = -1
-                if seri_record.partition_key:
+                if seri_record.partition_key != -1:
                     partition_idx = partitioner.KeyPartitioner.partitioning(
                             seri_record, partition_num)
                 else:
                     partition_idx = partitioner.RandomPartitioner.partitioning(
                             seri_record, partition_num)
-                print("partition_idx: ", partition_idx)
-                print("len(partitions): ", len(partitions))
                 partitions[partition_idx].push_data(seri_record)
-                print("OK!")
 
-    def start_standleton_process(self):
+    def start_standleton_process(self, is_process):
         succ_start_service_event = multiprocessing.Event()
-        proc = multiprocessing.Process(
-                target=self._partitioning_data_and_carry_to_next_subtask,
-                args=(
-                    self.channel, 
-                    self.output_endpoints,
-                    self.subtask_name,
-                    self.partition_idx,
-                    succ_start_service_event))
-        proc.daemon = True
+        if is_process:
+            proc = multiprocessing.Process(
+                    target=self._partitioning_data_and_carry_to_next_subtask,
+                    args=(self.channel, self.output_endpoints,
+                        self.subtask_name, self.partition_idx,
+                        succ_start_service_event),
+                    daemon=True)
+        else:
+            proc = threading.Thread(
+                    target=self._partitioning_data_and_carry_to_next_subtask,
+                    args=(self.channel, self.output_endpoints,
+                        self.subtask_name, self.partition_idx,
+                        succ_start_service_event))
         proc.start()
         succ_start_service_event.wait()
         return proc
@@ -118,9 +124,7 @@ class OutputPartitionDispenser(object):
         self.client.connect(endpoint)
 
     def push_data(self, record: serializator.SerializableRecord) -> None:
-        print("client push")
         self.client.pushRecord(
                     from_subtask=self.subtask_name,
                     partition_idx=self.partition_idx,
                     record=record.instance_to_proto())
-        print("succ client push")

@@ -10,6 +10,7 @@ from .sink_op_base import SinkOperatorBase
 from .key_op_base import KeyOperatorBase
 from .key_by_input_op import KeyByInputOp
 from .debug_op import DebugOp
+from .sum_op import SumOp
 
 BUILDIN_OPS = ImmutableDict([
     ("OperatorBase", OperatorBase),
@@ -17,4 +18,6 @@ BUILDIN_OPS = ImmutableDict([
     ("SinkOperatorBase", SinkOperatorBase),
     ("KeyOperatorBase", KeyOperatorBase),
     ("KeyByInputOp", KeyByInputOp),
-    ("DebugOp", DebugOp)])
+    ("DebugOp", DebugOp),
+    ("SumOp", SumOp),
+    ])

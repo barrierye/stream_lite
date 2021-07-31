@@ -63,24 +63,22 @@ message MachineResource {
 
 message Record {
   optional string data_id = 1; // for filter
-  required DataType data_type = 2;
-  required bytes data = 3;
+  required bytes data = 2;
+  required DataType data_type = 3;
   required int64 timestamp = 4;
-  optional string partition_key = 5 [default = ""]; // for partitioning
+  optional int64 partition_key = 5 [default = -1]; // for partitioning
 
   enum DataType {
-    STRING = 1;
-    KEYVALUE = 2;
-    CHECKPOINT = 3;
+    PICKLE = 1;
+    CHECKPOINT = 2;
+    FINISH = 3;
   }
   
-  message KeyValue {
-    repeated string keys = 1;
-    repeated string values = 2;
-  }
-
   message Checkpoint {
     required int32 id = 1;
   }
-
+  
+  message Finish {
+    
+  }
 }

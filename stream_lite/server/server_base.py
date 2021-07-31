@@ -5,6 +5,7 @@
 import os
 from concurrent import futures
 import grpc
+import threading
 import logging
 import multiprocessing
 
@@ -61,14 +62,18 @@ class ServerBase(object):
                     "Failed to run service ({})".format(e), exc_info=True)
             os._exit(-1)
 
-    def run_on_standalone_process(self):
+    def run_on_standalone_process(self, is_process):
         if self._process is not None:
             raise RuntimeError(
                     "Failed: process already running")
         succ_start_service_event = multiprocessing.Event()
-        self._process = multiprocessing.Process(
-                target=self.run, args=(succ_start_service_event, ))
-        # stop self when main process stop
-        self._process.darmon = True
+        if is_process:
+            # stop self when main process stop
+            self._process = multiprocessing.Process(
+                    target=self.run, args=(succ_start_service_event, ),
+                    daemon=True)
+        else:
+            self._process = threading.Thread(
+                    target=self.run, args=(succ_start_service_event, ))
         self._process.start()
         succ_start_service_event.wait()

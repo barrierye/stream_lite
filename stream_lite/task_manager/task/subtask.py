@@ -9,6 +9,7 @@ import os
 import logging
 import importlib
 import multiprocessing
+import threading
 from typing import List, Dict
 
 from stream_lite.proto import subtask_pb2_grpc
@@ -92,7 +93,7 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
             output_channel = self._init_output_dispenser(
                     self.output_endpoints)
         self._start_compute_on_standleton_process(
-                input_channel, output_channel)
+                input_channel, output_channel, is_process=False)
 
     def _is_source_op(self) -> bool:
         cls = SubTaskServicer._import_cls_from_file(
@@ -123,20 +124,32 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
 
     def _start_compute_on_standleton_process(self,
             input_channel: multiprocessing.Queue,
-            output_channel: multiprocessing.Queue):
+            output_channel: multiprocessing.Queue,
+            is_process=True):
         if self._core_process is not None:
             raise SystemExit("Failed: process already running")
         succ_start_service_event = multiprocessing.Event()
-        self._core_process = multiprocessing.Process(
-                target=SubTaskServicer._compute_core, 
-                args=(
-                    os.path.join(
-                        self.taskfile_dir, self.task_filename), 
-                    self.cls_name, self.subtask_name, 
-                    self.resource_path_dict, 
-                    input_channel, output_channel,
-                    succ_start_service_event))
-        self._core_process.daemon = True
+        if is_process:
+            self._core_process = multiprocessing.Process(
+                    target=SubTaskServicer._compute_core, 
+                    args=(
+                        os.path.join(
+                            self.taskfile_dir, self.task_filename), 
+                        self.cls_name, self.subtask_name, 
+                        self.resource_path_dict, 
+                        input_channel, output_channel,
+                        succ_start_service_event),
+                    daemon=True)
+        else:
+            self._core_process = threading.Thread(
+                    target=SubTaskServicer._compute_core,
+                    args=(
+                        os.path.join(
+                            self.taskfile_dir, self.task_filename),
+                        self.cls_name, self.subtask_name,
+                        self.resource_path_dict,
+                        input_channel, output_channel,
+                        succ_start_service_event))
         self._core_process.start()
         succ_start_service_event.wait()
 
@@ -157,7 +170,8 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
                     succ_start_service_event)
         except Exception as e:
             _LOGGER.critical(
-                    "Failed: run {} task failed ({})".format(e), exc_info=True)
+                    "Failed: run {} task failed (reason: {})".format(
+                        subtask_name, e), exc_info=True)
             os._exit(-1)
 
     @staticmethod
@@ -188,12 +202,11 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
         while True:
             data_id = None
             timestamp = None
-            partition_key = ""
+            partition_key = -1
             output_data = None
 
             input_data = None
             if not is_source_op:
-                print("[in] {}".format(subtask_name))
                 record = input_channel.get() # SerializableRecord
                 input_data = record.data.data # SerializableData.data
                 data_id = record.data_id
@@ -212,7 +225,6 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
             
             if not is_sink_op:
                 output = serializator.SerializableData.from_object(output_data)
-                print("[out] {}".format(subtask_name))
                 output_channel.put(
                         serializator.SerializableRecord(
                             data_id=data_id,
@@ -237,7 +249,6 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
 
     # --------------------------- pushRecord (recv) ----------------------------
     def pushRecord(self, request, context):
-        print("recv")
         pre_subtask = request.from_subtask
         partition_idx = request.partition_idx
         record = request.record

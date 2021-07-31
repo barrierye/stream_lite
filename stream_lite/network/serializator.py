@@ -3,6 +3,7 @@
 # Python release: 3.7.0
 # Create time: 2021-07-19
 import inspect
+import pickle
 import os
 import logging
 from typing import List, Dict
@@ -260,7 +261,7 @@ class SerializableRecord(SerializableObject):
 
     def __init__(self, **kwargs):
         super(SerializableRecord, self).__init__(**kwargs)
-        required_attrs = ["data_id", "data", "timestamp",
+        required_attrs = ["data_id", "data", "timestamp", 
                 "data_type", "partition_key"]
         self.check_attrs(required_attrs)
 
@@ -268,18 +269,17 @@ class SerializableRecord(SerializableObject):
         return common_pb2.Record(
                 data_id=self.data_id,
                 data=self.data.instance_to_bytes(),
-                timestamp=self.timestamp,
                 data_type=self.data_type,
+                timestamp=self.timestamp,
                 partition_key=self.partition_key)
 
     @staticmethod
     def from_proto(proto: common_pb2.Record):
-        # data_type: common_pb2.Record.DataType.XX
         return SerializableRecord(
                 data_id=proto.data_id,
                 data=SerializableData.from_bytes(proto.data, proto.data_type),
-                timestamp=proto.timestamp,
                 data_type=proto.data_type,
+                timestamp=proto.timestamp,
                 partition_key=proto.partition_key)
 
 
@@ -292,15 +292,11 @@ class SerializableData(SerializableObject):
 
     def instance_to_bytes(self):
         byte_array = None
-        if self.data_type == common_pb2.Record.DataType.STRING:
-            byte_array = self.data.encode("utf-8")
-        elif self.data_type == common_pb2.Record.DataType.KEYVALUE:
-            kvs = common_pb2.Record.KeyValue()
-            for key, value in self.data.items():
-                kvs.keys.append(key)
-                kvs.values.append(value)
-            byte_array = kvs.SerializeToString()
+        if self.data_type == common_pb2.Record.DataType.PICKLE:
+            byte_array = pickle.dumps(self.data)
         elif self.data_type == common_pb2.Record.DataType.CHECKPOINT:
+            byte_array = self.data.SerializeToString()
+        elif self.data_type == common_pb2.Record.DataType.FINISH:
             byte_array = self.data.SerializeToString()
         else:
             raise TypeError("Failed: unknow data type({})".format(data_type))
@@ -309,16 +305,13 @@ class SerializableData(SerializableObject):
     @staticmethod
     def from_bytes(byte_array: bytes, data_type: common_pb2.Record.DataType):
         data = None
-        if data_type == common_pb2.Record.DataType.STRING:
-            data = byte_array.decode("utf-8")
-        elif data_type == common_pb2.Record.DataType.KEYVALUE:
-            kvs = common_pb2.Record.KeyValue()
-            kvs.ParseFromString(byte_array)
-            data = {}
-            for idx, key in enumerate(kvs.keys):
-                data[key] = kvs.values[idx]
+        if data_type == common_pb2.Record.DataType.PICKLE:
+            data = pickle.loads(byte_array)
         elif data_type == common_pb2.Record.CHECKPOINT:
             data = common_pb2.Record.Checkpoint()
+            data.ParseFromString(byte_array)
+        elif data_type == common_pb2.Record.DataType.FINISH:
+            data = common_pb2.Record.Finish()
             data.ParseFromString(byte_array)
         else:
             raise TypeError("Failed: unknow data type({})".format(data_type))
@@ -328,13 +321,6 @@ class SerializableData(SerializableObject):
     
     @staticmethod
     def from_object(data):
-        data_type = None
-        if isinstance(data, str):
-            data_type = common_pb2.Record.DataType.STRING
-        elif isinstance(data, dict):
-            data_type = common_pb2.Record.DataType.KEYVALUE
-        else:
-            raise TypeError("Failed: unknow data type({})".format(type(data)))
         return SerializableData(
-                data_type=data_type,
+                data_type=common_pb2.Record.DataType.PICKLE,
                 data=data)

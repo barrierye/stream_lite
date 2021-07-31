@@ -2,13 +2,16 @@
 # Copyright (c) 2021 barriery
 # Python release: 3.7.0
 # Create time: 2021-07-26
+import os
 import multiprocessing
+import threading
 import logging
 from typing import List, Dict
 import queue
 
 from stream_lite.proto import common_pb2
 
+import stream_lite.config
 from stream_lite.network import serializator
 
 
@@ -32,7 +35,8 @@ class InputReceiver(object):
         for endpoint in input_endpoints:
             input_partition_receiver = InputPartitionReceiver(
                     self.channel, endpoint, self.event_barrier)
-            input_partition_receiver.start_standleton_process()
+            input_partition_receiver.start_standleton_process(
+                    is_process=stream_lite.config.IS_PROCESS)
             self.partitions.append(input_partition_receiver)
 
     def recv_data(self, partition_idx: int, 
@@ -87,19 +91,23 @@ class InputPartitionReceiver(object):
             else:
                 output_channel.put(seri_data)
 
-    def start_standleton_process(self):
+    def start_standleton_process(self, is_process):
         """
         起一个独立进程，不断处理数据到 channel 中
         """
         if self._process is not None:
             raise SystemExit("Failed: process already running")
         succ_start_service_event = multiprocessing.Event()
-        self._process = multiprocessing.Process(
-                target=self._prase_data_and_carry_to_channel,
-                args=(
-                    self.queue, self.channel, 
-                    self.event_barrier,
-                    succ_start_service_event))
-        self._process.daemon = True
+        if is_process:
+            self._process = multiprocessing.Process(
+                    target=self._prase_data_and_carry_to_channel,
+                    args=(self.queue, self.channel, 
+                        self.event_barrier, succ_start_service_event),
+                    daemon=True)
+        else:
+            self._process = threading.Thread(
+                    target=self._prase_data_and_carry_to_channel,
+                    args=(self.queue, self.channel,
+                        self.event_barrier, succ_start_service_event))
         self._process.start()
         succ_start_service_event.wait()

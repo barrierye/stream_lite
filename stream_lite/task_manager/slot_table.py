@@ -5,8 +5,11 @@
 import multiprocessing
 from readerwriterlock import rwlock
 import logging
+import os
 
 import stream_lite.proto.common_pb2 as common_pb2
+
+import stream_lite.config
 from stream_lite.network import serializator
 from stream_lite.server.subtask_server import SubTaskServer
 
@@ -22,7 +25,8 @@ class Slot(object):
         self.status = "DEPLOYED"
 
     def start(self):
-        self.subtask.run_on_standalone_process()
+        self.subtask.run_on_standalone_process(
+                is_process=stream_lite.config.IS_PROCESS)
 
     def __str__(self):
         return "[{}] subtask_name: {}, status: {}".format(

@@ -15,5 +15,5 @@ class DebugOp(OperatorBase):
 
     def compute(self, data):
         """ print only """
-        print("debug({}): {}".format(self.name, data))
+        print("[debug] ({}): {}".format(self.name, data))
         return data

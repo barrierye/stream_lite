@@ -34,8 +34,7 @@ class SubTaskClient(ClientBase):
                 from_subtask=from_subtask,
                 partition_idx=partition_idx,
                 record=record)
-        print(str(req))
-        resp = self.stub.pushRecord(req)
-        print(str(resp))
+        _LOGGER.debug("pushRecord: {}".format(str(req)))
+        resp = self.stub.pushRecord(req, timeout=1)
         if resp.status.err_code != 0:
             raise SystemExit(resp.status.message)
