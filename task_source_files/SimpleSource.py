@@ -6,6 +6,7 @@ import time
 import re
 
 from stream_lite import SourceOperatorBase
+from stream_lite.utils import FinishJobError
 
 class SimpleSource(SourceOperatorBase):
 
@@ -21,4 +22,8 @@ class SimpleSource(SourceOperatorBase):
 
     def compute(self, inputs):
         #  time.sleep(1)
-        return next(self.iter)
+        try:
+            ret = next(self.iter)
+        except Exception as e:
+            raise FinishJobError() 
+        return ret

@@ -9,7 +9,7 @@ from stream_lite import SinkOperatorBase
 class SimpleSink(SinkOperatorBase):
 
     def init(self, resource_path_dict):
-        print("init sink: {}".format(resource_path_dict))
+        pass
 
     def compute(self, inputs):
         print("{}: {}".format(self.name, inputs))

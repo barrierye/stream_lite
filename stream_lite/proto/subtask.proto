@@ -11,8 +11,14 @@ message PushRecordRequest {
   required int32 partition_idx = 3;
 }
 
+message TriggerCheckpointRequest {
+  required common.Record.Checkpoint checkpoint = 1;
+}
 
 service SubTaskService {
   // from other subtask
   rpc pushRecord(PushRecordRequest) returns (common.NilResponse) {}
+
+  // from job manager
+  rpc triggerCheckpoint(TriggerCheckpointRequest) returns (common.NilResponse) {}
 };

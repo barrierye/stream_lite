@@ -15,10 +15,11 @@ import stream_lite.proto.job_manager_pb2_grpc as job_manager_pb2_grpc
 
 from stream_lite.network.util import gen_nil_response
 from stream_lite.network import serializator
-from stream_lite.utils import IdGenerator
+from stream_lite.utils import JobIdGenerator
 
 from . import scheduler
 from .registered_task_manager_table import RegisteredTaskManagerTable
+from .checkpoint_coordinator import CheckpointCoordinator
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -30,10 +31,12 @@ class JobManagerServicer(job_manager_pb2_grpc.JobManagerServiceServicer):
         self.registered_task_manager_table = RegisteredTaskManagerTable()
         self.scheduler = scheduler.UserDefinedScheduler(
                 self.registered_task_manager_table)
+        self.checkpoint_coordinator = CheckpointCoordinator(
+                self.registered_task_manager_table)
 
     # --------------------------- submit job ----------------------------
     def submitJob(self, request, context):
-        jobid = IdGenerator().next()
+        jobid = JobIdGenerator().next()
         persistence_dir = "./_tmp/jm/task_files"
         seri_tasks = []
         for task in request.tasks:
@@ -43,7 +46,10 @@ class JobManagerServicer(job_manager_pb2_grpc.JobManagerServiceServicer):
             seri_tasks.append(seri_task)
         
         try:
-            self._innerSubmitJob(seri_tasks)
+            execute_map = self._innerSubmitJob(seri_tasks)
+        
+            # 把所有 Op 信息注册到 CheckpointCoordinator 里
+            self.checkpoint_coordinator.register_job(jobid, execute_map)
         except Exception as e:
             _LOGGER.error(e, exc_info=True)
             return job_manager_pb2.SubmitJobResponse(
@@ -54,7 +60,8 @@ class JobManagerServicer(job_manager_pb2_grpc.JobManagerServiceServicer):
                 status=common_pb2.Status(),
                 jobid=jobid)
         
-    def _innerSubmitJob(self, seri_tasks: List[serializator.SerializableTask]):
+    def _innerSubmitJob(self, seri_tasks: List[serializator.SerializableTask]) \
+            -> Dict[str, List[serializator.SerializableExectueTask]]:
         # schedule
         logical_map, execute_map = self.scheduler.schedule(seri_tasks)
         
@@ -65,6 +72,8 @@ class JobManagerServicer(job_manager_pb2_grpc.JobManagerServiceServicer):
         # start
         self._startExecuteTasks(logical_map, execute_map)
         _LOGGER.info("Success start all task.")
+
+        return execute_map
  
     def _deployExecuteTasks(self, 
             execute_map: Dict[str, List[serializator.SerializableExectueTask]]):
@@ -157,3 +166,13 @@ class JobManagerServicer(job_manager_pb2_grpc.JobManagerServiceServicer):
                     err_code=1, message=str(e))
         return gen_nil_response()
 
+    # --------------------------- trigger checkpoint ----------------------------
+    def triggerCheckpoint(self, request, context):
+        try:
+            self.checkpoint_coordinator.trigger_checkpoint(
+                    request.jobid)
+        except Exception as e:
+            _LOGGER.error(e, exc_info=True)
+            return gen_nil_response(
+                    err_code=1, message=str(e))
+        return gen_nil_response()

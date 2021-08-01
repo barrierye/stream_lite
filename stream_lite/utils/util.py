@@ -24,3 +24,12 @@ def get_filename(url: str) -> str:
 
 def get_timestamp() -> int:
     return int(time.time())
+
+
+def FinishJobError(RuntimeError):
+    """
+    用于表示正常终止 Job 的异常
+    """
+
+    def __init__(self):
+        super(FinishJobError, self).__init__()

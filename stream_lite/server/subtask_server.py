@@ -27,7 +27,7 @@ class SubTaskServer(ServerBase):
         super(SubTaskServer, self).__init__(rpc_port, worker_num)
         self.tm_name = tm_name
         self.execute_task = execute_task
-        self.service_name = "Service@{}".format(self.execute_task.subtask_name)
+        self.service_name = self.execute_task.subtask_name
 
     def init_service(self, server):
         subtask_service = SubTaskServicer(

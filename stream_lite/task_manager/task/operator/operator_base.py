@@ -20,3 +20,6 @@ class OperatorBase(object):
 
     def compute(self, data):
         raise NotImplementedError("Failed: function not implemented")
+
+    def checkpoint(self):
+        raise NotImplementedError("Failed: function not implemented")

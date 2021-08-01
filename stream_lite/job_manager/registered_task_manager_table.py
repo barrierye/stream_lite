@@ -29,9 +29,20 @@ class RegisteredTaskManagerTable(object):
             self.table[name] = RegisteredTaskManager(task_manager_desc)
             _LOGGER.info("Succ register task manager: {}".format(name))
 
-    def hasTaskManager(self, name: str) -> bool:
+    def has_task_manager(self, name: str) -> bool:
         with self.rw_lock_pair.gen_rlock():
             return name in self.table
+
+    def get_task_manager_endpoint(self, name: str) -> str:
+        with self.rw_lock_pair.gen_rlock():
+            if name not in self.table:
+                 raise KeyError(
+                         "Failed: task_manager(name={}) not registered".format(name))
+            return self.table[name].get_endpoint()
+
+    def get_task_manager_ip(self, name: str) -> str:
+        endpoint = self.get_task_manager_endpoint(name)
+        return endpoint.split(":")[0]
 
     def get_client(self, name: str) -> TaskManagerClient:
         with self.rw_lock_pair.gen_rlock():
@@ -52,11 +63,15 @@ class RegisteredTaskManager(object):
 
     def __init__(self, task_manager_desc):
         self.task_manager_desc = task_manager_desc
+        self.task_manager_endpoint = self.task_manager_desc.endpoint
         self.client = self._init_client()
+
+    def get_endpoint(self) -> str:
+        return self.task_manager_endpoint
 
     def _init_client(self) -> TaskManagerClient:
         client = TaskManagerClient()
-        client.connect(self.task_manager_desc.endpoint)
+        client.connect(self.task_manager_endpoint)
         _LOGGER.debug(
                 "Succ init register task manager(name={}) client"
                 .format(self.task_manager_desc.name))

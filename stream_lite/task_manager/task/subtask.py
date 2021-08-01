@@ -10,6 +10,7 @@ import logging
 import importlib
 import multiprocessing
 import threading
+import queue
 from typing import List, Dict
 
 from stream_lite.proto import subtask_pb2_grpc
@@ -18,7 +19,7 @@ from stream_lite.proto import common_pb2
 from stream_lite.network import serializator
 from stream_lite.network.util import gen_nil_response
 from stream_lite.client import SubTaskClient
-from stream_lite.utils import util
+from stream_lite.utils import util, FinishJobError, DataIdGenerator
 
 from .input_receiver import InputReceiver
 from .output_dispenser import OutputDispenser
@@ -59,7 +60,9 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
         if self.cls_name not in operator.BUILDIN_OPS:
             self._save_taskfile(
                     self.taskfile_dir, execute_task.task_file)
-
+        
+        self.input_channel = None
+        self.output_channel = None
         self.input_receiver = None
         self.output_dispenser = None
         self._core_process = None
@@ -85,16 +88,17 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
 
     # --------------------------- init for start service ----------------------------
     def init_for_start_service(self):
-        input_channel = None
-        output_channel = None
         if not self._is_source_op():
-            input_channel = self._init_input_receiver(
+            self.input_channel = self._init_input_receiver(
                     self.input_endpoints)
+        else:
+            # 用来接收 checkpoint 等 event
+            self.input_channel = multiprocessing.Queue()
         if not self._is_sink_op():
-            output_channel = self._init_output_dispenser(
+            self.output_channel = self._init_output_dispenser(
                     self.output_endpoints)
         self._start_compute_on_standleton_process(
-                input_channel, output_channel, is_process=False)
+                self.input_channel, self.output_channel, is_process=False)
 
     def _is_source_op(self) -> bool:
         cls = SubTaskServicer._import_cls_from_file(
@@ -169,8 +173,8 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
                     full_task_filename, cls_name, subtask_name,
                     resource_path_dict, input_channel, output_channel,
                     succ_start_service_event)
-        except StopIteration as e:
-            # SourceOp 中通过 StopIteration 异常（迭代器终止）来表示
+        except FinishJobError as e:
+            # SourceOp 中通过 FinishJobError 异常来表示
             # 处理完成。向下游 Operator 发送 Finish Record
             cls = SubTaskServicer._import_cls_from_file(
                     cls_name, full_task_filename)
@@ -215,38 +219,55 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
         succ_start_service_event.set()
 
         while True:
+            record = None
+            data_type = None
             data_id = None
             timestamp = None
             partition_key = -1
+            input_data = None
             output_data = None
 
-            input_data = None
             if not is_source_op:
                 record = input_channel.get() # SerializableRecord
+                data_type = record.data_type
                 input_data = record.data.data # SerializableData.data
                 data_id = record.data_id
                 timestamp = record.timestamp
 
-                if record.data_type == common_pb2.Record.DataType.FINISH:
+                if data_type == common_pb2.Record.DataType.FINISH:
                     _LOGGER.info(
                             "[{}] finished successfully!".format(subtask_name))
                     if not is_sink_op:
                         SubTaskServicer._push_finish_record_to_output_channel(output_channel)
                     break
             else:
-                data_id = "data_id" # TODO: 进程安全 gen
-                timestamp = util.get_timestamp()
-            
-            
+                try:
+                    record = input_channel.get_nowait()
+                    input_data = record.data.data
+                    data_type = record.data_type
+                except queue.Empty as e:
+                    # SourceOp 没有 event，继续处理
+                    data_id = str(DataIdGenerator().next())
+                    data_type = common_pb2.Record.DataType.PICKLE
+                    timestamp = util.get_timestamp()
+                    input_data = None
 
             if is_key_op:
                 output_data = input_data
-                partition_key = task_instance.compute(input_data)
+                if data_type == common_pb2.Record.DataType.PICKLE:
+                    partition_key = task_instance.compute(input_data)
             else:
-                output_data = task_instance.compute(input_data)
+                if data_type == common_pb2.Record.DataType.PICKLE:
+                    output_data = task_instance.compute(input_data)
+                elif data_type == common_pb2.Record.DataType.CHECKPOINT:
+                    output_data = input_data
+                    task_instance.checkpoint()
+                else:
+                    raise Exception("Failed: unknow data type: {}".format(data_type))
             
             if not is_sink_op:
-                output = serializator.SerializableData.from_object(output_data)
+                output = serializator.SerializableData.from_object(
+                        output_data, data_type=data_type)
                 output_channel.put(
                         serializator.SerializableRecord(
                             data_id=data_id,
@@ -290,4 +311,16 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
         _LOGGER.debug("Recv data(from={}): {}".format(
             pre_subtask, str(request)))
         self.input_receiver.recv_data(partition_idx, record)
+        return gen_nil_response()
+
+    # --------------------------- triggerCheckpoint ----------------------------
+    def triggerCheckpoint(self, request, context):
+        """
+        只有 SourceOp 才会被调用该函数
+        """
+        checkpoint = request.checkpoint
+        seri_data = serializator.SerializableData.from_object(
+                data_type=common_pb2.Record.DataType.CHECKPOINT,
+                data=checkpoint)
+        self.input_channel.put(seri_data)
         return gen_nil_response()

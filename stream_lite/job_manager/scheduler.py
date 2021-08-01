@@ -64,7 +64,7 @@ class UserDefinedScheduler(Scheduler):
         logical_map = {} # taskmanager.name -> List[serializable_task]
         for task in serializable_tasks:
             name = task.locate
-            if not self.registered_task_manager_table.hasTaskManager(name):
+            if not self.registered_task_manager_table.has_task_manager(name):
                 raise RuntimeError(
                         "Failed: task.locate({}) not registerd.".format(name))
             if name not in logical_map:

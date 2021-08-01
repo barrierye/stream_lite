@@ -68,10 +68,11 @@ class ServerBase(object):
                     "Failed: process already running")
         succ_start_service_event = multiprocessing.Event()
         if is_process:
-            # stop self when main process stop
+            # 这里不能将 daemon 设为 True:
+            #    AssertionError: daemonic processes are not allowed to have children
             self._process = multiprocessing.Process(
                     target=self.run, args=(succ_start_service_event, ),
-                    daemon=True)
+                    daemon=False)
         else:
             self._process = threading.Thread(
                     target=self.run, args=(succ_start_service_event, ))

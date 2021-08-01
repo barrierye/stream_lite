@@ -18,10 +18,15 @@ message RegisterTaskManagerRequest {
   required common.TaskManagerDescription task_manager_desc = 1;
 }
 
+message TriggerCheckpointRequest {
+  required string jobid = 1;
+}
+
 
 service JobManagerService {
   // from user front client
   rpc submitJob(SubmitJobRequest) returns (SubmitJobResponse) {}
+  rpc triggerCheckpoint(TriggerCheckpointRequest) returns (common.NilResponse) {}
   
   // from task manager
   rpc registerTaskManager(RegisterTaskManagerRequest) returns (common.NilResponse) {}

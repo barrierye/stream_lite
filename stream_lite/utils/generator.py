@@ -57,11 +57,35 @@ class AvailablePortGenerator(GeneratorBase):
         return available_port
 
 
-class IdGenerator(GeneratorBase):
+class JobIdGenerator(GeneratorBase):
 
     def __init__(self):
-        super(IdGenerator, self).__init__()
+        super(JobIdGenerator, self).__init__()
         
     def next(self):
         uid = uuid.uuid1()
         return uid.hex
+
+
+class IncIdGenerator(GeneratorBase):
+
+    def __init__(self):
+        super(IncIdGenerator, self).__init__()
+        self.counter = 0
+
+    def next(self):
+        count = self.counter
+        self.counter += 1
+        return count
+
+
+class CheckpointIdGenerator(IncIdGenerator):
+
+    def __init__(self):
+        super(CheckpointIdGenerator, self).__init__()
+
+
+class DataIdGenerator(IncIdGenerator):
+
+    def __init__(self):
+        super(DataIdGenerator, self).__init__()
