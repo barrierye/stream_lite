@@ -174,6 +174,14 @@ class JobManagerServicer(job_manager_pb2_grpc.JobManagerServiceServicer):
                     request.jobid, checkpoint_id, request.cancel_job)
         except Exception as e:
             _LOGGER.error(e, exc_info=True)
-            return gen_nil_response(
-                    err_code=1, message=str(e))
-        return gen_nil_response()
+            return job_manager_pb2.TriggerCheckpointResponse(
+                    status=common_pb2.Status(
+                        err_code=1, 
+                        message=str(e)))
+        return job_manager_pb2.TriggerCheckpointResponse(
+                status=common_pb2.Status(),
+                checkpoint_id=checkpoint_id)
+
+    # --------------------------- restore from checkpoint ----------------------------
+    def restoreFromCheckpoint(self, request, context):
+        pass

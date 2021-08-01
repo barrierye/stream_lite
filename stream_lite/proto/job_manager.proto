@@ -23,11 +23,26 @@ message TriggerCheckpointRequest {
   optional bool cancel_job = 2 [default = false];
 }
 
+message TriggerCheckpointResponse {
+  required common.Status status = 1;
+  optional int32 checkpoint_id = 2;
+}
+
+message RestoreFromCheckpointRequest {
+  required int32 checkpoint_id = 1;
+}
+
+message RestoreFromCheckpointResponse {
+  required common.Status status = 1;
+  optional string jobid = 2;
+}
 
 service JobManagerService {
   // from user front client
   rpc submitJob(SubmitJobRequest) returns (SubmitJobResponse) {}
-  rpc triggerCheckpoint(TriggerCheckpointRequest) returns (common.NilResponse) {}
+  rpc triggerCheckpoint(TriggerCheckpointRequest) returns (TriggerCheckpointResponse) {}
+  rpc restoreFromCheckpoint(RestoreFromCheckpointRequest) 
+      returns (RestoreFromCheckpointResponse) {}
   
   // from task manager
   rpc registerTaskManager(RegisterTaskManagerRequest) returns (common.NilResponse) {}

@@ -25,7 +25,7 @@ class UserClient(ClientBase):
     def _init_stub(self, channel):
         return job_manager_pb2_grpc.JobManagerServiceStub(channel)
 
-    def submitJob(self, yaml_path):
+    def submitJob(self, yaml_path: str) -> str:
         with open(yaml_path) as f:
             conf = yaml.load(f.read(), Loader=yaml.FullLoader)
 
@@ -43,11 +43,25 @@ class UserClient(ClientBase):
         return resp.jobid
     
     def triggerCheckpoint(self, 
-            jobid: str, cancel_job: bool = False):
+            jobid: str, cancel_job: bool = False) -> int:
         resp = self.stub.triggerCheckpoint(
                 job_manager_pb2.TriggerCheckpointRequest(
                     jobid=jobid,
                     cancel_job=cancel_job))
         if resp.status.err_code != 0:
             raise Exception(resp.status.message)
-        _LOGGER.info("Success to checkpoint (jobid={})".format(jobid))
+        _LOGGER.info(
+                "Success to checkpoint (jobid={}, chk_id={})"
+                .format(jobid, resp.checkpoint_id))
+        return resp.checkpoint_id
+
+    def restoreFromCheckpoint(self, checkpoint_id: int) -> str:
+        resp = self.stub.restoreFromCheckpoint(
+                job_manager_pb2.RestoreFromCheckpointRequest(
+                    checkpoint_id=checkpoint_id))
+        if resp.status.err_code != 0:
+            raise Exception(resp.status.message)
+        _LOGGER.info(
+                "Success to restore from checkpoint (chk_id={}), jobid={}"
+                .format(checkpoint_id, resp.jobid))
+        return resp.jobid
