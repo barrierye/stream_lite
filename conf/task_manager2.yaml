@@ -1,0 +1,7 @@
+job_manager_enpoint: "127.0.0.1:8970"
+name: taskmanager2
+coord:
+  x: 116.405419
+  y: 39.913828
+resource:
+  slot_number: 1

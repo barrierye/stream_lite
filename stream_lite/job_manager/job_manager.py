@@ -15,7 +15,7 @@ import stream_lite.proto.job_manager_pb2_grpc as job_manager_pb2_grpc
 
 from stream_lite.network.util import gen_nil_response
 from stream_lite.network import serializator
-from stream_lite.utils import JobIdGenerator
+from stream_lite.utils import JobIdGenerator, CheckpointIdGenerator
 
 from . import scheduler
 from .registered_task_manager_table import RegisteredTaskManagerTable
@@ -169,8 +169,9 @@ class JobManagerServicer(job_manager_pb2_grpc.JobManagerServiceServicer):
     # --------------------------- trigger checkpoint ----------------------------
     def triggerCheckpoint(self, request, context):
         try:
+            checkpoint_id = CheckpointIdGenerator().next()
             self.checkpoint_coordinator.trigger_checkpoint(
-                    request.jobid)
+                    request.jobid, checkpoint_id)
         except Exception as e:
             _LOGGER.error(e, exc_info=True)
             return gen_nil_response(

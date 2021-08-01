@@ -41,3 +41,4 @@ class JobManagerClient(ClientBase):
         _LOGGER.info(
                 "Success register task manager(name={})".format(conf["name"]) +\
                 " to job manager(endpoint={})".format(job_manager_enpoint))
+

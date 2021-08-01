@@ -16,3 +16,6 @@ class SumOp(OperatorBase):
             self.counter[data] = 0
         self.counter[data] += 1
         return (data, self.counter[data])
+
+    def checkpoint(self):
+        return self.counter

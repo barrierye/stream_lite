@@ -31,5 +31,5 @@ def FinishJobError(RuntimeError):
     用于表示正常终止 Job 的异常
     """
 
-    def __init__(self):
-        super(FinishJobError, self).__init__()
+    def __init__(self, info_str):
+        super(FinishJobError, self).__init__(info_str)

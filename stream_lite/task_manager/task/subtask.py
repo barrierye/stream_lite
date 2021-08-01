@@ -11,7 +11,8 @@ import importlib
 import multiprocessing
 import threading
 import queue
-from typing import List, Dict
+import pickle
+from typing import List, Dict, Any
 
 from stream_lite.proto import subtask_pb2_grpc
 from stream_lite.proto import common_pb2
@@ -54,6 +55,8 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
         self.resource_dir = "_tmp/tm/{}/{}_{}/resource".format(
                 self.tm_name, self.cls_name, self.partition_idx)
         self.taskfile_dir = "_tmp/tm/{}/{}_{}/taskfile".format(
+                self.tm_name, self.cls_name, self.partition_idx)
+        self.snapshot_dir = "_tmp/tm/{}/{}/{}/snapshot".format(
                 self.tm_name, self.cls_name, self.partition_idx)
         self.resource_path_dict = self._save_resources(
                 self.resource_dir, list(execute_task.resources))
@@ -143,6 +146,7 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
                         self.cls_name, self.subtask_name, 
                         self.resource_path_dict, 
                         input_channel, output_channel,
+                        self.snapshot_dir,
                         succ_start_service_event),
                     daemon=True)
         else:
@@ -154,6 +158,7 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
                         self.cls_name, self.subtask_name,
                         self.resource_path_dict,
                         input_channel, output_channel,
+                        self.snapshot_dir,
                         succ_start_service_event))
         self._core_process.start()
         succ_start_service_event.wait()
@@ -167,12 +172,13 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
             resource_path_dict: Dict[str, str],
             input_channel: multiprocessing.Queue,
             output_channel: multiprocessing.Queue,
+            snapshot_dir: str,
             succ_start_service_event: multiprocessing.Event):
         try:
             SubTaskServicer._inner_compute_core(
                     full_task_filename, cls_name, subtask_name,
                     resource_path_dict, input_channel, output_channel,
-                    succ_start_service_event)
+                    snapshot_dir, succ_start_service_event)
         except FinishJobError as e:
             # SourceOp 中通过 FinishJobError 异常来表示
             # 处理完成。向下游 Operator 发送 Finish Record
@@ -201,6 +207,7 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
             resource_path_dict: Dict[str, str],
             input_channel: multiprocessing.Queue,
             output_channel: multiprocessing.Queue,
+            snapshot_dir: str,
             succ_start_service_event: multiprocessing.Event):
         """
         具体执行逻辑
@@ -245,6 +252,7 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
                     record = input_channel.get_nowait()
                     input_data = record.data.data
                     data_type = record.data_type
+                    timestamp = util.get_timestamp()
                 except queue.Empty as e:
                     # SourceOp 没有 event，继续处理
                     data_id = str(DataIdGenerator().next())
@@ -261,7 +269,10 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
                     output_data = task_instance.compute(input_data)
                 elif data_type == common_pb2.Record.DataType.CHECKPOINT:
                     output_data = input_data
-                    task_instance.checkpoint()
+                    snapshot_state = task_instance.checkpoint()
+                    SubTaskServicer._save_snapshot_state(
+                            snapshot_dir, snapshot_state, input_data.id)
+                    _LOGGER.info("[{}] success save snapshot state".format(subtask_name))
                 else:
                     raise Exception("Failed: unknow data type: {}".format(data_type))
             
@@ -303,6 +314,16 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
                 timestamp=util.get_timestamp(),
                 partition_key=-1))
 
+    @staticmethod
+    def _save_snapshot_state(
+            snapshot_dir: str,
+            snapshot_state: Any,
+            checkpoint_id: int):
+        seri_file = serializator.SerializableFile(
+                name="chk_{}".format(checkpoint_id),
+                content=pickle.dumps(snapshot_state))
+        seri_file.persistence_to_localfs(prefix_path=snapshot_dir)
+
     # --------------------------- pushRecord (recv) ----------------------------
     def pushRecord(self, request, context):
         pre_subtask = request.from_subtask
@@ -319,8 +340,13 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
         只有 SourceOp 才会被调用该函数
         """
         checkpoint = request.checkpoint
-        seri_data = serializator.SerializableData.from_object(
+        seri_data = serializator.SerializableRecord(
+                data_id="checkpoint_data_id",
                 data_type=common_pb2.Record.DataType.CHECKPOINT,
-                data=checkpoint)
+                data=serializator.SerializableData.from_object(
+                    data_type=common_pb2.Record.DataType.CHECKPOINT,
+                    data=checkpoint),
+                timestamp=util.get_timestamp(),
+                partition_key=-1)
         self.input_channel.put(seri_data)
         return gen_nil_response()

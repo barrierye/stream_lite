@@ -57,8 +57,8 @@ class OutputDispenser(object):
                     partition_idx, succ_start_service_event)
         except Exception as e:
             _LOGGER.critical(
-                    "Failed: run output_partition_dispenser failed ({})"
-                    .format(e), exc_info=True)
+                    "Failed: [{}] run output_partition_dispenser failed ({})"
+                    .format(self.subtask_name, e), exc_info=True)
             os._exit(-1)
 
     def _inner_partitioning_data_and_carry_to_next_subtask(self,

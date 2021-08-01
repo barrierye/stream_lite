@@ -30,12 +30,13 @@ class SubTaskClient(ClientBase):
 
     def pushRecord(self, from_subtask: str,
             partition_idx: int, record: common_pb2.Record):
+        #  print(str(record))
         req = subtask_pb2.PushRecordRequest(
                 from_subtask=from_subtask,
                 partition_idx=partition_idx,
                 record=record)
         _LOGGER.debug("pushRecord: {}".format(str(req)))
-        resp = self.stub.pushRecord(req, timeout=1)
+        resp = self.stub.pushRecord(req)
         if resp.status.err_code != 0:
             raise SystemExit(resp.status.message)
 

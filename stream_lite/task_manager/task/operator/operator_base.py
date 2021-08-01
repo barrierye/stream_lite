@@ -22,4 +22,7 @@ class OperatorBase(object):
         raise NotImplementedError("Failed: function not implemented")
 
     def checkpoint(self):
+        """
+        返回值为 snapshot 的状态，将被作为文件存储 common_pb2.File
+        """
         raise NotImplementedError("Failed: function not implemented")

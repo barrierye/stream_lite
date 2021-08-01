@@ -40,3 +40,12 @@ class UserClient(ClientBase):
         if resp.status.err_code != 0:
             raise Exception(resp.status.message)
         _LOGGER.info("Success to submit job (jobid={})".format(resp.jobid))
+        return resp.jobid
+    
+    def triggerCheckpoint(self, jobid: str):
+        resp = self.stub.triggerCheckpoint(
+                job_manager_pb2.TriggerCheckpointRequest(
+                    jobid=jobid))
+        if resp.status.err_code != 0:
+            raise Exception(resp.status.message)
+        _LOGGER.info("Success to checkpoint (jobid={})".format(jobid))
