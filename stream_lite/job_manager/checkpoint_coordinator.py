@@ -34,13 +34,18 @@ class CheckpointCoordinator(object):
             self.table[jobid] = SpecificJobInfo(execute_task_map)
             #  _LOGGER.debug("Registering job: jobid({})".format(jobid))
 
-    def trigger_checkpoint(self, jobid: str, checkpoint_id: int):
+    def trigger_checkpoint(self, 
+            jobid: str,
+            checkpoint_id: int,
+            cancel_job: bool):
         with self.rw_lock_pair.gen_rlock():
             if jobid not in self.table:
                 raise KeyError(
                         "Failed to trigger checkpoint: can not found job(jobid={})".format(jobid))
             self.table[jobid].trigger_checkpoint(
-                    checkpoint_id, self.registered_task_manager_table)
+                    checkpoint_id, 
+                    self.registered_task_manager_table,
+                    cancel_job)
 
 
 class SpecificJobInfo(object):
@@ -64,8 +69,10 @@ class SpecificJobInfo(object):
                     source_ops[task_manager_name].append(task)
         return source_ops
 
-    def trigger_checkpoint(self, checkpoint_id: int,
-            registered_task_manager_table: RegisteredTaskManagerTable):
+    def trigger_checkpoint(self, 
+            checkpoint_id: int,
+            registered_task_manager_table: RegisteredTaskManagerTable,
+            cancel_job: bool):
         """
         传入 registered_task_manager_table 是为了找到对应 task_manager 的 endpoint
         """
@@ -78,17 +85,19 @@ class SpecificJobInfo(object):
                         task_manager_ip, 
                         task.port, 
                         task.subtask_name,
-                        checkpoint_id)
+                        checkpoint_id,
+                        cancel_job)
 
     def _inner_trigger_checkpoint(self, 
             subtask_ip: str, 
             subtask_port: int, 
             subtask_name: str,
-            checkpoint_id: int):
+            checkpoint_id: int,
+            cancel_job: bool):
         subtask_endpoint = "{}:{}".format(subtask_ip, subtask_port)
         client = SubTaskClient()
         client.connect(subtask_endpoint)
         _LOGGER.info(
                 "Try to trigger checkpoint(id={}) for subtask [{}] (endpoint={})"
                 .format(checkpoint_id, subtask_name, subtask_endpoint))
-        client.triggerCheckpoint(checkpoint_id)
+        client.triggerCheckpoint(checkpoint_id, cancel_job)

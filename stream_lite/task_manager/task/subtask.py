@@ -187,7 +187,7 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
             if issubclass(cls, operator.SourceOperatorBase):
                 _LOGGER.info(
                         "[{}] finished successfully!".format(subtask_name))
-                SubTaskServicer._push_finish_record_to_output_channel(output_channel)
+                SubTaskServicer._push_finish_event_to_output_channel(output_channel)
             else:
                 _LOGGER.critical(
                         "Failed: run {} task failed (reason: {})".format(
@@ -245,14 +245,13 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
                     _LOGGER.info(
                             "[{}] finished successfully!".format(subtask_name))
                     if not is_sink_op:
-                        SubTaskServicer._push_finish_record_to_output_channel(output_channel)
+                        SubTaskServicer._push_finish_event_to_output_channel(output_channel)
                     break
             else:
                 try:
                     record = input_channel.get_nowait()
                     input_data = record.data.data
                     data_type = record.data_type
-                    timestamp = util.get_timestamp()
                 except queue.Empty as e:
                     # SourceOp 没有 event，继续处理
                     data_id = str(DataIdGenerator().next())
@@ -264,15 +263,26 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
                 output_data = input_data
                 if data_type == common_pb2.Record.DataType.PICKLE:
                     partition_key = task_instance.compute(input_data)
+                elif data_type == common_pb2.Record.DataType.CHECKPOINT:
+                    break
+                else:
+                    raise Exception("Failed: unknow data type: {}".format(data_type))
             else:
                 if data_type == common_pb2.Record.DataType.PICKLE:
                     output_data = task_instance.compute(input_data)
                 elif data_type == common_pb2.Record.DataType.CHECKPOINT:
-                    output_data = input_data
+                    if not is_sink_op:
+                        SubTaskServicer._push_checkpoint_event_to_output_channel(
+                                input_data, output_channel)
                     snapshot_state = task_instance.checkpoint()
                     SubTaskServicer._save_snapshot_state(
                             snapshot_dir, snapshot_state, input_data.id)
                     _LOGGER.info("[{}] success save snapshot state".format(subtask_name))
+                    if input_data.cancel_job:
+                        _LOGGER.info("[{}] success finish job".format(subtask_name))
+                        break
+                    else:
+                        continue
                 else:
                     raise Exception("Failed: unknow data type: {}".format(data_type))
             
@@ -302,17 +312,41 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
         return cls
 
     @staticmethod
-    def _push_finish_record_to_output_channel(
+    def _push_event_record_to_output_channel(
+            data_id: str,
+            data_type: common_pb2.Record.DataType,
+            data: serializator.SerializableData,
             output_channel: multiprocessing.Queue):
         output_channel.put(
                 serializator.SerializableRecord(
+                    data_id=data_id,
+                    data_type=data_type,
+                    data=data,
+                    timestamp=util.get_timestamp(),
+                    partition_key=-1))
+
+    @staticmethod
+    def _push_finish_event_to_output_channel(
+            output_channel: multiprocessing.Queue):
+        SubTaskServicer._push_event_record_to_output_channel(
                 data_id="last_finish_data_id",
                 data_type=common_pb2.Record.DataType.FINISH,
                 data=serializator.SerializableData.from_object(
                     data=common_pb2.Record.Finish(),
                     data_type=common_pb2.Record.DataType.FINISH),
-                timestamp=util.get_timestamp(),
-                partition_key=-1))
+                output_channel=output_channel)
+
+    @staticmethod
+    def _push_checkpoint_event_to_output_channel(
+            checkpoint: common_pb2.Record.Checkpoint,
+            output_channel: multiprocessing.Queue):
+        SubTaskServicer._push_event_record_to_output_channel(
+                data_id="checkpoint_data_id",
+                data_type=common_pb2.Record.DataType.CHECKPOINT,
+                data=serializator.SerializableData.from_object(
+                    data_type=common_pb2.Record.DataType.CHECKPOINT,
+                    data=checkpoint),
+                output_channel=output_channel)
 
     @staticmethod
     def _save_snapshot_state(

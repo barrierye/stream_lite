@@ -20,6 +20,7 @@ message RegisterTaskManagerRequest {
 
 message TriggerCheckpointRequest {
   required string jobid = 1;
+  optional bool cancel_job = 2 [default = false];
 }
 
 

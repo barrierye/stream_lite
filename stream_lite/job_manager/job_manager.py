@@ -171,7 +171,7 @@ class JobManagerServicer(job_manager_pb2_grpc.JobManagerServiceServicer):
         try:
             checkpoint_id = CheckpointIdGenerator().next()
             self.checkpoint_coordinator.trigger_checkpoint(
-                    request.jobid, checkpoint_id)
+                    request.jobid, checkpoint_id, request.cancel_job)
         except Exception as e:
             _LOGGER.error(e, exc_info=True)
             return gen_nil_response(

@@ -40,10 +40,11 @@ class SubTaskClient(ClientBase):
         if resp.status.err_code != 0:
             raise SystemExit(resp.status.message)
 
-    def triggerCheckpoint(self, checkpoint_id: int):
+    def triggerCheckpoint(self, checkpoint_id: int, cancel_job: bool):
         resp = self.stub.triggerCheckpoint(
                 subtask_pb2.TriggerCheckpointRequest(
                     checkpoint=common_pb2.Record.Checkpoint(
-                        id=checkpoint_id)))
+                        id=checkpoint_id,
+                        cancel_job=cancel_job)))
         if resp.status.err_code != 0:
             raise SystemExit(resp.status.message)
