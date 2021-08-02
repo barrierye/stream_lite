@@ -240,13 +240,6 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
                 input_data = record.data.data # SerializableData.data
                 data_id = record.data_id
                 timestamp = record.timestamp
-
-                if data_type == common_pb2.Record.DataType.FINISH:
-                    _LOGGER.info(
-                            "[{}] finished successfully!".format(subtask_name))
-                    if not is_sink_op:
-                        SubTaskServicer._push_finish_event_to_output_channel(output_channel)
-                    break
             else:
                 try:
                     record = input_channel.get_nowait()
@@ -258,12 +251,27 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
                     data_type = common_pb2.Record.DataType.PICKLE
                     timestamp = util.get_timestamp()
                     input_data = None
+            '''
+            _LOGGER.info(
+                    "[{}] recv: {}(type={})".format(
+                        subtask_name, str(input_data), data_type))
+            '''
 
             if is_key_op:
                 output_data = input_data
                 if data_type == common_pb2.Record.DataType.PICKLE:
                     partition_key = task_instance.compute(input_data)
                 elif data_type == common_pb2.Record.DataType.CHECKPOINT:
+                    SubTaskServicer._push_checkpoint_event_to_output_channel(
+                            input_data, output_channel)
+                    if input_data.cancel_job:
+                        break
+                    else:
+                        continue
+                elif data_type == common_pb2.Record.DataType.FINISH:
+                    SubTaskServicer._push_finish_event_to_output_channel(output_channel)
+                    _LOGGER.info(
+                            "[{}] finished successfully!".format(subtask_name))
                     break
                 else:
                     raise Exception("Failed: unknow data type: {}".format(data_type))
@@ -283,6 +291,12 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
                         break
                     else:
                         continue
+                elif data_type == common_pb2.Record.DataType.FINISH:
+                    _LOGGER.info(
+                            "[{}] finished successfully!".format(subtask_name))
+                    if not is_sink_op:
+                        SubTaskServicer._push_finish_event_to_output_channel(output_channel)
+                    break
                 else:
                     raise Exception("Failed: unknow data type: {}".format(data_type))
             
