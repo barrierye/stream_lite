@@ -12,7 +12,7 @@ from .operator_base import OperatorBase
 class KeyOperatorBase(OperatorBase):
 
     def __init__(self):
-        pass
+        super(KeyOperatorBase, self).__init__()
 
     def compute(self, data) -> str:
         """ return key """

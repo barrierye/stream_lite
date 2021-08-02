@@ -13,6 +13,7 @@ class SimpleSource(SourceOperatorBase):
     def init(self, resource_path_dict):
         self.file = open(resource_path_dict["document-words.txt"])
         self.counter = 0
+        self.register_var("counter")
 
     def compute(self, inputs):
         time.sleep(1)
@@ -22,6 +23,3 @@ class SimpleSource(SourceOperatorBase):
             return word.strip()
         else:
             raise FinishJobError("") 
-
-    def checkpoint(self):
-        return self.counter

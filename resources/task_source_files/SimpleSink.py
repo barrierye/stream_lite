@@ -13,6 +13,3 @@ class SimpleSink(SinkOperatorBase):
 
     def compute(self, inputs):
         print("{}: {}".format(self.name, inputs))
-
-    def checkpoint(self):
-        pass

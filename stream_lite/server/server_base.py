@@ -35,7 +35,7 @@ class ServerBase(object):
                 "[{}] Attention: rpc_port has been updated({})".format(
                     self.service_name, self.rpc_port))
 
-    def _inner_run(self, succ_start_service_event: multiprocessing.Event):
+    def _inner_run(self):
         server = grpc.server(
                 futures.ThreadPoolExecutor(max_workers=self.worker_num),
                 options=[('grpc.max_send_message_length', 256 * 1024 * 1024),
@@ -49,14 +49,11 @@ class ServerBase(object):
         server.add_insecure_port('[::]:{}'.format(self.rpc_port))
         _LOGGER.info("[{}] Run on port: {}".format(self.service_name, self.rpc_port))
         server.start()
-        if succ_start_service_event:
-            # 如果不用 Process 新建进程的话不需要 set
-            succ_start_service_event.set()
         server.wait_for_termination()
 
-    def run(self, succ_start_service_event: multiprocessing.Event = None):
+    def run(self):
         try:
-            self._inner_run(succ_start_service_event)
+            self._inner_run()
         except Exception as e:
             _LOGGER.critical(
                     "Failed to run service ({})".format(e), exc_info=True)
@@ -66,15 +63,13 @@ class ServerBase(object):
         if self._process is not None:
             raise RuntimeError(
                     "Failed: process already running")
-        succ_start_service_event = multiprocessing.Event()
         if is_process:
             # 这里不能将 daemon 设为 True:
             #    AssertionError: daemonic processes are not allowed to have children
             self._process = multiprocessing.Process(
-                    target=self.run, args=(succ_start_service_event, ),
+                    target=self.run,
                     daemon=False)
         else:
             self._process = threading.Thread(
-                    target=self.run, args=(succ_start_service_event, ))
+                    target=self.run)
         self._process.start()
-        succ_start_service_event.wait()

@@ -136,7 +136,6 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
             is_process=True):
         if self._core_process is not None:
             raise SystemExit("Failed: process already running")
-        succ_start_service_event = multiprocessing.Event()
         if is_process:
             self._core_process = multiprocessing.Process(
                     target=SubTaskServicer._compute_core, 
@@ -146,8 +145,7 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
                         self.cls_name, self.subtask_name, 
                         self.resource_path_dict, 
                         input_channel, output_channel,
-                        self.snapshot_dir,
-                        succ_start_service_event),
+                        self.snapshot_dir),
                     daemon=True)
         else:
             self._core_process = threading.Thread(
@@ -158,10 +156,8 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
                         self.cls_name, self.subtask_name,
                         self.resource_path_dict,
                         input_channel, output_channel,
-                        self.snapshot_dir,
-                        succ_start_service_event))
+                        self.snapshot_dir))
         self._core_process.start()
-        succ_start_service_event.wait()
 
     # --------------------------- compute core ----------------------------
     @staticmethod
@@ -172,13 +168,12 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
             resource_path_dict: Dict[str, str],
             input_channel: multiprocessing.Queue,
             output_channel: multiprocessing.Queue,
-            snapshot_dir: str,
-            succ_start_service_event: multiprocessing.Event):
+            snapshot_dir: str):
         try:
             SubTaskServicer._inner_compute_core(
                     full_task_filename, cls_name, subtask_name,
                     resource_path_dict, input_channel, output_channel,
-                    snapshot_dir, succ_start_service_event)
+                    snapshot_dir)
         except FinishJobError as e:
             # SourceOp 中通过 FinishJobError 异常来表示
             # 处理完成。向下游 Operator 发送 Finish Record
@@ -207,8 +202,7 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
             resource_path_dict: Dict[str, str],
             input_channel: multiprocessing.Queue,
             output_channel: multiprocessing.Queue,
-            snapshot_dir: str,
-            succ_start_service_event: multiprocessing.Event):
+            snapshot_dir: str):
         """
         具体执行逻辑
         """
@@ -223,7 +217,6 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
         task_instance = cls()
         task_instance.set_name(subtask_name)
         task_instance.init(resource_path_dict)
-        succ_start_service_event.set()
 
         while True:
             record = None

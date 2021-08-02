@@ -49,12 +49,11 @@ class OutputDispenser(object):
             input_channel: multiprocessing.Queue,
             output_endpoints: List[str],
             subtask_name: str,
-            partition_idx: int,
-            succ_start_service_event: multiprocessing.Event):
+            partition_idx: int):
         try:
             self._inner_partitioning_data_and_carry_to_next_subtask(
                     input_channel, output_endpoints, subtask_name, 
-                    partition_idx, succ_start_service_event)
+                    partition_idx)
         except Exception as e:
             _LOGGER.critical(
                     "Failed: [{}] run output_partition_dispenser failed ({})"
@@ -65,8 +64,7 @@ class OutputDispenser(object):
             input_channel: multiprocessing.Queue,
             output_endpoints: List[str],
             subtask_name: str,
-            partition_idx: int,
-            succ_start_service_event: multiprocessing.Event):
+            partition_idx: int):
         partitions = []
         for endpoint in output_endpoints:
             output_partition_dispenser = OutputPartitionDispenser(
@@ -78,7 +76,6 @@ class OutputDispenser(object):
         need_broadcast_datatype = [
                 common_pb2.Record.DataType.FINISH,
                 common_pb2.Record.DataType.CHECKPOINT]
-        succ_start_service_event.set()
         while True:
             seri_record = input_channel.get()
             if seri_record.data_type in need_broadcast_datatype:
@@ -97,22 +94,18 @@ class OutputDispenser(object):
                 partitions[partition_idx].push_data(seri_record)
 
     def start_standleton_process(self, is_process):
-        succ_start_service_event = multiprocessing.Event()
         if is_process:
             proc = multiprocessing.Process(
                     target=self._partitioning_data_and_carry_to_next_subtask,
                     args=(self.channel, self.output_endpoints,
-                        self.subtask_name, self.partition_idx,
-                        succ_start_service_event),
+                        self.subtask_name, self.partition_idx),
                     daemon=True)
         else:
             proc = threading.Thread(
                     target=self._partitioning_data_and_carry_to_next_subtask,
                     args=(self.channel, self.output_endpoints,
-                        self.subtask_name, self.partition_idx,
-                        succ_start_service_event))
+                        self.subtask_name, self.partition_idx))
         proc.start()
-        succ_start_service_event.wait()
         return proc
 
 

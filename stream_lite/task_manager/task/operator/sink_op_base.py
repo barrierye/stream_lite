@@ -12,7 +12,7 @@ from .operator_base import OperatorBase
 class SinkOperatorBase(OperatorBase):
 
     def __init__(self):
-        pass
+        super(SinkOperatorBase, self).__init__()
 
     def compute(self, data):
         raise NotImplementedError("Failed: function not implemented")

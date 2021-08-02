@@ -61,12 +61,10 @@ class InputPartitionReceiver(object):
     def _prase_data_and_carry_to_channel(self, 
             input_queue: multiprocessing.Queue,
             output_channel: multiprocessing.Queue,
-            event_barrier: multiprocessing.Barrier,
-            succ_start_service_event: multiprocessing.Event):
+            event_barrier: multiprocessing.Barrier):
         try:
             self._inner_prase_data_and_carry_to_channel(
-                    input_queue, output_channel, event_barrier,
-                    succ_start_service_event)
+                    input_queue, output_channel, event_barrier)
         except Exception as e:
             _LOGGER.critical(
                     "Failed: run input_partition_receiver failed ({})".format(e), exc_info=True)
@@ -75,12 +73,10 @@ class InputPartitionReceiver(object):
     def _inner_prase_data_and_carry_to_channel(self,
             input_queue: multiprocessing.Queue,
             output_channel: multiprocessing.Queue,
-            event_barrier: multiprocessing.Barrier,
-            succ_start_service_event: multiprocessing.Event):
+            event_barrier: multiprocessing.Barrier):
         need_barrier_datatype = [
                 common_pb2.Record.DataType.FINISH,
                 common_pb2.Record.DataType.CHECKPOINT]
-        succ_start_service_event.set()
         while True:
             proto_data = input_queue.get()
             seri_data = serializator.SerializableRecord.from_proto(proto_data)
@@ -99,17 +95,15 @@ class InputPartitionReceiver(object):
         """
         if self._process is not None:
             raise SystemExit("Failed: process already running")
-        succ_start_service_event = multiprocessing.Event()
         if is_process:
             self._process = multiprocessing.Process(
                     target=self._prase_data_and_carry_to_channel,
                     args=(self.queue, self.channel, 
-                        self.event_barrier, succ_start_service_event),
+                        self.event_barrier), 
                     daemon=True)
         else:
             self._process = threading.Thread(
                     target=self._prase_data_and_carry_to_channel,
                     args=(self.queue, self.channel,
-                        self.event_barrier, succ_start_service_event))
+                        self.event_barrier))
         self._process.start()
-        succ_start_service_event.wait()

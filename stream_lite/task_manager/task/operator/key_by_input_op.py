@@ -9,7 +9,7 @@ from .key_op_base import KeyOperatorBase
 class KeyByInputOp(KeyOperatorBase):
 
     def __init__(self):
-        pass
+        super(KeyByInputOp, self).__init__()
 
     def compute(self, data: str) -> int:
         """ return key """

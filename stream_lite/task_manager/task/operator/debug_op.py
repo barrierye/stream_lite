@@ -11,7 +11,7 @@ from .operator_base import OperatorBase
 class DebugOp(OperatorBase):
 
     def __init__(self):
-        pass
+        super(DebugOp, self).__init__()
 
     def compute(self, data):
         """ print only """

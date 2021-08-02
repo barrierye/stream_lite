@@ -12,7 +12,7 @@ from .operator_base import OperatorBase
 class SourceOperatorBase(OperatorBase):
 
     def __init__(self):
-        pass
+        super(SourceOperatorBase, self).__init__()
 
     def compute(self, data):
         raise NotImplementedError("Failed: function not implemented")

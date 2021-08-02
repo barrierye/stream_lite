@@ -10,10 +10,17 @@ from typing import Dict
 class OperatorBase(object):
 
     def __init__(self):
-        pass
+        self.registered_vars = set() # 用于 snapshot 的状态
 
     def set_name(self, name):
         self.name = name
+
+    def register_var(self, var_name):
+        self.registered_vars.add(var_name)
+
+    def register_vars(self, var_names):
+        for var_name in var_names:
+            self.register_var(var_name)
 
     def init(self, resource_path_dict: Dict[str, str]):
         pass
@@ -25,4 +32,5 @@ class OperatorBase(object):
         """
         返回值为 snapshot 的状态，将被作为文件存储 common_pb2.File
         """
-        raise NotImplementedError("Failed: function not implemented")
+        state = {var_name: getattr(self, var_name) for var_name in self.registered_vars}
+        return state
