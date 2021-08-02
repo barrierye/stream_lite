@@ -182,6 +182,20 @@ class JobManagerServicer(job_manager_pb2_grpc.JobManagerServiceServicer):
                 status=common_pb2.Status(),
                 checkpoint_id=checkpoint_id)
 
+    # --------------------------- acknowledge checkpoint ----------------------------
+    def acknowledgeCheckpoint(self, request, context):
+        if request.status.err_code != 0:
+            _LOGGER.error(
+                    "Failed to acknowledge checkpoint: status.err_code != 0 ({})"
+                    .format(request.status.message))
+            return
+        succ = self.checkpoint_coordinator.acknowledgeCheckpoint(request)
+        if succ:
+            _LOGGER.info(
+                    "Success to complete checkpoint(id={}) of job(id={})"
+                    .format(request.checkpoint_id, request.jobid))
+        return gen_nil_response()
+
     # --------------------------- restore from checkpoint ----------------------------
     def restoreFromCheckpoint(self, request, context):
         pass

@@ -19,9 +19,12 @@ _LOGGER = logging.getLogger(__name__)
 class Slot(object):
 
     def __init__(self, tm_name: str,
+            job_manager_enpoint: str,
             execute_task: serializator.SerializableExectueTask):
         self.tm_name = tm_name
-        self.subtask = SubTaskServer(tm_name, execute_task)
+        self.job_manager_enpoint = job_manager_enpoint
+        self.subtask = SubTaskServer(
+                tm_name, job_manager_enpoint, execute_task)
         self.status = "DEPLOYED"
 
     def start(self):
@@ -37,10 +40,11 @@ class Slot(object):
 
 class SlotTable(object):
 
-    def __init__(self, tm_name: str, capacity: int):
+    def __init__(self, tm_name: str, job_manager_enpoint: str, capacity: int):
         self.rw_lock_pair = rwlock.RWLockFair()
         self.tm_name = tm_name
         self.capacity = capacity
+        self.job_manager_enpoint = job_manager_enpoint
         self.table = {} # subtask_name -> Slot
 
     def deployExecuteTask(self, proto: common_pb2.ExecuteTask) -> None:
@@ -57,7 +61,8 @@ class SlotTable(object):
                 raise KeyError(
                         "Failed to deploy task: subtask_name({}) already exists"
                         .format(subtask_name))
-            self.table[subtask_name] = Slot(self.tm_name, execute_task)
+            self.table[subtask_name] = Slot(
+                    self.tm_name, self.job_manager_enpoint, execute_task)
             _LOGGER.debug("Succ deploy task: {}".format(subtask_name))
 
     def startExecuteTask(self, subtask_name: str) -> None:

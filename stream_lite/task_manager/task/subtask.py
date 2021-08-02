@@ -19,7 +19,7 @@ from stream_lite.proto import common_pb2
 
 from stream_lite.network import serializator
 from stream_lite.network.util import gen_nil_response
-from stream_lite.client import SubTaskClient
+from stream_lite.client import SubTaskClient, JobManagerClient
 from stream_lite.utils import util, FinishJobError, DataIdGenerator
 
 from .input_receiver import InputReceiver
@@ -41,9 +41,11 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
 
     def __init__(self, 
             tm_name: str,
+            job_manager_enpoint: str,
             execute_task: serializator.SerializableExectueTask):
         super(SubTaskServicer, self).__init__()
         self.tm_name = tm_name
+        self.job_manager_enpoint = job_manager_enpoint
         self.subtask_id = id(self)
         self.cls_name = execute_task.cls_name
         self.task_filename = execute_task.task_file.name
@@ -145,7 +147,8 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
                         self.cls_name, self.subtask_name, 
                         self.resource_path_dict, 
                         input_channel, output_channel,
-                        self.snapshot_dir),
+                        self.snapshot_dir,
+                        self.job_manager_enpoint),
                     daemon=True)
         else:
             self._core_process = threading.Thread(
@@ -156,7 +159,8 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
                         self.cls_name, self.subtask_name,
                         self.resource_path_dict,
                         input_channel, output_channel,
-                        self.snapshot_dir))
+                        self.snapshot_dir,
+                        self.job_manager_enpoint))
         self._core_process.start()
 
     # --------------------------- compute core ----------------------------
@@ -168,12 +172,13 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
             resource_path_dict: Dict[str, str],
             input_channel: multiprocessing.Queue,
             output_channel: multiprocessing.Queue,
-            snapshot_dir: str):
+            snapshot_dir: str,
+            job_manager_enpoint: str):
         try:
             SubTaskServicer._inner_compute_core(
                     full_task_filename, cls_name, subtask_name,
                     resource_path_dict, input_channel, output_channel,
-                    snapshot_dir)
+                    snapshot_dir, job_manager_enpoint)
         except FinishJobError as e:
             # SourceOp 中通过 FinishJobError 异常来表示
             # 处理完成。向下游 Operator 发送 Finish Record
@@ -202,7 +207,8 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
             resource_path_dict: Dict[str, str],
             input_channel: multiprocessing.Queue,
             output_channel: multiprocessing.Queue,
-            snapshot_dir: str):
+            snapshot_dir: str,
+            job_manager_enpoint: str):
         """
         具体执行逻辑
         """
@@ -367,6 +373,23 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
                 name="chk_{}".format(checkpoint_id),
                 content=pickle.dumps(snapshot_state))
         seri_file.persistence_to_localfs(prefix_path=snapshot_dir)
+
+    @staticmethod
+    def _acknowledge_checkpoint(self, 
+            job_manager_enpoint: str,
+            subtask_name: str, 
+            jobid: str,
+            checkpoint_id: int, 
+            err_code: int = 0, 
+            err_msg: str = ""):
+        client = JobManagerClient()
+        client.connect(job_manager_enpoint)
+        client.acknowledgeCheckpoint(
+                subtask_name=subtask_name,
+                jobid=jobid,
+                checkpoint_id=checkpoint_id,
+                err_code=err_code,
+                err_msg=err_msg)
 
     # --------------------------- pushRecord (recv) ----------------------------
     def pushRecord(self, request, context):

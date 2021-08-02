@@ -47,6 +47,15 @@ class CheckpointCoordinator(object):
                     self.registered_task_manager_table,
                     cancel_job)
 
+    def acknowledgeCheckpoint(self, 
+            request: job_manager_pb2.AcknowledgeCheckpointRequest) -> bool:
+        jobid = request.jobid
+        with self.rw_lock_pair.gen_rlock():
+            if jobid not in self.table:
+                raise KeyError(
+                        "Failed to trigger checkpoint: can not found job(jobid={})".format(jobid))
+            return self.table[jobid].acknowledgeCheckpoint(request)
+
 
 class SpecificJobInfo(object):
     """
@@ -56,6 +65,7 @@ class SpecificJobInfo(object):
     def __init__(self, 
             execute_task_map: Dict[str, List[serializator.SerializableTask]]):
         self.source_ops = self.find_source_ops(execute_task_map)
+        self.ack_map = AcknowledgeTable(execute_task_map)
 
     def find_source_ops(self, 
             execute_task_map: Dict[str, List[serializator.SerializableTask]]) \
@@ -69,6 +79,10 @@ class SpecificJobInfo(object):
                     source_ops[task_manager_name].append(task)
         return source_ops
 
+    def acknowledgeCheckpoint(self, 
+            request: job_manager_pb2.AcknowledgeCheckpointRequest) -> bool:
+        return self.ack_map.acknowledgeCheckpoint(request)
+
     def trigger_checkpoint(self, 
             checkpoint_id: int,
             registered_task_manager_table: RegisteredTaskManagerTable,
@@ -76,6 +90,9 @@ class SpecificJobInfo(object):
         """
         传入 registered_task_manager_table 是为了找到对应 task_manager 的 endpoint
         """
+        if self.ack_map.has_checkpoint(checkpoint_id):
+            raise KeyError(
+                    "Failed: checkpoint(id={}) already exists".format(jobid))
         for task_manager_name, tasks in self.source_ops.items():
             task_manager_ip = \
                     registered_task_manager_table.get_task_manager_ip(
@@ -87,6 +104,7 @@ class SpecificJobInfo(object):
                         task.subtask_name,
                         checkpoint_id,
                         cancel_job)
+        self.ack_map.register_pending_checkpoint(checkpoint_id)
 
     def _inner_trigger_checkpoint(self, 
             subtask_ip: str, 
@@ -101,3 +119,47 @@ class SpecificJobInfo(object):
                 "Try to trigger checkpoint(id={}) for subtask [{}] (endpoint={})"
                 .format(checkpoint_id, subtask_name, subtask_endpoint))
         client.triggerCheckpoint(checkpoint_id, cancel_job)
+
+
+class AcknowledgeTable(object):
+    """
+    checkpoint_id -> pending_checkpoint
+    """
+
+    def __init__(self, 
+            execute_task_map: Dict[str, List[serializator.SerializableTask]]):
+        self.execute_task_map = execute_task_map
+        self.pending_checkpoints = {}
+
+    def has_checkpoint(self, checkpoint_id: int):
+        return checkpoint_id in self.pending_checkpoints
+
+    def register_pending_checkpoint(checkpoint_id: int):
+        if checkpoint_id in self.pending_checkpoint:
+            raise KeyError(
+                    "Failed: checkpoint(id={}) already exists".format(checkpoint_id))
+        self.pending_checkpoints[checkpoint_id] = set()
+        for task_manager_name, tasks in self.execute_task.items():
+            for task in tasks:
+                subtask_name = task.subtask_name
+                self.pending_checkpoints[checkpoint_id].add(subtask_name)
+
+    def acknowledgeCheckpoint(self,
+            request: job_manager_pb2.AcknowledgeCheckpointRequest) -> bool:
+        """
+        返回是否完全 ack
+        """
+        checkpoint_id = request.checkpoint_id
+        if checkpoint_id not in self.pending_checkpoint:
+            raise KeyError(
+                    "Failed: checkpoint(id={}) not exists".format(checkpoint_id))
+        subtask_name = request.subtask_name
+        pending_checkpoint = self.pending_checkpoints[checkpoint_id]
+        if subtask_name not in pending_checkpoint:
+            _LOGGER.warning("{} already acknowledge".format(subtask_name))
+        else:
+            pending_checkpoint.remove(subtask_name)
+        if len(pending_checkpoint) == 0:
+            self.pending_checkpoints.pop(checkpoint_id)
+            return True
+        return False

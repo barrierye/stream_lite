@@ -42,3 +42,15 @@ class JobManagerClient(ClientBase):
                 "Success register task manager(name={})".format(conf["name"]) +\
                 " to job manager(endpoint={})".format(job_manager_enpoint))
 
+    def acknowledgeCheckpoint(self, subtask_name: str, jobid: str,
+            checkpoint_id: int, err_code: int = 0, err_msg: str = ""):
+        resp = self.stub.acknowledgeCheckpoint(
+                job_manager_pb2.AcknowledgeCheckpointRequest(
+                    status=common_pb2.Status(
+                        err_code=err_code,
+                        message=err_msg),
+                    subtask_name=subtask_name,
+                    jobid=jobid,
+                    checkpoint_id=checkpoint_id))
+        if resp.status.err_code != 0:
+            raise Exception(resp.status.message)

@@ -34,7 +34,9 @@ class TaskManagerServicer(task_manager_pb2_grpc.TaskManagerServiceServicer):
                 stream_lite.utils.util.get_ip(), rpc_port)
         self.conf = self._init_by_yaml(conf_yaml_path)
         self._register(self.conf)
-        self.slot_table = SlotTable(self.name, self.resource.slot_number)
+        self.slot_table = SlotTable(
+                self.name, conf["job_manager_enpoint"],
+                self.resource.slot_number)
 
     def _init_by_yaml(self, conf_yaml_path: str) -> dict:
         with open(conf_yaml_path) as f:
