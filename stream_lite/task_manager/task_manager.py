@@ -35,7 +35,7 @@ class TaskManagerServicer(task_manager_pb2_grpc.TaskManagerServiceServicer):
         self.conf = self._init_by_yaml(conf_yaml_path)
         self._register(self.conf)
         self.slot_table = SlotTable(
-                self.name, conf["job_manager_enpoint"],
+                self.name, self.conf["job_manager_enpoint"],
                 self.resource.slot_number)
 
     def _init_by_yaml(self, conf_yaml_path: str) -> dict:
@@ -98,7 +98,8 @@ class TaskManagerServicer(task_manager_pb2_grpc.TaskManagerServiceServicer):
             return gen_nil_response(
                     err_code=1, message=err_msg)
         try:
-            self.slot_table.deployExecuteTask(request.exec_task)
+            self.slot_table.deployExecuteTask(
+                    request.jobid, request.exec_task)
         except Exception as e:
             _LOGGER.error(e, exc_info=True)
             return gen_nil_response(

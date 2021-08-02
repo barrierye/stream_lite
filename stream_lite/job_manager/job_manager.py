@@ -46,7 +46,7 @@ class JobManagerServicer(job_manager_pb2_grpc.JobManagerServiceServicer):
             seri_tasks.append(seri_task)
         
         try:
-            execute_map = self._innerSubmitJob(seri_tasks)
+            execute_map = self._innerSubmitJob(seri_tasks, jobid)
         
             # 把所有 Op 信息注册到 CheckpointCoordinator 里
             self.checkpoint_coordinator.register_job(jobid, execute_map)
@@ -60,13 +60,14 @@ class JobManagerServicer(job_manager_pb2_grpc.JobManagerServiceServicer):
                 status=common_pb2.Status(),
                 jobid=jobid)
         
-    def _innerSubmitJob(self, seri_tasks: List[serializator.SerializableTask]) \
-            -> Dict[str, List[serializator.SerializableExectueTask]]:
+    def _innerSubmitJob(self, 
+            seri_tasks: List[serializator.SerializableTask],
+            jobid: str) -> Dict[str, List[serializator.SerializableExectueTask]]:
         # schedule
         logical_map, execute_map = self.scheduler.schedule(seri_tasks)
         
         # deploy
-        self._deployExecuteTasks(execute_map)
+        self._deployExecuteTasks(jobid, execute_map)
         _LOGGER.info("Success deploy all task.")
 
         # start
@@ -76,11 +77,12 @@ class JobManagerServicer(job_manager_pb2_grpc.JobManagerServiceServicer):
         return execute_map
  
     def _deployExecuteTasks(self, 
+            jobid: str,
             execute_map: Dict[str, List[serializator.SerializableExectueTask]]):
         for task_manager_name, seri_execute_tasks in execute_map.items():
             client = self.registered_task_manager_table.get_client(task_manager_name)
             for execute_task in seri_execute_tasks:
-                client.deployTask(execute_task)
+                client.deployTask(jobid, execute_task)
 
     def _startExecuteTasks(self, 
             logical_map: Dict[str, List[serializator.SerializableTask]],

@@ -41,10 +41,12 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
 
     def __init__(self, 
             tm_name: str,
+            jobid: str,
             job_manager_enpoint: str,
             execute_task: serializator.SerializableExectueTask):
         super(SubTaskServicer, self).__init__()
         self.tm_name = tm_name
+        self.jobid = jobid
         self.job_manager_enpoint = job_manager_enpoint
         self.subtask_id = id(self)
         self.cls_name = execute_task.cls_name
@@ -142,6 +144,7 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
             self._core_process = multiprocessing.Process(
                     target=SubTaskServicer._compute_core, 
                     args=(
+                        self.jobid,
                         os.path.join(
                             self.taskfile_dir, self.task_filename), 
                         self.cls_name, self.subtask_name, 
@@ -154,6 +157,7 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
             self._core_process = threading.Thread(
                     target=SubTaskServicer._compute_core,
                     args=(
+                        self.jobid, 
                         os.path.join(
                             self.taskfile_dir, self.task_filename),
                         self.cls_name, self.subtask_name,
@@ -166,6 +170,7 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
     # --------------------------- compute core ----------------------------
     @staticmethod
     def _compute_core( 
+            jobid: str,
             full_task_filename: str,
             cls_name: str,
             subtask_name: str,
@@ -176,7 +181,7 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
             job_manager_enpoint: str):
         try:
             SubTaskServicer._inner_compute_core(
-                    full_task_filename, cls_name, subtask_name,
+                    jobid, full_task_filename, cls_name, subtask_name,
                     resource_path_dict, input_channel, output_channel,
                     snapshot_dir, job_manager_enpoint)
         except FinishJobError as e:
@@ -201,6 +206,7 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
 
     @staticmethod
     def _inner_compute_core( 
+            jobid: str,
             full_task_filename: str,
             cls_name: str,
             subtask_name: str,
@@ -265,6 +271,11 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
                             input_data, output_channel)
                     snapshot_state = task_instance.checkpoint()
                     _LOGGER.info("[{}] success save snapshot state".format(subtask_name))
+                    SubTaskServicer._acknowledge_checkpoint(
+                            job_manager_enpoint=job_manager_enpoint, 
+                            subtask_name=subtask_name, 
+                            jobid=jobid,
+                            checkpoint_id=input_data.id)
                     if input_data.cancel_job:
                         _LOGGER.info("[{}] success finish job".format(subtask_name))
                         break
@@ -288,6 +299,11 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
                     SubTaskServicer._save_snapshot_state(
                             snapshot_dir, snapshot_state, input_data.id)
                     _LOGGER.info("[{}] success save snapshot state".format(subtask_name))
+                    SubTaskServicer._acknowledge_checkpoint(
+                            job_manager_enpoint=job_manager_enpoint, 
+                            subtask_name=subtask_name, 
+                            jobid=jobid,
+                            checkpoint_id=input_data.id)
                     if input_data.cancel_job:
                         _LOGGER.info("[{}] success finish job".format(subtask_name))
                         break
@@ -375,7 +391,7 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
         seri_file.persistence_to_localfs(prefix_path=snapshot_dir)
 
     @staticmethod
-    def _acknowledge_checkpoint(self, 
+    def _acknowledge_checkpoint(
             job_manager_enpoint: str,
             subtask_name: str, 
             jobid: str,

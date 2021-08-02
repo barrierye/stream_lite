@@ -18,6 +18,8 @@ class SubTaskServer(ServerBase):
 
     def __init__(self, 
             tm_name: str,
+            jobid: str,
+            job_manager_enpoint: str,
             execute_task: serializator.SerializableExectueTask,
             rpc_port: int = -1, 
             worker_num: int = 1):
@@ -26,12 +28,15 @@ class SubTaskServer(ServerBase):
                     "Failed: can not set rpc_port for SubTaskServer")
         super(SubTaskServer, self).__init__(rpc_port, worker_num)
         self.tm_name = tm_name
+        self.jobid = jobid
+        self.job_manager_enpoint = job_manager_enpoint
         self.execute_task = execute_task
         self.service_name = self.execute_task.subtask_name
 
     def init_service(self, server):
         subtask_service = SubTaskServicer(
-                self.tm_name, self.execute_task)
+                self.tm_name, self.jobid, 
+                self.job_manager_enpoint, self.execute_task)
         # **Attention**: motify rpc port
         self.update_rpc_port(subtask_service.port)
         try:

@@ -8,6 +8,7 @@ import logging
 
 from stream_lite.proto import common_pb2
 from stream_lite.proto import subtask_pb2
+from stream_lite.proto import job_manager_pb2
 
 from stream_lite.client import SubTaskClient
 from .registered_task_manager_table import RegisteredTaskManagerTable
@@ -134,12 +135,12 @@ class AcknowledgeTable(object):
     def has_checkpoint(self, checkpoint_id: int):
         return checkpoint_id in self.pending_checkpoints
 
-    def register_pending_checkpoint(checkpoint_id: int):
-        if checkpoint_id in self.pending_checkpoint:
+    def register_pending_checkpoint(self, checkpoint_id: int):
+        if checkpoint_id in self.pending_checkpoints:
             raise KeyError(
                     "Failed: checkpoint(id={}) already exists".format(checkpoint_id))
         self.pending_checkpoints[checkpoint_id] = set()
-        for task_manager_name, tasks in self.execute_task.items():
+        for task_manager_name, tasks in self.execute_task_map.items():
             for task in tasks:
                 subtask_name = task.subtask_name
                 self.pending_checkpoints[checkpoint_id].add(subtask_name)
@@ -150,7 +151,7 @@ class AcknowledgeTable(object):
         返回是否完全 ack
         """
         checkpoint_id = request.checkpoint_id
-        if checkpoint_id not in self.pending_checkpoint:
+        if checkpoint_id not in self.pending_checkpoints:
             raise KeyError(
                     "Failed: checkpoint(id={}) not exists".format(checkpoint_id))
         subtask_name = request.subtask_name

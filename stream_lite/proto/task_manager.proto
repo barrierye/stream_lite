@@ -16,6 +16,7 @@ message RequiredSlotResponse {
 
 message DeployTaskRequest {
   required common.ExecuteTask exec_task = 1;
+  required string jobid = 2;
 };
 
 message StartTaskRequest {
