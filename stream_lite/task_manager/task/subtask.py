@@ -257,7 +257,10 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
                 elif data_type == common_pb2.Record.DataType.CHECKPOINT:
                     SubTaskServicer._push_checkpoint_event_to_output_channel(
                             input_data, output_channel)
+                    snapshot_state = task_instance.checkpoint()
+                    _LOGGER.info("[{}] success save snapshot state".format(subtask_name))
                     if input_data.cancel_job:
+                        _LOGGER.info("[{}] success finish job".format(subtask_name))
                         break
                     else:
                         continue

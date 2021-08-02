@@ -37,6 +37,7 @@ message RestoreFromCheckpointResponse {
   optional string jobid = 2;
 }
 
+
 service JobManagerService {
   // from user front client
   rpc submitJob(SubmitJobRequest) returns (SubmitJobResponse) {}
@@ -46,4 +47,7 @@ service JobManagerService {
   
   // from task manager
   rpc registerTaskManager(RegisterTaskManagerRequest) returns (common.NilResponse) {}
+
+  // from subtask
+  // rpc acknowledgeCheckpoint(AcknowledgeCheckpointRequest) returns (common.NilResponse) {}
 };

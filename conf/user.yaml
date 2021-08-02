@@ -1,14 +1,14 @@
 tasks:
   - name: SimpleSource
     currency: 1
-    resources: [resources/document-words.txt]
+    resources: [resources/document-words.txt, resources/document-words-small.txt]
     locate: taskmanager1
   - name: KeyByInputOp
     currency: 1
     input_tasks: [SimpleSource]
     locate: taskmanager1
   - name: SumOp
-    currency: 2
+    currency: 1
     input_tasks: [KeyByInputOp]
     locate: taskmanager1
   - name: SimpleSink

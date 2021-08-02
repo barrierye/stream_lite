@@ -18,6 +18,6 @@ if __name__ == '__main__':
     client = UserClient()
     client.connect('0.0.0.0:8970')
     jobid = client.submitJob(conf_path)
-    time.sleep(1)
-    client.triggerCheckpoint(jobid, cancel_job=False)
+    #  time.sleep(1)
+    #  client.triggerCheckpoint(jobid, cancel_job=False)
     #  client.triggerCheckpoint(jobid, cancel_job=True)

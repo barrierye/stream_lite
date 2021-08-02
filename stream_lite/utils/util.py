@@ -26,7 +26,7 @@ def get_timestamp() -> int:
     return int(time.time())
 
 
-def FinishJobError(RuntimeError):
+class FinishJobError(RuntimeError):
     """
     用于表示正常终止 Job 的异常
     """
