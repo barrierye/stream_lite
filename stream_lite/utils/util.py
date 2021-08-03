@@ -12,15 +12,19 @@ def get_ip() -> str:
     ip = socket.gethostbyname(hostname)
     return ip
 
-def get_filename(url: str) -> str:
+def get_filename(uri: str) -> str:
     """
     example:
-        url: /path/to/file
+        uri: /path/to/file
         path: /path/to/
         filename: file
     """
-    path, filename = os.path.split(url)
+    path, filename = os.path.split(uri)
     return filename
+
+def get_dirname(uri: str) -> str:
+    path, filename = os.path.split(uri)
+    return path
 
 def get_timestamp() -> int:
     return int(time.time())

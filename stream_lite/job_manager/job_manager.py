@@ -3,6 +3,7 @@
 # Python release: 3.7.0
 # Create time: 2021-07-19
 from concurrent import futures
+import os
 import grpc
 import logging
 import pickle
@@ -33,16 +34,21 @@ class JobManagerServicer(job_manager_pb2_grpc.JobManagerServiceServicer):
                 self.registered_task_manager_table)
         self.checkpoint_coordinator = CheckpointCoordinator(
                 self.registered_task_manager_table)
+        self.taskfile_dir = "./_tmp/jm/taskfiles"
+        self.resource_dir = "./_tmp/jm/resource/{}" # cls_name
+        self.snapshot_dir = "./_tmp/jm/snapshot/{}/partition_{}" # cls_name, part
 
     # --------------------------- submit job ----------------------------
     def submitJob(self, request, context):
         jobid = JobIdGenerator().next()
-        persistence_dir = "./_tmp/jm/task_files"
         seri_tasks = []
         for task in request.tasks:
             seri_task = serializator.SerializableTask.from_proto(task)
             if seri_task.task_file is not None:
-                seri_task.task_file.persistence_to_localfs(persistence_dir)
+                seri_task.task_file.persistence_to_localfs(self.taskfile_dir)
+                for resource in seri_task.resources:
+                    resource.persistence_to_localfs(
+                            self.resource_dir.format(seri_task.cls_name))
             seri_tasks.append(seri_task)
         
         try:
@@ -192,6 +198,11 @@ class JobManagerServicer(job_manager_pb2_grpc.JobManagerServiceServicer):
                     .format(request.status.message))
             return
         succ = self.checkpoint_coordinator.acknowledgeCheckpoint(request)
+        seri_file = serializator.SerializableFile.from_proto(request.state)
+        cls_name = request.subtask_name.split("#")[0]
+        partition_idx = request.subtask_name.split("#")[1].strip("()").split("/")[0]
+        seri_file.persistence_to_localfs(
+                self.snapshot_dir.format(cls_name, partition_idx))
         if succ:
             _LOGGER.info(
                     "Success to complete checkpoint(id={}) of job(id={})"

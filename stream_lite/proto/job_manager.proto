@@ -42,8 +42,8 @@ message AcknowledgeCheckpointRequest {
   required string subtask_name = 2;
   required string jobid = 3;
   required int32 checkpoint_id = 4;
+  required common.File state = 5;
   // optional common.ExecuteTask exec_task = 3;
-  // optional common.File state = 4;
 }
 
 service JobManagerService {

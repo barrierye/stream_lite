@@ -25,7 +25,7 @@ class JobManagerClient(ClientBase):
     def _init_stub(self, channel):
         return job_manager_pb2_grpc.JobManagerServiceStub(channel)
 
-    def registerTaskManager(self, endpoint, conf: dict):
+    def registerTaskManager(self, endpoint: str, conf: dict):
         job_manager_enpoint = conf["job_manager_enpoint"]
         resp = self.stub.registerTaskManager(
                 job_manager_pb2.RegisterTaskManagerRequest(
@@ -42,8 +42,13 @@ class JobManagerClient(ClientBase):
                 "Success register task manager(name={})".format(conf["name"]) +\
                 " to job manager(endpoint={})".format(job_manager_enpoint))
 
-    def acknowledgeCheckpoint(self, subtask_name: str, jobid: str,
-            checkpoint_id: int, err_code: int = 0, err_msg: str = ""):
+    def acknowledgeCheckpoint(self, 
+            subtask_name: str, 
+            jobid: str,
+            checkpoint_id: int, 
+            state: serializator.SerializableFile,
+            err_code: int = 0, 
+            err_msg: str = ""):
         resp = self.stub.acknowledgeCheckpoint(
                 job_manager_pb2.AcknowledgeCheckpointRequest(
                     status=common_pb2.Status(
@@ -51,6 +56,7 @@ class JobManagerClient(ClientBase):
                         message=err_msg),
                     subtask_name=subtask_name,
                     jobid=jobid,
-                    checkpoint_id=checkpoint_id))
+                    checkpoint_id=checkpoint_id,
+                    state=state.instance_to_proto()))
         if resp.status.err_code != 0:
             raise Exception(resp.status.message)

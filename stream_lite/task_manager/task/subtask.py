@@ -12,7 +12,7 @@ import multiprocessing
 import threading
 import queue
 import pickle
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Tuple, Union
 
 from stream_lite.proto import subtask_pb2_grpc
 from stream_lite.proto import common_pb2
@@ -56,11 +56,11 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
         self.subtask_name = execute_task.subtask_name
         self.partition_idx = execute_task.partition_idx
         self.port = execute_task.port
-        self.resource_dir = "_tmp/tm/{}/{}_{}/resource".format(
+        self.resource_dir = "_tmp/tm/{}/{}/partition_{}/resource".format(
                 self.tm_name, self.cls_name, self.partition_idx)
-        self.taskfile_dir = "_tmp/tm/{}/{}_{}/taskfile".format(
+        self.taskfile_dir = "_tmp/tm/{}/{}/partition_{}/taskfile".format(
                 self.tm_name, self.cls_name, self.partition_idx)
-        self.snapshot_dir = "_tmp/tm/{}/{}/{}/snapshot".format(
+        self.snapshot_dir = "_tmp/tm/{}/{}/partition_{}/snapshot".format(
                 self.tm_name, self.cls_name, self.partition_idx)
         self.resource_path_dict = self._save_resources(
                 self.resource_dir, list(execute_task.resources))
@@ -230,6 +230,42 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
         task_instance.set_name(subtask_name)
         task_instance.init(resource_path_dict)
 
+        def pickle_data_process(
+                task_instance: operator.OperatorBase,
+                is_key_op: bool,
+                input_data: Any) -> Tuple[Any, int]:
+            output_data = None
+            partition_key = -1
+            if is_key_op:
+                output_data = input_data
+                partition_key = task_instance.compute(input_data)
+            else:
+                output_data = task_instance.compute(input_data)
+            return output_data, partition_key
+
+        def checkpoint_event_process(
+                task_instance: operator.OperatorBase,
+                is_sink_op: bool,
+                input_data: Any) -> None:
+            if not is_sink_op:
+                SubTaskServicer._push_checkpoint_event_to_output_channel(
+                        input_data, output_channel)
+            SubTaskServicer._checkpoint(
+                    task_instance=task_instance,
+                    snapshot_dir=snapshot_dir,
+                    checkpoint_id=input_data.id,
+                    job_manager_enpoint=job_manager_enpoint,
+                    subtask_name=subtask_name,
+                    jobid=jobid)
+
+        def finish_event_process(
+                task_instance: operator.OperatorBase,
+                is_sink_op: bool,
+                input_data: Any) -> None:
+            if not is_sink_op:
+                SubTaskServicer._push_finish_event_to_output_channel(output_channel)
+
+
         while True:
             record = None
             data_type = None
@@ -256,67 +292,33 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
                     data_type = common_pb2.Record.DataType.PICKLE
                     timestamp = util.get_timestamp()
                     input_data = None
-            '''
-            _LOGGER.info(
-                    "[{}] recv: {}(type={})".format(
-                        subtask_name, str(input_data), data_type))
-            '''
-
-            if is_key_op:
-                output_data = input_data
-                if data_type == common_pb2.Record.DataType.PICKLE:
-                    partition_key = task_instance.compute(input_data)
-                elif data_type == common_pb2.Record.DataType.CHECKPOINT:
-                    SubTaskServicer._push_checkpoint_event_to_output_channel(
-                            input_data, output_channel)
-                    snapshot_state = task_instance.checkpoint()
-                    _LOGGER.info("[{}] success save snapshot state".format(subtask_name))
-                    SubTaskServicer._acknowledge_checkpoint(
-                            job_manager_enpoint=job_manager_enpoint, 
-                            subtask_name=subtask_name, 
-                            jobid=jobid,
-                            checkpoint_id=input_data.id)
-                    if input_data.cancel_job:
-                        _LOGGER.info("[{}] success finish job".format(subtask_name))
-                        break
-                    else:
-                        continue
-                elif data_type == common_pb2.Record.DataType.FINISH:
-                    SubTaskServicer._push_finish_event_to_output_channel(output_channel)
-                    _LOGGER.info(
-                            "[{}] finished successfully!".format(subtask_name))
+            
+            if data_type == common_pb2.Record.DataType.PICKLE:
+                output_data, partition_key = pickle_data_process(
+                        task_instance=task_instance,
+                        is_key_op=is_key_op, 
+                        input_data=input_data)
+            elif data_type == common_pb2.Record.DataType.CHECKPOINT:
+                checkpoint_event_process(
+                        task_instance=task_instance, 
+                        is_sink_op=is_sink_op,
+                        input_data=input_data)
+                _LOGGER.info("[{}] success save snapshot state".format(subtask_name))
+                cancel_job = input_data.cancel_job
+                if cancel_job:
+                    _LOGGER.info("[{}] success finish job".format(subtask_name))
                     break
                 else:
-                    raise Exception("Failed: unknow data type: {}".format(data_type))
+                    continue
+            elif data_type == common_pb2.Record.DataType.FINISH:
+                finish_event_process(
+                        task_instance=task_instance,
+                        is_sink_op=is_sink_op,
+                        input_data=input_data)
+                _LOGGER.info("[{}] finished successfully!".format(subtask_name))
+                break
             else:
-                if data_type == common_pb2.Record.DataType.PICKLE:
-                    output_data = task_instance.compute(input_data)
-                elif data_type == common_pb2.Record.DataType.CHECKPOINT:
-                    if not is_sink_op:
-                        SubTaskServicer._push_checkpoint_event_to_output_channel(
-                                input_data, output_channel)
-                    snapshot_state = task_instance.checkpoint()
-                    SubTaskServicer._save_snapshot_state(
-                            snapshot_dir, snapshot_state, input_data.id)
-                    _LOGGER.info("[{}] success save snapshot state".format(subtask_name))
-                    SubTaskServicer._acknowledge_checkpoint(
-                            job_manager_enpoint=job_manager_enpoint, 
-                            subtask_name=subtask_name, 
-                            jobid=jobid,
-                            checkpoint_id=input_data.id)
-                    if input_data.cancel_job:
-                        _LOGGER.info("[{}] success finish job".format(subtask_name))
-                        break
-                    else:
-                        continue
-                elif data_type == common_pb2.Record.DataType.FINISH:
-                    _LOGGER.info(
-                            "[{}] finished successfully!".format(subtask_name))
-                    if not is_sink_op:
-                        SubTaskServicer._push_finish_event_to_output_channel(output_channel)
-                    break
-                else:
-                    raise Exception("Failed: unknow data type: {}".format(data_type))
+                raise Exception("Failed: unknow data type: {}".format(data_type))
             
             if not is_sink_op:
                 output = serializator.SerializableData.from_object(
@@ -384,11 +386,13 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
     def _save_snapshot_state(
             snapshot_dir: str,
             snapshot_state: Any,
-            checkpoint_id: int):
+            checkpoint_id: int) -> serializator.SerializableFile:
         seri_file = serializator.SerializableFile(
                 name="chk_{}".format(checkpoint_id),
                 content=pickle.dumps(snapshot_state))
+        print(snapshot_dir)
         seri_file.persistence_to_localfs(prefix_path=snapshot_dir)
+        return seri_file
 
     @staticmethod
     def _acknowledge_checkpoint(
@@ -396,16 +400,36 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
             subtask_name: str, 
             jobid: str,
             checkpoint_id: int, 
+            state: serializator.SerializableFile,
             err_code: int = 0, 
-            err_msg: str = ""):
+            err_msg: str = "") -> None:
         client = JobManagerClient()
         client.connect(job_manager_enpoint)
         client.acknowledgeCheckpoint(
                 subtask_name=subtask_name,
                 jobid=jobid,
                 checkpoint_id=checkpoint_id,
+                state=state,
                 err_code=err_code,
                 err_msg=err_msg)
+
+    @staticmethod
+    def _checkpoint(
+            task_instance: operator.OperatorBase,
+            snapshot_dir: str,
+            checkpoint_id: int,
+            job_manager_enpoint: str,
+            subtask_name: str,
+            jobid: str) -> None:
+        snapshot_state = task_instance.checkpoint()
+        seri_file = SubTaskServicer._save_snapshot_state(
+                snapshot_dir, snapshot_state, checkpoint_id)
+        SubTaskServicer._acknowledge_checkpoint(
+                job_manager_enpoint=job_manager_enpoint, 
+                subtask_name=subtask_name, 
+                jobid=jobid,
+                checkpoint_id=checkpoint_id,
+                state=seri_file)
 
     # --------------------------- pushRecord (recv) ----------------------------
     def pushRecord(self, request, context):
