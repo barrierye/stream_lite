@@ -230,6 +230,38 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
         task_instance.set_name(subtask_name)
         task_instance.init(resource_path_dict)
 
+        # --------------------- get input ----------------------
+        def get_input_data(
+                task_instance: operator.OperatorBase,
+                is_source_op: bool) \
+                        -> Tuple[int, Any, str, int]:
+            if not is_source_op:
+                record = input_channel.get() # SerializableRecord
+                return [
+                        record.data_type, # type
+                        record.data.data, # input_data (SerializableData.data)
+                        record.data_id,   # data_id
+                        record.timestamp] # timestamp
+            else:
+                try:
+                    record = input_channel.get_nowait()
+                    return [
+                            record.data_type, # type
+                            record.data.data, # input_data
+                            -1,               # data_id
+                            -1]               # timestamp
+                except queue.Empty as e:
+                    # SourceOp 没有 event，继续处理
+                    data_id = str(DataIdGenerator().next())
+                    data_type = common_pb2.Record.DataType.PICKLE
+                    timestamp = util.get_timestamp()
+                    return [
+                            data_type, # data_type
+                            None,      # input_data
+                            data_id,   # data_id
+                            timestamp] # timestamp 
+
+        # --------------------- process data ----------------------
         def pickle_data_process(
                 task_instance: operator.OperatorBase,
                 is_key_op: bool,
@@ -262,36 +294,38 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
                 task_instance: operator.OperatorBase,
                 is_sink_op: bool,
                 input_data: Any) -> None:
-            if not is_sink_op:
-                SubTaskServicer._push_finish_event_to_output_channel(output_channel)
+            if is_sink_op:
+                return
+            SubTaskServicer._push_finish_event_to_output_channel(output_channel)
+
+        # --------------------- push output ----------------------
+        def push_output_data(
+                task_instance: operator.OperatorBase,
+                is_sink_op: bool,
+                output_data: Any,
+                data_type: int,
+                data_id: str,
+                timestamp: int,
+                partition_key: int) -> None:
+            if is_sink_op:
+                return
+            output = serializator.SerializableData.from_object(
+                    output_data, data_type=data_type)
+            output_channel.put(
+                    serializator.SerializableRecord(
+                        data_id=data_id,
+                        data_type=output.data_type,
+                        data=output,
+                        timestamp=timestamp,
+                        partition_key=partition_key))
 
 
         while True:
-            record = None
-            data_type = None
-            data_id = None
-            timestamp = None
             partition_key = -1
-            input_data = None
             output_data = None
 
-            if not is_source_op:
-                record = input_channel.get() # SerializableRecord
-                data_type = record.data_type
-                input_data = record.data.data # SerializableData.data
-                data_id = record.data_id
-                timestamp = record.timestamp
-            else:
-                try:
-                    record = input_channel.get_nowait()
-                    input_data = record.data.data
-                    data_type = record.data_type
-                except queue.Empty as e:
-                    # SourceOp 没有 event，继续处理
-                    data_id = str(DataIdGenerator().next())
-                    data_type = common_pb2.Record.DataType.PICKLE
-                    timestamp = util.get_timestamp()
-                    input_data = None
+            data_type, input_data, data_id, timestamp = \
+                    get_input_data(task_instance, is_source_op)
             
             if data_type == common_pb2.Record.DataType.PICKLE:
                 output_data, partition_key = pickle_data_process(
@@ -320,16 +354,14 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
             else:
                 raise Exception("Failed: unknow data type: {}".format(data_type))
             
-            if not is_sink_op:
-                output = serializator.SerializableData.from_object(
-                        output_data, data_type=data_type)
-                output_channel.put(
-                        serializator.SerializableRecord(
-                            data_id=data_id,
-                            data_type=output.data_type,
-                            data=output,
-                            timestamp=timestamp,
-                            partition_key=partition_key))
+            push_output_data(
+                task_instance=task_instance,
+                is_sink_op=is_sink_op,
+                output_data=output_data,
+                data_type=data_type,
+                data_id=data_id,
+                timestamp=timestamp,
+                partition_key=partition_key)
 
     @staticmethod
     def _import_cls_from_file(cls_name: str, filepath: str):
@@ -390,7 +422,6 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
         seri_file = serializator.SerializableFile(
                 name="chk_{}".format(checkpoint_id),
                 content=pickle.dumps(snapshot_state))
-        print(snapshot_dir)
         seri_file.persistence_to_localfs(prefix_path=snapshot_dir)
         return seri_file
 
