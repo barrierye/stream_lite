@@ -34,21 +34,29 @@ class JobManagerServicer(job_manager_pb2_grpc.JobManagerServiceServicer):
                 self.registered_task_manager_table)
         self.checkpoint_coordinator = CheckpointCoordinator(
                 self.registered_task_manager_table)
-        self.taskfile_dir = "./_tmp/jm/taskfiles"
-        self.resource_dir = "./_tmp/jm/resource/{}" # cls_name
-        self.snapshot_dir = "./_tmp/jm/snapshot/{}/partition_{}" # cls_name, part
+        self.jobinfo_dir = "./_tmp/jm/jobid_{}" # jobid
+        self.taskfile_dir = "./_tmp/jm/jobid_{}/taskfiles"   # jobid
+        self.resource_dir = "./_tmp/jm/jobid_{}/resource/{}" # jobid, cls_name
+        self.snapshot_dir = "./_tmp/jm/jobid_{}/snapshot/{}/partition_{}" # jobid, cls_name, part
 
     # --------------------------- submit job ----------------------------
     def submitJob(self, request, context):
+        # persistence_to_localfs
         jobid = JobIdGenerator().next()
+        jobinfo_path = self.jobinfo_dir.format(jobid)
+        os.system("mkdir -p {}".format(jobinfo_path))
+        with open(os.path.join(
+            self.jobinfo_dir.format(jobid), "jobinfo.prototxt"), "wb") as f:
+            f.write(request.SerializeToString())
         seri_tasks = []
         for task in request.tasks:
             seri_task = serializator.SerializableTask.from_proto(task)
-            if seri_task.task_file is not None:
-                seri_task.task_file.persistence_to_localfs(self.taskfile_dir)
-                for resource in seri_task.resources:
-                    resource.persistence_to_localfs(
-                            self.resource_dir.format(seri_task.cls_name))
+            #  if seri_task.task_file is not None:
+                #seri_task.task_file.persistence_to_localfs(
+                       # self.taskfile_dir.format(jobid))
+                #  for resource in seri_task.resources:
+                    #  resource.persistence_to_localfs(
+                            #  self.resource_dir.format(jobid, seri_task.cls_name))
             seri_tasks.append(seri_task)
         
         try:
@@ -200,9 +208,10 @@ class JobManagerServicer(job_manager_pb2_grpc.JobManagerServiceServicer):
         succ = self.checkpoint_coordinator.acknowledgeCheckpoint(request)
         seri_file = serializator.SerializableFile.from_proto(request.state)
         cls_name = request.subtask_name.split("#")[0]
+        jobid = request.jobid
         partition_idx = request.subtask_name.split("#")[1].strip("()").split("/")[0]
         seri_file.persistence_to_localfs(
-                self.snapshot_dir.format(cls_name, partition_idx))
+                self.snapshot_dir.format(jobid, cls_name, partition_idx))
         if succ:
             _LOGGER.info(
                     "Success to complete checkpoint(id={}) of job(id={})"
@@ -211,4 +220,22 @@ class JobManagerServicer(job_manager_pb2_grpc.JobManagerServiceServicer):
 
     # --------------------------- restore from checkpoint ----------------------------
     def restoreFromCheckpoint(self, request, context):
-        pass
+        jobid = request.jobid
+        jobinfo_path = os.path.join(
+                self.jobinfo_dir.format(jobid), "jobinfo.prototxt")
+        if not os.path.exists(jobinfo_path):
+            return job_manager_pb2.RestoreFromCheckpointResponse(
+                    status=common_pb2.Status(
+                        err_code=1, 
+                        message="Failed: can not found job(id={})".format(jobid)))
+
+        with open(jobinfo_path, "rb") as f:
+            req = job_manager_pb2.SubmitJobRequest()
+            req.ParseFromString(f.read())
+
+        new_jobid = JobIdGenerator().next()
+        # TODO!!!!!
+
+        return job_manager_pb2.RestoreFromCheckpointResponse(
+                status=common_pb2.Status(),
+                jobid=new_jobid)

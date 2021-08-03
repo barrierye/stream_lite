@@ -17,8 +17,11 @@ if __name__ == '__main__':
     # for debug
     client = UserClient()
     client.connect('0.0.0.0:8970')
-    jobid = client.submitJob(conf_path)
+    #  jobid = client.submitJob(conf_path)
     time.sleep(1)
     #  jobid = "2474b990f3b911eb8e8dacde48001122"
-    client.triggerCheckpoint(jobid, cancel_job=False)
+    #  client.triggerCheckpoint(jobid, cancel_job=False)
     #  client.triggerCheckpoint(jobid, cancel_job=True)
+    client.restoreFromCheckpoint(
+            jobid="7f51c376f49011eba818acde48001122",
+            checkpoint_id=0)

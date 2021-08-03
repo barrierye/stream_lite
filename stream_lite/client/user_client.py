@@ -43,7 +43,8 @@ class UserClient(ClientBase):
         return resp.jobid
     
     def triggerCheckpoint(self, 
-            jobid: str, cancel_job: bool = False) -> int:
+            jobid: str, 
+            cancel_job: bool = False) -> int:
         resp = self.stub.triggerCheckpoint(
                 job_manager_pb2.TriggerCheckpointRequest(
                     jobid=jobid,
@@ -55,10 +56,13 @@ class UserClient(ClientBase):
                 .format(jobid, resp.checkpoint_id))
         return resp.checkpoint_id
 
-    def restoreFromCheckpoint(self, checkpoint_id: int) -> str:
+    def restoreFromCheckpoint(self, 
+            jobid: str, 
+            checkpoint_id: int) -> str:
         resp = self.stub.restoreFromCheckpoint(
                 job_manager_pb2.RestoreFromCheckpointRequest(
-                    checkpoint_id=checkpoint_id))
+                    checkpoint_id=checkpoint_id,
+                    jobid=jobid))
         if resp.status.err_code != 0:
             raise Exception(resp.status.message)
         _LOGGER.info(

@@ -29,7 +29,8 @@ message TriggerCheckpointResponse {
 }
 
 message RestoreFromCheckpointRequest {
-  required int32 checkpoint_id = 1;
+  required string jobid = 1;
+  required int32 checkpoint_id = 2;
 }
 
 message RestoreFromCheckpointResponse {
