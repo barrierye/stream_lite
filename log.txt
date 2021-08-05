@@ -1,2 +1,0 @@
-2021-08-02 16:39 INFO     [job_manager_client.py:43] Success register task manager(name=taskmanager1) to job manager(endpoint=127.0.0.1:8970)
-2021-08-02 16:39 INFO     [server_base.py:50] [Service@TaskManager] Run on port: 12000

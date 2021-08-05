@@ -17,7 +17,7 @@ class SimpleSource(SourceOperatorBase):
         self.register_var("counter")
 
     def compute(self, inputs):
-        time.sleep(1)
+        time.sleep(0.05)
         word = self.file.readline()
         if word:
             self.counter += 1

@@ -3,8 +3,10 @@
 # Python release: 3.7.0
 # Create time: 2021-07-25
 import logging
+from typing import List, Dict, Union
 
 from stream_lite.proto import subtask_pb2_grpc
+from stream_lite.proto import common_pb2
 
 from stream_lite.network import serializator
 from stream_lite.server.server_base import ServerBase
@@ -21,8 +23,9 @@ class SubTaskServer(ServerBase):
             jobid: str,
             job_manager_enpoint: str,
             execute_task: serializator.SerializableExectueTask,
-            rpc_port: int = -1, 
-            worker_num: int = 1):
+            rpc_port: int = -1,
+            worker_num: int = 1,
+            state: Union[None, common_pb2.File] = None):
         if rpc_port != -1:
             raise ValueError(
                     "Failed: can not set rpc_port for SubTaskServer")
@@ -32,11 +35,14 @@ class SubTaskServer(ServerBase):
         self.job_manager_enpoint = job_manager_enpoint
         self.execute_task = execute_task
         self.service_name = self.execute_task.subtask_name
+        self.state = state
 
     def init_service(self, server):
         subtask_service = SubTaskServicer(
                 self.tm_name, self.jobid, 
-                self.job_manager_enpoint, self.execute_task)
+                self.job_manager_enpoint, 
+                self.execute_task,
+                self.state)
         # **Attention**: motify rpc port
         self.update_rpc_port(subtask_service.port)
         try:

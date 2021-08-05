@@ -12,4 +12,4 @@ class SimpleSink(SinkOperatorBase):
         pass
 
     def compute(self, inputs):
-        print("{}: {}".format(self.name, inputs))
+        print(inputs)

@@ -7,7 +7,7 @@ import logging
 import pickle
 import inspect
 import time
-from typing import List, Dict
+from typing import List, Dict, Union, Optional
 
 from stream_lite.proto import job_manager_pb2, job_manager_pb2_grpc
 from stream_lite.proto import task_manager_pb2, task_manager_pb2_grpc
@@ -44,11 +44,14 @@ class TaskManagerClient(ClientBase):
         return list(resp.available_ports)
 
     def deployTask(self, jobid: str,
-            exec_task: serializator.SerializableExectueTask):
-        resp = self.stub.deployTask(
-                task_manager_pb2.DeployTaskRequest(
-                    exec_task=exec_task.instance_to_proto(),
-                    jobid=jobid))
+            exec_task: serializator.SerializableExectueTask,
+            state: Union[None, common_pb2.File]) -> None:
+        req = task_manager_pb2.DeployTaskRequest(
+                exec_task=exec_task.instance_to_proto(),
+                jobid=jobid)
+        if state is not None:
+            req.state.CopyFrom(state)
+        resp = self.stub.deployTask(req)
         
         if resp.status.err_code != 0:
             raise RuntimeError(resp.status.message)

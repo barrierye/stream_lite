@@ -51,12 +51,6 @@ class JobManagerServicer(job_manager_pb2_grpc.JobManagerServiceServicer):
         seri_tasks = []
         for task in request.tasks:
             seri_task = serializator.SerializableTask.from_proto(task)
-            #  if seri_task.task_file is not None:
-                #seri_task.task_file.persistence_to_localfs(
-                       # self.taskfile_dir.format(jobid))
-                #  for resource in seri_task.resources:
-                    #  resource.persistence_to_localfs(
-                            #  self.resource_dir.format(jobid, seri_task.cls_name))
             seri_tasks.append(seri_task)
         
         try:
@@ -92,11 +86,25 @@ class JobManagerServicer(job_manager_pb2_grpc.JobManagerServiceServicer):
  
     def _deployExecuteTasks(self, 
             jobid: str,
-            execute_map: Dict[str, List[serializator.SerializableExectueTask]]):
+            execute_map: Dict[str, List[serializator.SerializableExectueTask]],
+            with_state: bool = False,
+            chk_jobid: str = "",
+            checkpoint_id: int = -1) -> None:
         for task_manager_name, seri_execute_tasks in execute_map.items():
             client = self.registered_task_manager_table.get_client(task_manager_name)
             for execute_task in seri_execute_tasks:
-                client.deployTask(jobid, execute_task)
+                state = None
+                if with_state:
+                    cls_name = execute_task.cls_name
+                    partition_idx = execute_task.partition_idx
+                    state_name = "chk_{}".format(checkpoint_id)
+                    snapshot_path = os.path.join(
+                            self.snapshot_dir.format(
+                                chk_jobid, cls_name, partition_idx),
+                            state_name)
+                    state = serializator.SerializableFile.to_proto(
+                            snapshot_path, state_name)
+                client.deployTask(jobid, execute_task, state)
 
     def _startExecuteTasks(self, 
             logical_map: Dict[str, List[serializator.SerializableTask]],
@@ -221,6 +229,7 @@ class JobManagerServicer(job_manager_pb2_grpc.JobManagerServiceServicer):
     # --------------------------- restore from checkpoint ----------------------------
     def restoreFromCheckpoint(self, request, context):
         jobid = request.jobid
+        checkpoint_id = request.checkpoint_id
         jobinfo_path = os.path.join(
                 self.jobinfo_dir.format(jobid), "jobinfo.prototxt")
         if not os.path.exists(jobinfo_path):
@@ -234,8 +243,42 @@ class JobManagerServicer(job_manager_pb2_grpc.JobManagerServiceServicer):
             req.ParseFromString(f.read())
 
         new_jobid = JobIdGenerator().next()
-        # TODO!!!!!
+        
+        seri_tasks = []
+        for task in req.tasks:
+            seri_task = serializator.SerializableTask.from_proto(task)
+            seri_tasks.append(seri_task)
+        
+        try:
+            execute_map = self._innerRestartJob(
+                    seri_tasks, jobid, new_jobid, checkpoint_id)
+        
+            # 把所有 Op 信息注册到 CheckpointCoordinator 里
+            self.checkpoint_coordinator.register_job(new_jobid, execute_map)
+        except Exception as e:
+            _LOGGER.error(e, exc_info=True)
+            return job_manager_pb2.RestoreFromCheckpointResponse(
+                    status=common_pb2.Status(
+                        err_code=1, message=str(e)))
 
         return job_manager_pb2.RestoreFromCheckpointResponse(
                 status=common_pb2.Status(),
                 jobid=new_jobid)
+ 
+    def _innerRestartJob(self, 
+            seri_tasks: List[serializator.SerializableTask],
+            jobid: str,
+            new_jobid: str,
+            checkpoint_id: int) -> Dict[str, List[serializator.SerializableExectueTask]]:
+        # schedule
+        logical_map, execute_map = self.scheduler.schedule(seri_tasks)
+
+        # deploy
+        self._deployExecuteTasks(new_jobid, execute_map, True, jobid, checkpoint_id)
+        _LOGGER.info("Success deploy all task.")
+
+        # start
+        self._startExecuteTasks(logical_map, execute_map)
+        _LOGGER.info("Success start all task.")
+
+        return execute_map

@@ -14,6 +14,7 @@ import queue
 import pickle
 from typing import List, Dict, Any, Tuple, Union
 
+import stream_lite
 from stream_lite.proto import subtask_pb2_grpc
 from stream_lite.proto import common_pb2
 
@@ -43,7 +44,8 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
             tm_name: str,
             jobid: str,
             job_manager_enpoint: str,
-            execute_task: serializator.SerializableExectueTask):
+            execute_task: serializator.SerializableExectueTask,
+            state: Union[None, common_pb2.File]):
         super(SubTaskServicer, self).__init__()
         self.tm_name = tm_name
         self.jobid = jobid
@@ -56,6 +58,7 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
         self.subtask_name = execute_task.subtask_name
         self.partition_idx = execute_task.partition_idx
         self.port = execute_task.port
+        self.state = state
         self.resource_dir = "_tmp/tm/{}/{}/partition_{}/resource".format(
                 self.tm_name, self.cls_name, self.partition_idx)
         self.taskfile_dir = "_tmp/tm/{}/{}/partition_{}/taskfile".format(
@@ -105,7 +108,8 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
             self.output_channel = self._init_output_dispenser(
                     self.output_endpoints)
         self._start_compute_on_standleton_process(
-                self.input_channel, self.output_channel, is_process=False)
+                self.input_channel, self.output_channel, 
+                is_process=stream_lite.config.IS_PROCESS)
 
     def _is_source_op(self) -> bool:
         cls = SubTaskServicer._import_cls_from_file(
@@ -151,7 +155,8 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
                         self.resource_path_dict, 
                         input_channel, output_channel,
                         self.snapshot_dir,
-                        self.job_manager_enpoint),
+                        self.job_manager_enpoint,
+                        self.state),
                     daemon=True)
         else:
             self._core_process = threading.Thread(
@@ -164,7 +169,8 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
                         self.resource_path_dict,
                         input_channel, output_channel,
                         self.snapshot_dir,
-                        self.job_manager_enpoint))
+                        self.job_manager_enpoint,
+                        self.state))
         self._core_process.start()
 
     # --------------------------- compute core ----------------------------
@@ -178,12 +184,13 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
             input_channel: multiprocessing.Queue,
             output_channel: multiprocessing.Queue,
             snapshot_dir: str,
-            job_manager_enpoint: str):
+            job_manager_enpoint: str,
+            state: Union[None, common_pb2.File]):
         try:
             SubTaskServicer._inner_compute_core(
                     jobid, full_task_filename, cls_name, subtask_name,
                     resource_path_dict, input_channel, output_channel,
-                    snapshot_dir, job_manager_enpoint)
+                    snapshot_dir, job_manager_enpoint, state)
         except FinishJobError as e:
             # SourceOp 中通过 FinishJobError 异常来表示
             # 处理完成。向下游 Operator 发送 Finish Record
@@ -214,7 +221,8 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
             input_channel: multiprocessing.Queue,
             output_channel: multiprocessing.Queue,
             snapshot_dir: str,
-            job_manager_enpoint: str):
+            job_manager_enpoint: str,
+            state_pb: Union[None, common_pb2.File]):
         """
         具体执行逻辑
         """
@@ -229,6 +237,13 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
         task_instance = cls()
         task_instance.set_name(subtask_name)
         task_instance.init(resource_path_dict)
+
+        # restore from checkpoint
+        if state_pb is not None:
+            seri_state = serializator.SerializableFile.from_proto(state_pb)
+            if seri_state.content:
+                state = pickle.loads(seri_state.content)
+                task_instance.restore_from_checkpoint(state)
 
         # --------------------- get input ----------------------
         def get_input_data(
