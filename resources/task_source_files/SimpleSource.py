@@ -11,16 +11,16 @@ from stream_lite.utils import FinishJobError
 class SimpleSource(SourceOperatorBase):
 
     def init(self, resource_path_dict):
-        self.file = open(resource_path_dict["document-words.txt"])
-        #  self.file = open(resource_path_dict["document-words-small.txt"])
+        with open(resource_path_dict["document-words.txt"]) as f:
+            self.lines = f.readlines()
         self.counter = 0
         self.register_var("counter")
 
     def compute(self, inputs):
         time.sleep(0.05)
-        word = self.file.readline()
-        if word:
+        if self.counter < len(self.lines):
+            word = self.lines[self.counter].strip()
             self.counter += 1
-            return word.strip()
+            return word
         else:
             raise FinishJobError("") 

@@ -18,15 +18,15 @@ if __name__ == '__main__':
     client = UserClient()
     client.connect('0.0.0.0:8970')
     
-    restart = False
+    restart = True #False
 
     if not restart:
         jobid = client.submitJob(conf_path)
         time.sleep(1)
         #  client.triggerCheckpoint(jobid, cancel_job=False)
-        #  client.triggerCheckpoint(jobid, cancel_job=True)
+        client.triggerCheckpoint(jobid, cancel_job=True)
     else:
-        jobid = "7344a5e4f61611ebbbf0acde48001122"
+        jobid = "56d2538ef6c511ebb53bacde48001122"
         client.restoreFromCheckpoint(
                 jobid=jobid,
                 checkpoint_id=0)
