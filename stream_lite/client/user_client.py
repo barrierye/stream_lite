@@ -69,3 +69,17 @@ class UserClient(ClientBase):
                 "Success to restore from checkpoint (chk_id={}), jobid={}"
                 .format(checkpoint_id, resp.jobid))
         return resp.jobid
+
+    def triggerMigrate(self, 
+            jobid: str,
+            src_subtask_name: str,
+            target_task_manager_locate: str) -> None:
+        resp = self.stub.migrate(
+                job_manager_pb2.MigrateRequest(
+                    jobid=jobid,
+                    src_subtask_name=src_subtask_name,
+                    target_task_manager_locate=target_task_manager_locate))
+        if resp.status.err_code != 0:
+            raise Exception(resp.status.message)
+        _LOGGER.info(
+                "Success to migrate job(id={})".format(jobid))

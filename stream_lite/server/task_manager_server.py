@@ -14,7 +14,7 @@ _LOGGER = logging.getLogger(__name__)
 
 class TaskManager(ServerBase):
 
-    def __init__(self, conf_yaml_path: str, rpc_port: int = -1, worker_num: int = 1):
+    def __init__(self, conf_yaml_path: str, rpc_port: int = -1, worker_num: int = 4):
         if rpc_port == -1:
             rpc_port = AvailablePortGenerator().next()
         super(TaskManager, self).__init__(rpc_port, worker_num)

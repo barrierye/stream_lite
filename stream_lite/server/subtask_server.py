@@ -24,7 +24,7 @@ class SubTaskServer(ServerBase):
             job_manager_enpoint: str,
             execute_task: serializator.SerializableExectueTask,
             rpc_port: int = -1,
-            worker_num: int = 1,
+            worker_num: int = 4,
             state: Union[None, common_pb2.File] = None):
         if rpc_port != -1:
             raise ValueError(

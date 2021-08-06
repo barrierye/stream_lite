@@ -79,10 +79,10 @@ class IncIdGenerator(GeneratorBase):
         return count
 
 
-class CheckpointIdGenerator(IncIdGenerator):
+class EventIdGenerator(IncIdGenerator):
 
     def __init__(self):
-        super(CheckpointIdGenerator, self).__init__()
+        super(EventIdGenerator, self).__init__()
 
 
 class DataIdGenerator(IncIdGenerator):

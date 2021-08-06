@@ -47,12 +47,19 @@ message AcknowledgeCheckpointRequest {
   // optional common.ExecuteTask exec_task = 3;
 }
 
+message MigrateRequest {
+  required string src_subtask_name = 1;
+  required string target_task_manager_locate = 2;
+  required string jobid = 3;
+}
+
 service JobManagerService {
   // from user front client
   rpc submitJob(SubmitJobRequest) returns (SubmitJobResponse) {}
   rpc triggerCheckpoint(TriggerCheckpointRequest) returns (TriggerCheckpointResponse) {}
   rpc restoreFromCheckpoint(RestoreFromCheckpointRequest) 
       returns (RestoreFromCheckpointResponse) {}
+  rpc triggerMigrate(MigrateRequest) returns (common.NilResponse) {}
   
   // from task manager
   rpc registerTaskManager(RegisterTaskManagerRequest) returns (common.NilResponse) {}

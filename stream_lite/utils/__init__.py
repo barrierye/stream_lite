@@ -5,6 +5,6 @@
 from .generator import (
         AvailablePortGenerator, 
         JobIdGenerator, 
-        CheckpointIdGenerator,
+        EventIdGenerator,
         DataIdGenerator)
 from .util import FinishJobError

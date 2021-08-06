@@ -16,11 +16,11 @@ import stream_lite.proto.job_manager_pb2_grpc as job_manager_pb2_grpc
 
 from stream_lite.network.util import gen_nil_response
 from stream_lite.network import serializator
-from stream_lite.utils import JobIdGenerator, CheckpointIdGenerator
+from stream_lite.utils import JobIdGenerator, EventIdGenerator
 
 from . import scheduler
 from .registered_task_manager_table import RegisteredTaskManagerTable
-from .checkpoint_coordinator import CheckpointCoordinator
+from .job_coordinator import JobCoordinator
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -32,7 +32,7 @@ class JobManagerServicer(job_manager_pb2_grpc.JobManagerServiceServicer):
         self.registered_task_manager_table = RegisteredTaskManagerTable()
         self.scheduler = scheduler.UserDefinedScheduler(
                 self.registered_task_manager_table)
-        self.checkpoint_coordinator = CheckpointCoordinator(
+        self.job_coordinator = JobCoordinator(
                 self.registered_task_manager_table)
         self.jobinfo_dir = "./_tmp/jm/jobid_{}" # jobid
         self.taskfile_dir = "./_tmp/jm/jobid_{}/taskfiles"   # jobid
@@ -57,7 +57,7 @@ class JobManagerServicer(job_manager_pb2_grpc.JobManagerServiceServicer):
             execute_map = self._innerSubmitJob(seri_tasks, jobid)
         
             # 把所有 Op 信息注册到 CheckpointCoordinator 里
-            self.checkpoint_coordinator.register_job(jobid, execute_map)
+            self.job_coordinator.register_job(jobid, execute_map)
         except Exception as e:
             _LOGGER.error(e, exc_info=True)
             return job_manager_pb2.SubmitJobResponse(
@@ -193,9 +193,15 @@ class JobManagerServicer(job_manager_pb2_grpc.JobManagerServiceServicer):
     # --------------------------- trigger checkpoint ----------------------------
     def triggerCheckpoint(self, request, context):
         try:
-            checkpoint_id = CheckpointIdGenerator().next()
-            self.checkpoint_coordinator.trigger_checkpoint(
-                    request.jobid, checkpoint_id, request.cancel_job)
+            jobid = request.jobid
+            checkpoint_id = EventIdGenerator().next()
+            self.job_coordinator.trigger_checkpoint(
+                    jobid=jobid, 
+                    checkpoint_id=checkpoint_id, 
+                    cancel_job=request.cancel_job)
+            self.job_coordinator.block_util_checkpoint_completed(
+                    jobid=jobid,
+                    checkpoint_id=checkpoint_id)
         except Exception as e:
             _LOGGER.error(e, exc_info=True)
             return job_manager_pb2.TriggerCheckpointResponse(
@@ -213,7 +219,7 @@ class JobManagerServicer(job_manager_pb2_grpc.JobManagerServiceServicer):
                     "Failed to acknowledge checkpoint: status.err_code != 0 ({})"
                     .format(request.status.message))
             return
-        succ = self.checkpoint_coordinator.acknowledgeCheckpoint(request)
+        succ = self.job_coordinator.acknowledgeCheckpoint(request)
         seri_file = serializator.SerializableFile.from_proto(request.state)
         cls_name = request.subtask_name.split("#")[0]
         jobid = request.jobid
@@ -254,7 +260,7 @@ class JobManagerServicer(job_manager_pb2_grpc.JobManagerServiceServicer):
                     seri_tasks, jobid, new_jobid, checkpoint_id)
         
             # 把所有 Op 信息注册到 CheckpointCoordinator 里
-            self.checkpoint_coordinator.register_job(new_jobid, execute_map)
+            self.job_coordinator.register_job(new_jobid, execute_map)
         except Exception as e:
             _LOGGER.error(e, exc_info=True)
             return job_manager_pb2.RestoreFromCheckpointResponse(
@@ -282,3 +288,31 @@ class JobManagerServicer(job_manager_pb2_grpc.JobManagerServiceServicer):
         _LOGGER.info("Success start all task.")
 
         return execute_map
+    
+    # --------------------------- migrate ----------------------------
+    def triggerMigrate(self, request, context):
+        try:
+            jobid = request.jobid
+            src_subtask_name = request.src_subtask_name
+            target_task_manager_locate = request.target_task_manager_locate
+
+            # step 1: checkpoint
+            checkpoint_id = EventIdGenerator().next()
+            self.job_coordinator.trigger_checkpoint(
+                    jobid=jobid, 
+                    checkpoint_id=checkpoint_id, 
+                    cancel_job=False)
+            self.job_coordinator.block_util_checkpoint_completed(
+                    jobid=jobid,
+                    checkpoint_id=checkpoint_id)
+
+            migrate_id = EventIdGenerator().next()
+            self.job_coordinator.trigger_migrate(
+                    jobid, src_subtask_name,
+                    target_task_manager_locate,
+                    migrate_id)
+        except Exception as e:
+            _LOGGER.error(e, exc_info=True)
+            return gen_nil_response(
+                    err_code=1, message=str(e))
+        return gen_nil_response()
