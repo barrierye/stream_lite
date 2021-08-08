@@ -55,6 +55,8 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
         self.task_filename = execute_task.task_file.name
         self.input_endpoints = execute_task.input_endpoints
         self.output_endpoints = execute_task.output_endpoints
+        self.upstream_cls_names = execute_task.upstream_cls_names # for migrate
+        self.downstream_cls_names = execute_task.downstream_cls_names  # for migrate
         self.subtask_name = execute_task.subtask_name
         self.partition_idx = execute_task.partition_idx
         self.port = execute_task.port
@@ -135,7 +137,8 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
         output_channel = multiprocessing.Queue()
         self.output_dispenser = OutputDispenser(
                 output_channel, output_endpoints,
-                self.subtask_name, self.partition_idx)
+                self.subtask_name, self.partition_idx,
+                self.downstream_cls_names)
         return output_channel
 
     def _start_compute_on_standleton_process(self,
@@ -154,6 +157,8 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
                         self.cls_name, self.subtask_name, 
                         self.resource_path_dict, 
                         input_channel, output_channel,
+                        self.upstream_cls_names,
+                        self.downstream_cls_names,
                         self.snapshot_dir,
                         self.job_manager_enpoint,
                         self.state),
@@ -168,6 +173,8 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
                         self.cls_name, self.subtask_name,
                         self.resource_path_dict,
                         input_channel, output_channel,
+                        self.upstream_cls_names,
+                        self.downstream_cls_names,
                         self.snapshot_dir,
                         self.job_manager_enpoint,
                         self.state))
@@ -183,6 +190,8 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
             resource_path_dict: Dict[str, str],
             input_channel: multiprocessing.Queue,
             output_channel: multiprocessing.Queue,
+            upstream_cls_names: List[str],
+            downstream_cls_names: List[str],
             snapshot_dir: str,
             job_manager_enpoint: str,
             state: Union[None, common_pb2.File]):
@@ -190,6 +199,7 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
             SubTaskServicer._inner_compute_core(
                     jobid, full_task_filename, cls_name, subtask_name,
                     resource_path_dict, input_channel, output_channel,
+                    upstream_cls_names, downstream_cls_names,
                     snapshot_dir, job_manager_enpoint, state)
         except FinishJobError as e:
             # SourceOp 中通过 FinishJobError 异常来表示
@@ -220,6 +230,8 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
             resource_path_dict: Dict[str, str],
             input_channel: multiprocessing.Queue,
             output_channel: multiprocessing.Queue,
+            upstream_cls_names: List[str],
+            downstream_cls_names: List[str],
             snapshot_dir: str,
             job_manager_enpoint: str,
             state_pb: Union[None, common_pb2.File]):
@@ -234,6 +246,7 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
         is_source_op = issubclass(cls, operator.SourceOperatorBase)
         is_sink_op = issubclass(cls, operator.SinkOperatorBase)
         is_key_op = issubclass(cls, operator.KeyOperatorBase)
+        current_data_id = -1 # 为了过滤 migrate 产生的重复数据
         task_instance = cls()
         task_instance.set_name(subtask_name)
         task_instance.init(resource_path_dict)
@@ -300,9 +313,27 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
             SubTaskServicer._checkpoint(
                     task_instance=task_instance,
                     snapshot_dir=snapshot_dir,
+                    checkpoint=input_data,
                     checkpoint_id=input_data.id,
                     job_manager_enpoint=job_manager_enpoint,
                     subtask_name=subtask_name,
+                    jobid=jobid)
+
+        def migrate_event_process(
+                task_instance: operator.OperatorBase,
+                is_sink_op: bool,
+                input_data: Any) -> None:
+            if not is_sink_op:
+                SubTaskServicer._push_migrate_event_to_output_channel(
+                        input_data, output_channel)
+            SubTaskServicer._migrate(
+                    task_instance=task_instance,
+                    migrate=input_data,
+                    job_manager_enpoint=job_manager_enpoint,
+                    subtask_name=subtask_name,
+                    upstream_cls_names=upstream_cls_names,
+                    downstream_cls_names=downstream_cls_names,
+                    migrate_id=input_data.id,
                     jobid=jobid)
 
         def finish_event_process(
@@ -343,6 +374,10 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
                     get_input_data(task_instance, is_source_op)
             
             if data_type == common_pb2.Record.DataType.PICKLE:
+                if int(data_id) <= current_data_id:
+                    # 过滤重复 data_id
+                    continue
+                current_data_id = int(data_id)
                 output_data, partition_key = pickle_data_process(
                         task_instance=task_instance,
                         is_key_op=is_key_op, 
@@ -460,13 +495,34 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
                 err_msg=err_msg)
 
     @staticmethod
+    def _acknowledge_migrate(
+            job_manager_enpoint: str,
+            subtask_name: str, 
+            jobid: str,
+            migrate_id: int, 
+            err_code: int = 0, 
+            err_msg: str = "") -> None:
+        client = JobManagerClient()
+        client.connect(job_manager_enpoint)
+        client.acknowledgeMigrate(
+                subtask_name=subtask_name,
+                jobid=jobid,
+                migrate_id=migrate_id,
+                err_code=err_code,
+                err_msg=err_msg)
+
+    @staticmethod
     def _checkpoint(
             task_instance: operator.OperatorBase,
             snapshot_dir: str,
+            checkpoint: Any,
             checkpoint_id: int,
             job_manager_enpoint: str,
             subtask_name: str,
             jobid: str) -> None:
+        """
+        每个 subtask 执行 checkpoint 操作
+        """
         snapshot_state = task_instance.checkpoint()
         seri_file = SubTaskServicer._save_snapshot_state(
                 snapshot_dir, snapshot_state, checkpoint_id)
@@ -476,6 +532,26 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
                 jobid=jobid,
                 checkpoint_id=checkpoint_id,
                 state=seri_file)
+
+    @staticmethod
+    def _migrate(
+            task_instance: operator.OperatorBase,
+            migrate_id, int,
+            migrate: common_pb2.Record.Migrate,
+            job_manager_enpoint: str,
+            subtask_name: str,
+            upstream_cls_names: List[str],
+            downstream_cls_names: List[str],
+            jobid: str) -> None:
+        """
+        每个 subtask 执行 migrate 操作
+        """
+        # (这部分操作在 output_dispenser 处理): 仅 new_subtask_name 上游的 task 与之建立连接
+        SubTaskServicer._acknowledge_migrate(
+                job_manager_enpoint=job_manager_enpoint,
+                subtask_name=subtask_name,
+                jobid=jobid,
+                migrate_id=migrate_id)
 
     # --------------------------- pushRecord (recv) ----------------------------
     def pushRecord(self, request, context):
@@ -499,6 +575,23 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
                 data=serializator.SerializableData.from_object(
                     data_type=common_pb2.Record.DataType.CHECKPOINT,
                     data=checkpoint),
+                timestamp=util.get_timestamp(),
+                partition_key=-1)
+        self.input_channel.put(seri_data)
+        return gen_nil_response()
+
+    # --------------------------- triggerCheckpoint ----------------------------
+    def triggerMigrate(self, request, context):
+        """
+        只有 SourceOp 才会被调用该函数
+        """
+        migrate = request.migrate
+        seri_data = serializator.SerializableRecord(
+                data_id="migrate_data_id",
+                data_type=common_pb2.Record.DataType.MIGRATE,
+                data=serializator.SerializableData.from_object(
+                    data_type=common_pb2.Record.DataType.MIGRATE,
+                    data=migrate),
                 timestamp=util.get_timestamp(),
                 partition_key=-1)
         self.input_channel.put(seri_data)

@@ -99,7 +99,9 @@ class UserDefinedScheduler(Scheduler):
                                 port=port,
                                 host=task_manager_host,
                                 subtask_name=subtask_name,
-                                partition_idx=i)
+                                partition_idx=i,
+                                upstream_cls_names=logical_task.input_tasks,
+                                downstream_cls_names=[])
                     execute_map[task_manager_name].append(execute_task)
                     name_to_executetask[subtask_name] = execute_task
     
@@ -136,4 +138,5 @@ class UserDefinedScheduler(Scheduler):
                                     "{}:{}".format(
                                         current_executetask.host,
                                         current_executetask.port))
+                        pre_executetask.downstream_cls_names = [logical_task.cls_name]
         return execute_map

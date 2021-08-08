@@ -15,10 +15,15 @@ message TriggerCheckpointRequest {
   required common.Record.Checkpoint checkpoint = 1;
 }
 
+message TriggerMigrateRequest {
+  required common.Record.Migrate migrate = 1;
+}
+
 service SubTaskService {
   // from other subtask
   rpc pushRecord(PushRecordRequest) returns (common.NilResponse) {}
 
   // from job manager
   rpc triggerCheckpoint(TriggerCheckpointRequest) returns (common.NilResponse) {}
+  rpc triggerMigrate(TriggerMigrateRequest) returns (common.NilResponse) {}
 };

@@ -60,3 +60,20 @@ class JobManagerClient(ClientBase):
                     state=state.instance_to_proto()))
         if resp.status.err_code != 0:
             raise Exception(resp.status.message)
+
+    def acknowledgeMigrate(self, 
+            subtask_name: str, 
+            jobid: str,
+            migrate_id: int, 
+            err_code: int = 0, 
+            err_msg: str = ""):
+        resp = self.stub.acknowledgeMigrate(
+                job_manager_pb2.AcknowledgeMigrateRequest(
+                    status=common_pb2.Status(
+                        err_code=err_code,
+                        message=err_msg),
+                    subtask_name=subtask_name,
+                    jobid=jobid,
+                    migrate_id=migrate_id))
+        if resp.status.err_code != 0:
+            raise Exception(resp.status.message)

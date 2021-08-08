@@ -208,7 +208,8 @@ class SerializableExectueTask(SerializableObject):
         super(SerializableExectueTask, self).__init__(**kwargs)
         required_attrs = ["cls_name", "input_endpoints", 
                 "output_endpoints", "resources", "task_file",
-                "subtask_name", "partition_idx", "port"]
+                "subtask_name", "partition_idx", "port",
+                "upstream_cls_names", "downstream_cls_names"]
         self.check_attrs(required_attrs)
 
     def instance_to_proto(self) -> common_pb2.ExecuteTask:
@@ -220,7 +221,9 @@ class SerializableExectueTask(SerializableObject):
                 task_file=self.task_file,
                 subtask_name=self.subtask_name,
                 partition_idx=self.partition_idx,
-                port=self.port)
+                port=self.port,
+                upstream_cls_names=self.upstream_cls_names,
+                downstream_cls_names=self.downstream_cls_names)
 
     @staticmethod
     def to_proto(
@@ -231,7 +234,9 @@ class SerializableExectueTask(SerializableObject):
             task_file: SerializableFile,
             subtask_name: str,
             partition_idx: int,
-            port: int) -> common_pb2.ExecuteTask:
+            port: int,
+            upstream_cls_names: List[str],
+            downstream_cls_names: List[str]) -> common_pb2.ExecuteTask:
         proto = common_pb2.ExecuteTask(
                 cls_name=cls_name,
                 input_endpoints=input_endpoints,
@@ -239,7 +244,9 @@ class SerializableExectueTask(SerializableObject):
                 resources=[f.instance_to_proto() for f in resources],
                 subtask_name=subtask_name,
                 partition_idx=partition_idx,
-                port=port)
+                port=port,
+                upstream_cls_names=upstream_cls_names,
+                downstream_cls_names=downstream_cls_names)
         if task_file is not None:
             proto.task_file.CopyFrom(task_file.instance_to_proto())
         return proto
@@ -254,7 +261,9 @@ class SerializableExectueTask(SerializableObject):
                 task_file=SerializableFile.from_proto(proto.task_file),
                 subtask_name=proto.subtask_name,
                 partition_idx=proto.partition_idx,
-                port=proto.port)
+                port=proto.port,
+                upstream_cls_names=list(proto.upstream_cls_names),
+                downstream_cls_names=list(proto.downstream_cls_names))
 
 
 class SerializableRecord(SerializableObject):
@@ -298,6 +307,8 @@ class SerializableData(SerializableObject):
             byte_array = self.data.SerializeToString()
         elif self.data_type == common_pb2.Record.DataType.FINISH:
             byte_array = self.data.SerializeToString()
+        elif self.data_type == common_pb2.Record.DataType.MIGRATE:
+            byte_array = self.data.SerializeToString()
         else:
             raise TypeError("Failed: unknow data type({})".format(data_type))
         return byte_array
@@ -312,6 +323,9 @@ class SerializableData(SerializableObject):
             data.ParseFromString(byte_array)
         elif data_type == common_pb2.Record.DataType.FINISH:
             data = common_pb2.Record.Finish()
+            data.ParseFromString(byte_array)
+        elif data_type == common_pb2.Record.DataType.MIGRATE:
+            data = common_pb2.Record.Migrate()
             data.ParseFromString(byte_array)
         else:
             raise TypeError("Failed: unknow data type({})".format(data_type))

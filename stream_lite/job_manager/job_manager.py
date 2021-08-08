@@ -14,6 +14,7 @@ import stream_lite.proto.job_manager_pb2 as job_manager_pb2
 import stream_lite.proto.common_pb2 as common_pb2
 import stream_lite.proto.job_manager_pb2_grpc as job_manager_pb2_grpc
 
+from stream_lite import client
 from stream_lite.network.util import gen_nil_response
 from stream_lite.network import serializator
 from stream_lite.utils import JobIdGenerator, EventIdGenerator
@@ -38,16 +39,19 @@ class JobManagerServicer(job_manager_pb2_grpc.JobManagerServiceServicer):
         self.taskfile_dir = "./_tmp/jm/jobid_{}/taskfiles"   # jobid
         self.resource_dir = "./_tmp/jm/jobid_{}/resource/{}" # jobid, cls_name
         self.snapshot_dir = "./_tmp/jm/jobid_{}/snapshot/{}/partition_{}" # jobid, cls_name, part
+        self.exetasks_dir = "./_tmp/jm/jobid_{}/physical/{}/partition_{}" # jobid, cls_name, part
 
     # --------------------------- submit job ----------------------------
     def submitJob(self, request, context):
-        # persistence_to_localfs
         jobid = JobIdGenerator().next()
+
+        # persistence_to_localfs: whole request
         jobinfo_path = self.jobinfo_dir.format(jobid)
         os.system("mkdir -p {}".format(jobinfo_path))
         with open(os.path.join(
-            self.jobinfo_dir.format(jobid), "jobinfo.prototxt"), "wb") as f:
+            jobinfo_path, "jobinfo.prototxt"), "wb") as f:
             f.write(request.SerializeToString())
+        
         seri_tasks = []
         for task in request.tasks:
             seri_task = serializator.SerializableTask.from_proto(task)
@@ -55,7 +59,17 @@ class JobManagerServicer(job_manager_pb2_grpc.JobManagerServiceServicer):
         
         try:
             execute_map = self._innerSubmitJob(seri_tasks, jobid)
-        
+
+            # persistence_to_localfs: physical task
+            for task_manager_name, execute_tasks in execute_map.items():
+                for task in execute_tasks:
+                    task_path = self.exetasks_dir.format(
+                            jobid, task.cls_name, task.partition_idx)
+                    os.system("mkdir -p {}".format(task_path))
+                    with open(os.path.join(
+                        task_path, "task.prototxt"), "wb") as f:
+                        f.write(task.instance_to_proto().SerializeToString())
+
             # 把所有 Op 信息注册到 CheckpointCoordinator 里
             self.job_coordinator.register_job(jobid, execute_map)
         except Exception as e:
@@ -83,7 +97,27 @@ class JobManagerServicer(job_manager_pb2_grpc.JobManagerServiceServicer):
         _LOGGER.info("Success start all task.")
 
         return execute_map
- 
+
+    def _deployExecuteTask(self,
+            jobid: str,
+            client: client.TaskManagerClient,
+            execute_task: serializator.SerializableExectueTask,
+            with_state: bool = False,
+            chk_jobid: str = "", # checkpoint 时候的 jobid
+            checkpoint_id: int = -1) -> None:
+        state = None
+        if with_state:
+            cls_name = execute_task.cls_name
+            partition_idx = execute_task.partition_idx
+            state_name = "chk_{}".format(checkpoint_id)
+            snapshot_path = os.path.join(
+                    self.snapshot_dir.format(
+                        chk_jobid, cls_name, partition_idx),
+                    state_name)
+            state = serializator.SerializableFile.to_proto(
+                    snapshot_path, state_name)
+        client.deployTask(jobid, execute_task, state)
+
     def _deployExecuteTasks(self, 
             jobid: str,
             execute_map: Dict[str, List[serializator.SerializableExectueTask]],
@@ -93,18 +127,13 @@ class JobManagerServicer(job_manager_pb2_grpc.JobManagerServiceServicer):
         for task_manager_name, seri_execute_tasks in execute_map.items():
             client = self.registered_task_manager_table.get_client(task_manager_name)
             for execute_task in seri_execute_tasks:
-                state = None
-                if with_state:
-                    cls_name = execute_task.cls_name
-                    partition_idx = execute_task.partition_idx
-                    state_name = "chk_{}".format(checkpoint_id)
-                    snapshot_path = os.path.join(
-                            self.snapshot_dir.format(
-                                chk_jobid, cls_name, partition_idx),
-                            state_name)
-                    state = serializator.SerializableFile.to_proto(
-                            snapshot_path, state_name)
-                client.deployTask(jobid, execute_task, state)
+                self._deployExecuteTask(
+                        jobid=jobid,
+                        client=client,
+                        execute_task=execute_task,
+                        with_state=with_state,
+                        chk_jobid=chk_jobid,
+                        checkpoint_id=checkpoint_id)
 
     def _startExecuteTasks(self, 
             logical_map: Dict[str, List[serializator.SerializableTask]],
@@ -167,10 +196,10 @@ class JobManagerServicer(job_manager_pb2_grpc.JobManagerServiceServicer):
             subtask_name = self._get_subtask_name(
                     cls_name, i, logical_task.currency)
             task_manager_name, execute_task = subtask_name_inverted_index[subtask_name]
-            self._innerDfsToStartExecuteTask(
+            self._innerStartExecuteTask(
                     task_manager_name, execute_task)
 
-    def _innerDfsToStartExecuteTask(self, 
+    def _innerStartExecuteTask(self, 
             task_manager_name: str,
             execute_task: serializator.SerializableExectueTask):
         client = self.registered_task_manager_table.get_client(task_manager_name)
@@ -198,7 +227,9 @@ class JobManagerServicer(job_manager_pb2_grpc.JobManagerServiceServicer):
             self.job_coordinator.trigger_checkpoint(
                     jobid=jobid, 
                     checkpoint_id=checkpoint_id, 
-                    cancel_job=request.cancel_job)
+                    cancel_job=request.cancel_job,
+                    migrate_cls_name="",
+                    migrate_partition_idx=0)
             self.job_coordinator.block_util_checkpoint_completed(
                     jobid=jobid,
                     checkpoint_id=checkpoint_id)
@@ -293,24 +324,88 @@ class JobManagerServicer(job_manager_pb2_grpc.JobManagerServiceServicer):
     def triggerMigrate(self, request, context):
         try:
             jobid = request.jobid
-            src_subtask_name = request.src_subtask_name
+            src_cls_name = request.src_cls_name
+            src_partition_idx = request.src_partition_idx
             target_task_manager_locate = request.target_task_manager_locate
 
-            # step 1: checkpoint
+            # step 1: checkpoint for migrate
             checkpoint_id = EventIdGenerator().next()
             self.job_coordinator.trigger_checkpoint(
                     jobid=jobid, 
                     checkpoint_id=checkpoint_id, 
-                    cancel_job=False)
+                    cancel_job=False,
+                    migrate_cls_name=src_cls_name,
+                    migrate_partition_idx=src_partition_idx)
             self.job_coordinator.block_util_checkpoint_completed(
                     jobid=jobid,
                     checkpoint_id=checkpoint_id)
 
+            # step 2: deploy and start new subtask in target_task_manager_locate
+            # step 2.1: find subtask file, resources and snapshot
+            task_path = self.exetasks_dir.format(
+                    jobid, src_cls_name, src_partition_idx)
+            prototxt_path = os.path.join(task_path, "task.prototxt")
+            if not os.path.exists(prototxt_path):
+                return gen_nil_response(
+                        err_code=1, 
+                        message="Failed: can not found job(id={})".format(jobid))
+            with open(prototxt_path, "rb") as f:
+                execute_task_pb = common_pb2.ExecuteTask()
+                execute_task_pb.ParseFromString(f.read())
+
+            # step 2.2: ask for slot resource
+            if not self.registered_task_manager_table.has_task_manager(target_task_manager_locate):
+                return gen_nil_response(
+                        err_code=1,
+                        message="Failed: can not found task_manager(name={})".format(
+                            target_task_manager_locate))
+            client = self.registered_task_manager_table.get_client(task_manager_name)
+            available_ports = client.requestSlot([
+                serializator.SerializableTask(
+                        cls_name=execute_task_pb.cls_name,
+                        currency=1,
+                        locate=target_task_manager_locate,
+                        resources=[],
+                        task_file=None,
+                        input_tasks=None)])
+            exe_task = serializator.SerializableExectueTask.from_proto(execute_task_pb)
+            exe_task.port = available_ports[0]
+            exe_task_endpoint = "{}:{}".format(
+                    self.registered_task_manager_table.get_host(task_manager_name),
+                    exe_task.port)
+
+            # step 2.3: deploy subtask (with state)
+            client = self.registered_task_manager_table.get_client(task_manager_name)
+            self._deployExecuteTask(
+                    jobid=jobid,
+                    client=client,
+                    execute_task=exe_task,
+                    with_state=True,
+                    chk_jobid=jobid,
+                    checkpoint_id=checkpoint_id)
+            _LOGGER.info("Success deploy a new task.")
+
+            # step 2.4: start subtask
+            self._innerStartExecuteTask(
+                    task_manager_name=target_task_manager_locate,
+                    execute_task=exe_task)
+            _LOGGER.info("Success start the new task.")
+ 
+            # step 3: broadcast migrate event to notify upstream subtask
+            #         start send data to the new subtask.
             migrate_id = EventIdGenerator().next()
             self.job_coordinator.trigger_migrate(
-                    jobid, src_subtask_name,
-                    target_task_manager_locate,
-                    migrate_id)
+                    jobid=jobid, 
+                    new_cls_name=src_cls_name, 
+                    new_partition_idx=src_partition_idx,
+                    new_endpoint=exe_task_endpoint,
+                    migrate_id=migrate_id)
+            self.job_coordinator.block_util_migrate_completed(
+                    jobid=jobid,
+                    migrate_id=migrate_id)
+ 
+            # step 4: close old subtask
+            # TODO
         except Exception as e:
             _LOGGER.error(e, exc_info=True)
             return gen_nil_response(

@@ -29,7 +29,7 @@ class SubTaskClient(ClientBase):
         return subtask_pb2_grpc.SubTaskServiceStub(channel)
 
     def pushRecord(self, from_subtask: str,
-            partition_idx: int, record: common_pb2.Record):
+            partition_idx: int, record: common_pb2.Record) -> None:
         #  print(str(record))
         req = subtask_pb2.PushRecordRequest(
                 from_subtask=from_subtask,
@@ -40,11 +40,32 @@ class SubTaskClient(ClientBase):
         if resp.status.err_code != 0:
             raise SystemExit(resp.status.message)
 
-    def triggerCheckpoint(self, checkpoint_id: int, cancel_job: bool):
+    def triggerCheckpoint(self, 
+            checkpoint_id: int, 
+            cancel_job: bool,
+            migrate_cls_name: str,
+            migrate_partition_idx: int) -> None:
         resp = self.stub.triggerCheckpoint(
                 subtask_pb2.TriggerCheckpointRequest(
                     checkpoint=common_pb2.Record.Checkpoint(
                         id=checkpoint_id,
-                        cancel_job=cancel_job)))
+                        cancel_job=cancel_job,
+                        migrate_cls_name=migrate_cls_name,
+                        migrate_partition_idx=migrate_partition_idx)))
+        if resp.status.err_code != 0:
+            raise SystemExit(resp.status.message)
+
+    def triggerMigrate(self,
+            migrate_id: int, 
+            new_cls_name: str, 
+            new_partition_idx: int, 
+            new_endpoint: str) -> None:
+        resp = self.stub.triggerMigrate(
+                subtask_pb2.TriggerMigrateRequest(
+                    migrate=common_pb2.Record.Migrate(
+                        id=migrate_id,
+                        new_cls_name=new_cls_name,
+                        new_partition_idx=new_partition_idx,
+                        new_endpoint=new_endpoint)))
         if resp.status.err_code != 0:
             raise SystemExit(resp.status.message)
