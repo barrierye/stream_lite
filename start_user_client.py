@@ -18,15 +18,21 @@ if __name__ == '__main__':
     client = UserClient()
     client.connect('0.0.0.0:8970')
     
-    restart = False
+    restart = False #True
 
     if not restart:
         jobid = client.submitJob(conf_path)
         time.sleep(1)
-        client.triggerCheckpoint(jobid, cancel_job=False)
+        #  client.triggerCheckpoint(jobid, cancel_job=False)
         #  client.triggerCheckpoint(jobid, cancel_job=True)
+        
+        client.triggerMigrate(
+                jobid=jobid, 
+                src_cls_name="SumOp",
+                src_partition_idx=0,
+                target_task_manager_locate="taskmanager1")
     else:
-        jobid = "56d2538ef6c511ebb53bacde48001122"
+        jobid = "e9df982cf91711eba61facde48001122"
         client.restoreFromCheckpoint(
                 jobid=jobid,
                 checkpoint_id=0)

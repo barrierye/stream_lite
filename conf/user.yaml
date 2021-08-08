@@ -8,11 +8,11 @@ tasks:
     input_tasks: [SimpleSource]
     locate: taskmanager1
   - name: SumOp
-    currency: 1
+    currency: 2
     input_tasks: [KeyByInputOp]
     locate: taskmanager1
   - name: SimpleSink
-    currency: 2
+    currency: 1
     input_tasks: [SumOp]
     locate: taskmanager1
 task_files_dir: resources/task_source_files

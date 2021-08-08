@@ -72,12 +72,14 @@ class UserClient(ClientBase):
 
     def triggerMigrate(self, 
             jobid: str,
-            src_subtask_name: str,
+            src_cls_name: str,
+            src_partition_idx: int,
             target_task_manager_locate: str) -> None:
-        resp = self.stub.migrate(
+        resp = self.stub.triggerMigrate(
                 job_manager_pb2.MigrateRequest(
                     jobid=jobid,
-                    src_subtask_name=src_subtask_name,
+                    src_cls_name=src_cls_name,
+                    src_partition_idx=src_partition_idx,
                     target_task_manager_locate=target_task_manager_locate))
         if resp.status.err_code != 0:
             raise Exception(resp.status.message)
