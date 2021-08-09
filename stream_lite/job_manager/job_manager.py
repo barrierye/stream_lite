@@ -21,7 +21,7 @@ from stream_lite.utils import JobIdGenerator, EventIdGenerator
 
 from . import scheduler
 from .registered_task_manager_table import RegisteredTaskManagerTable
-from .job_coordinator import JobCoordinator
+from .job_coordinator import JobCoordinator, PendingForNotify
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -250,6 +250,10 @@ class JobManagerServicer(job_manager_pb2_grpc.JobManagerServiceServicer):
                     "Failed to acknowledge checkpoint: status.err_code != 0 ({})"
                     .format(request.status.message))
             return
+        # migrate 过程中的 event 不处理
+        if request.subtask_name.endswith("@MIGRATE"):
+            return gen_nil_response()
+
         succ = self.job_coordinator.acknowledgeCheckpoint(request)
         seri_file = serializator.SerializableFile.from_proto(request.state)
         cls_name = request.subtask_name.split("#")[0]
@@ -326,6 +330,7 @@ class JobManagerServicer(job_manager_pb2_grpc.JobManagerServiceServicer):
             jobid = request.jobid
             src_cls_name = request.src_cls_name
             src_partition_idx = request.src_partition_idx
+            src_currency = request.src_currency
             target_task_manager_locate = request.target_task_manager_locate
 
             # step 1: checkpoint for migrate
@@ -406,8 +411,21 @@ class JobManagerServicer(job_manager_pb2_grpc.JobManagerServiceServicer):
                     jobid=jobid,
                     migrate_id=migrate_id)
  
-            # step 4: close old subtask
-            # TODO
+            # step 4: block util migrate sync
+            self.job_coordinator.register_pending_migrate_sync(jobid, migrate_id)
+            self.job_coordinator.block_util_migrate_sync(jobid, migrate_id)
+
+            # step 5: terminate old subtask
+            self.job_coordinator.terminate_subtask(
+                    jobid=jobid,
+                    cls_name=src_cls_name,
+                    partition_idx=src_partition_idx,
+                    subtask_name=scheduler.Scheduler._get_subtask_name(
+                        cls_name=src_cls_name,
+                        idx=src_partition_idx,
+                        currency=src_currency),
+                    terminate_id=migrate_id)
+
         except Exception as e:
             _LOGGER.error(e, exc_info=True)
             return gen_nil_response(
@@ -421,6 +439,10 @@ class JobManagerServicer(job_manager_pb2_grpc.JobManagerServiceServicer):
                     "Failed to acknowledge migrate: status.err_code != 0 ({})"
                     .format(request.status.message))
             return
+        # migrate 过程中的 event 不处理
+        if request.subtask_name.endswith("@MIGRATE"):
+            return gen_nil_response()
+
         succ = self.job_coordinator.acknowledgeMigrate(request)
         if succ:
             _LOGGER.info(
@@ -428,4 +450,7 @@ class JobManagerServicer(job_manager_pb2_grpc.JobManagerServiceServicer):
                     .format(request.migrate_id, request.jobid))
         return gen_nil_response()
 
-
+    # --------------------------- notify migrate synchron ----------------------------
+    def notifyMigrateSynchron(self, request, context):
+        self.job_coordinator.notifyMigrateSynchron(request)
+        return gen_nil_response()

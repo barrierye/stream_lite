@@ -19,6 +19,10 @@ message TriggerMigrateRequest {
   required common.Record.Migrate migrate = 1;
 }
 
+message TerminateSubtaskRequest {
+  required common.Record.TerminateSubtask terminate_subtask = 1;
+}
+
 service SubTaskService {
   // from other subtask
   rpc pushRecord(PushRecordRequest) returns (common.NilResponse) {}
@@ -26,4 +30,5 @@ service SubTaskService {
   // from job manager
   rpc triggerCheckpoint(TriggerCheckpointRequest) returns (common.NilResponse) {}
   rpc triggerMigrate(TriggerMigrateRequest) returns (common.NilResponse) {}
+  rpc terminateSubtask(TerminateSubtaskRequest) returns (common.NilResponse) {}
 };

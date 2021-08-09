@@ -52,6 +52,7 @@ message MigrateRequest {
   optional int32 src_partition_idx = 2 [default = 0];
   required string target_task_manager_locate = 3;
   required string jobid = 4;
+  required int32 src_currency = 5;
 }
 
 message AcknowledgeMigrateRequest {
@@ -59,6 +60,11 @@ message AcknowledgeMigrateRequest {
   required string subtask_name = 2;
   required string jobid = 3;
   required int32 migrate_id = 4;
+}
+
+message NotifyMigrateSynchronRequest {
+  required string jobid = 1;
+  required int32 migrate_id = 2;
 }
 
 service JobManagerService {
@@ -75,4 +81,6 @@ service JobManagerService {
   // from subtask
   rpc acknowledgeCheckpoint(AcknowledgeCheckpointRequest) returns (common.NilResponse) {}
   rpc acknowledgeMigrate(AcknowledgeMigrateRequest) returns (common.NilResponse) {}
+  rpc notifyMigrateSynchron(NotifyMigrateSynchronRequest) 
+      returns (common.NilResponse) {}
 };

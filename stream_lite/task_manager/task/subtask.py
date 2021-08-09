@@ -247,6 +247,7 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
         is_sink_op = issubclass(cls, operator.SinkOperatorBase)
         is_key_op = issubclass(cls, operator.KeyOperatorBase)
         current_data_id = -1 # 为了过滤 migrate 产生的重复数据
+        migrate_id = -1
         task_instance = cls()
         task_instance.set_name(subtask_name)
         task_instance.init(resource_path_dict)
@@ -375,8 +376,18 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
             
             if data_type == common_pb2.Record.DataType.PICKLE:
                 if int(data_id) <= current_data_id:
-                    _LOGGER.info("[{}] get repetitive data: {}".format(subtask_name, data_id))
                     # 过滤重复 data_id
+                    # 遇到重复 data_id，说明新旧数据流已经同步，可以终止旧数据流
+                    _LOGGER.info(
+                            "[{}] get repetitive data: {}, try to terminate the old subtask."
+                            .format(subtask_name, data_id))
+                    
+                    if migrate_id != -1:
+                        SubTaskServicer._notify_migrate_synchron(
+                                job_manager_enpoint=job_manager_enpoint,
+                                jobid=jobid,
+                                migrate_id=migrate_id)
+                        migrate_id = -1
                     continue
                 current_data_id = int(data_id)
                 output_data, partition_key = pickle_data_process(
@@ -396,6 +407,9 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
                 else:
                     continue
             elif data_type == common_pb2.Record.DataType.MIGRATE:
+                assert migrate_id == -1
+                migrate_id = input_data.id
+
                 migrate_event_process(
                         task_instance=task_instance,
                         is_sink_op=is_sink_op,
@@ -531,6 +545,16 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
                 err_msg=err_msg)
 
     @staticmethod
+    def _notify_migrate_synchron(
+            job_manager_enpoint: str,
+            jobid: str,
+            migrate_id: int) -> None:
+        client = JobManagerClient()
+        client.connect(job_manager_enpoint)
+        client.notifyMigrateSynchron(
+                jobid=jobid, migrate_id=migrate_id)
+
+    @staticmethod
     def _checkpoint(
             task_instance: operator.OperatorBase,
             snapshot_dir: str,
@@ -617,6 +641,23 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
                 data=serializator.SerializableData.from_object(
                     data_type=common_pb2.Record.DataType.MIGRATE,
                     data=migrate),
+                timestamp=util.get_timestamp(),
+                partition_key=-1)
+        self.input_channel.put(seri_data)
+        return gen_nil_response()
+
+    # --------------------------- terminateSubtask ----------------------------
+    def terminateSubtask(self, request, context):
+        """
+        只有 SourceOp 才会被调用该函数
+        """
+        terminate = request.terminate_subtask
+        seri_data = serializator.SerializableRecord(
+                data_id="terminate_data_id",
+                data_type=common_pb2.Record.DataType.TERMINATE_SUBTASK,
+                data=serializator.SerializableData.from_object(
+                    data_type=common_pb2.Record.DataType.TERMINATE_SUBTASK,
+                    data=terminate),
                 timestamp=util.get_timestamp(),
                 partition_key=-1)
         self.input_channel.put(seri_data)

@@ -41,7 +41,8 @@ class Scheduler(object):
             available_ports_map[task_manager_name] = available_ports
         return available_ports_map
 
-    def _get_subtask_name(self, cls_name: str, idx: int, currency: int) -> str:
+    @staticmethod
+    def _get_subtask_name(cls_name: str, idx: int, currency: int) -> str:
         return "{}#({}/{})".format(cls_name, idx, currency)
 
 

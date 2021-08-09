@@ -25,7 +25,7 @@ class JobManagerClient(ClientBase):
     def _init_stub(self, channel):
         return job_manager_pb2_grpc.JobManagerServiceStub(channel)
 
-    def registerTaskManager(self, endpoint: str, conf: dict):
+    def registerTaskManager(self, endpoint: str, conf: dict) -> None:
         job_manager_enpoint = conf["job_manager_enpoint"]
         resp = self.stub.registerTaskManager(
                 job_manager_pb2.RegisterTaskManagerRequest(
@@ -48,7 +48,7 @@ class JobManagerClient(ClientBase):
             checkpoint_id: int, 
             state: serializator.SerializableFile,
             err_code: int = 0, 
-            err_msg: str = ""):
+            err_msg: str = "") -> None:
         resp = self.stub.acknowledgeCheckpoint(
                 job_manager_pb2.AcknowledgeCheckpointRequest(
                     status=common_pb2.Status(
@@ -66,7 +66,7 @@ class JobManagerClient(ClientBase):
             jobid: str,
             migrate_id: int, 
             err_code: int = 0, 
-            err_msg: str = ""):
+            err_msg: str = "") -> None:
         resp = self.stub.acknowledgeMigrate(
                 job_manager_pb2.AcknowledgeMigrateRequest(
                     status=common_pb2.Status(
@@ -75,5 +75,14 @@ class JobManagerClient(ClientBase):
                     subtask_name=subtask_name,
                     jobid=jobid,
                     migrate_id=migrate_id))
+        if resp.status.err_code != 0:
+            raise Exception(resp.status.message)
+
+    def notifyMigrateSynchron(self,
+            jobid: str,
+            migrate_id: int) -> None:
+        resp = self.stub.notifyMigrateSynchron(
+                job_manager_pb2.NotifyMigrateSynchronRequest(
+                    jobid=jobid, migrate_id=migrate_id))
         if resp.status.err_code != 0:
             raise Exception(resp.status.message)

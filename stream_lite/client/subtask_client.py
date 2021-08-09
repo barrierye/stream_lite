@@ -69,3 +69,18 @@ class SubTaskClient(ClientBase):
                         new_endpoint=new_endpoint)))
         if resp.status.err_code != 0:
             raise SystemExit(resp.status.message)
+
+    def terminateSubtask(self,
+            terminate_id: int, 
+            cls_name: str,
+            partition_idx: int, 
+            subtask_name: str) -> None:
+        resp = self.stub.terminateSubtask(
+                subtask_pb2.TerminateSubtaskRequest(
+                    terminate_subtask=common_pb2.Record.TerminateSubtask(
+                        id=terminate_id,
+                        cls_name=cls_name,
+                        partition_idx=partition_idx,
+                        subtask_name=subtask_name)))
+        if resp.status.err_code != 0:
+            raise SystemExit(resp.status.message)

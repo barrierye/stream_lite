@@ -69,6 +69,37 @@ class JobCoordinator(object):
                     new_partition_idx,
                     new_endpoint)
 
+    def register_pending_migrate_sync(self,
+            jobid: str,
+            migrate_id: int) -> None:
+        with self.rw_lock_pair.gen_wlock():
+            if jobid not in self.table:
+                raise KeyError(
+                        "Failed to register pending_migrate_sync: can not" +\
+                        " found job(jobid={})".format(jobid))
+            self.table[jobid].register_pending_migrate_sync(migrate_id)
+
+    def terminate_subtask(self,
+            jobid: str,
+            cls_name: str,
+            partition_idx: int,
+            subtask_name: str,
+            terminate_id: int) -> None:
+        """
+        通过类似 checkpoint 的机制，给 source 发 event
+        """
+        with self.rw_lock_pair.gen_wlock():
+            if jobid not in self.table:
+                raise KeyError(
+                        "Failed to terminate subtask: can" +\
+                        " not found job(jobid={})".format(jobid))
+            self.table[jobid].terminate_subtask(
+                    terminate_id,
+                    self.registered_task_manager_table,
+                    cls_name,
+                    partition_idx,
+                    subtask_name)
+
     def acknowledgeCheckpoint(self, 
             request: job_manager_pb2.AcknowledgeCheckpointRequest) -> bool:
         jobid = request.jobid
@@ -86,6 +117,15 @@ class JobCoordinator(object):
                 raise KeyError(
                         "Failed to ack migrate: can can not found job(jobid={})".format(jobid))
             return self.table[jobid].acknowledgeMigrate(request)
+
+    def notifyMigrateSynchron(self, 
+            request: job_manager_pb2.NotifyMigrateSynchronRequest) -> bool:
+        jobid = request.jobid
+        with self.rw_lock_pair.gen_wlock():
+            if jobid not in self.table:
+                raise KeyError(
+                        "Failed to notify migrate sync: can can not found job(jobid={})".format(jobid))
+        return self.table[jobid].notifyMigrateSynchron(request)
 
     def block_util_checkpoint_completed(self,
             jobid: str,
@@ -105,6 +145,15 @@ class JobCoordinator(object):
                         "Failed to block migrate: can not found job(jobid={})".format(jobid))
         self.table[jobid].block_util_event_completed(migrate_id)
 
+    def block_util_migrate_sync(self,
+            jobid: str,
+            migrate_id: int) -> None:
+        with self.rw_lock_pair.gen_rlock():
+            if jobid not in self.table:
+                raise KeyError(
+                        "Failed to block migrate: can not found job(jobid={})".format(jobid))
+        self.table[jobid].block_util_migrate_sync(migrate_id)
+        
 
 
 class SpecificJobInfo(object):
@@ -227,7 +276,64 @@ class SpecificJobInfo(object):
                 .format(migrate_id, subtask_name, subtask_endpoint))
         client.triggerMigrate(migrate_id, new_cls_name, new_partition_idx, new_endpoint)
 
-        
+    def terminate_subtask(self,
+            terminate_id: int,
+            registered_task_manager_table: RegisteredTaskManagerTable,
+            cls_name: str,
+            partition_idx: int,
+            subtask_name: str) -> None:
+        if self.ack_table.has_event(terminate_id):
+            raise KeyError(
+                    "Failed: terminate(id={}) already exists".format(terminate_id))
+        for task_manager_name, tasks in self.source_ops.items():
+            task_manager_ip = \
+                    registered_task_manager_table.get_task_manager_ip(
+                            task_manager_name)
+            for task in tasks:
+                self._inner_terminate_subtask(
+                        task_manager_ip,
+                        task.port,
+                        task.subtask_name,
+                        terminate_id,
+                        cls_name, 
+                        partition_idx, 
+                        subtask_name)
+        self.ack_table.register_pending_event(terminate_id)
+
+    def _inner_terminate_subtask(self,
+            subtask_ip: str,
+            subtask_port: int,
+            subtask_name: str,
+            terminate_id: int,
+            terminate_cls_name: str,
+            terminate_partition_idx: int,
+            terminate_subtask_name: str) -> None:
+        subtask_endpoint = "{}:{}".format(subtask_ip, subtask_port)
+        client = SubTaskClient()
+        client.connect(subtask_endpoint)
+        _LOGGER.info(
+                "Try to trigger terminate(id={}) for subtask [{}] (endpoint={})"
+                .format(terminate_id, subtask_name, subtask_endpoint))
+        client.terminateSubtask(terminate_id, terminate_cls_name,
+                terminate_partition_idx, terminate_subtask_name)
+
+    def register_pending_migrate_sync(self, migrate_id: int) -> None:
+        if self.ack_table.has_event(migrate_id):
+            raise KeyError(
+                    "Failed: migrate(id={}) already exists".format(migrate_id))
+        self.ack_table.register_pending_migrate_sync(migrate_id)
+
+    def notifyMigrateSynchron(self, 
+            request: job_manager_pb2.NotifyMigrateSynchronRequest) -> bool:
+        return self.ack_table.notifyMigrateSynchron(request)
+
+    def block_util_migrate_sync(self, event_id: int) -> None:
+        if not self.ack_table.has_event(event_id):
+            raise KeyError(
+                    "Failed: event(id={}) not exists".format(event_id))
+        self.ack_table.block_util_migrate_sync(event_id)
+
+
 class EventAcknowledgeTable(object):
     """
     event_id -> pending_event
@@ -246,6 +352,12 @@ class EventAcknowledgeTable(object):
             raise KeyError(
                     "Failed: event(id={}) already exists".format(event_id))
         self.pending_events[event_id] = PendingEvent(self.execute_task_map)
+
+    def register_pending_migrate_sync(self, migrate_id: int) -> None:
+        if migrate_id in self.pending_events:
+            raise KeyError(
+                    "Failed: event(id={}) already exists".format(migrate_id))
+        self.pending_events[migrate_id] = PendingForNotify()
 
     def acknowledgeCheckpoint(self,
             request: job_manager_pb2.AcknowledgeCheckpointRequest) -> bool:
@@ -268,11 +380,27 @@ class EventAcknowledgeTable(object):
         subtask_name = request.subtask_name
         return self.pending_events[migrate_id].acknowledgeEvent(subtask_name)
 
+    def notifyMigrateSynchron(self,
+            request: job_manager_pb2.NotifyMigrateSynchronRequest) -> None:
+        migrate_id = request.migrate_id
+        if migrate_id not in self.pending_events:
+            raise KeyError(
+                    "Failed: migrate(id={}) not exists".format(migrate_id))
+        self.pending_events[migrate_id].notify()
+
     def block_util_event_completed(self, event_id: int) -> None:
         if event_id not in self.pending_events:
             raise KeyError(
                     "Failed: event(id={}) not exists".format(event_id))
         self.pending_events[event_id].block_util_event_completed()
+        self.pending_events.pop(event_id)
+
+    def block_util_migrate_sync(self, migrate_id: int) -> None:
+        if migrate_id not in self.pending_events:
+            raise KeyError(
+                    "Failed: event(id={}) not exists".format(migrate_id))
+        self.pending_events[migrate_id].block()
+        self.pending_events.pop(migrate_id)
 
 
 class PendingEvent(object):
@@ -309,3 +437,17 @@ class PendingEvent(object):
         with self.cv:
             while not self.is_event_completed():
                 self.cv.wait()
+
+
+class PendingForNotify(object):
+
+    def __init__(self):
+        self.cv = threading.Condition()  # for block
+
+    def notify(self) -> None:
+        with self.cv:
+            self.cv.notify_all()
+
+    def block(self) -> None:
+        with self.cv:
+            self.cv.wait()

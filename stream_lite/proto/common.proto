@@ -50,8 +50,8 @@ message Coordinate {
 message TaskManagerDescription {
   required string endpoint = 1;
   required string name = 2;
-  optional common.Coordinate coord = 3;
-  required common.MachineResource resource = 4;
+  optional Coordinate coord = 3;
+  required MachineResource resource = 4;
   optional string host = 5;
 }
 
@@ -75,6 +75,7 @@ message Record {
     CHECKPOINT = 2;
     FINISH = 3;
     MIGRATE = 4;
+    TERMINATE_SUBTASK = 5;
   }
   
   message Checkpoint {
@@ -89,6 +90,13 @@ message Record {
     required string new_cls_name = 2;
     required int32 new_partition_idx = 3;
     required string new_endpoint = 4;
+  }
+
+  message TerminateSubtask {
+    required int32 id = 1;
+    required string cls_name = 2;
+    required int32 partition_idx = 3;
+    required string subtask_name = 4;
   }
   
   message Finish {

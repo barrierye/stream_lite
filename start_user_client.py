@@ -29,6 +29,7 @@ if __name__ == '__main__':
                 jobid=jobid, 
                 src_cls_name="SumOp",
                 src_partition_idx=0,
+                src_currency=2,
                 target_task_manager_locate="taskmanager1")
     else:
         jobid = "e9df982cf91711eba61facde48001122"
