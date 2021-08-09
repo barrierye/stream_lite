@@ -373,9 +373,11 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
             data_type, input_data, data_id, timestamp = \
                     get_input_data(task_instance, is_source_op)
             
+            if subtask_name.startswith("SimpleSink") or subtask_name.startswith("Sum"):
+                print("[{}] get data: {}, type: {}".format(subtask_name, data_id, data_type))
             if data_type == common_pb2.Record.DataType.PICKLE:
                 if int(data_id) <= current_data_id:
-                    _LOGGER.debug("[{}] get repetitive data: {}".format(subtask_name, data_id))
+                    print("[{}] get repetitive data: {}".format(subtask_name, data_id))
                     # 过滤重复 data_id
                     continue
                 current_data_id = int(data_id)
@@ -400,6 +402,7 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
                         task_instance=task_instance,
                         is_sink_op=is_sink_op,
                         input_data=input_data)
+                continue
             elif data_type == common_pb2.Record.DataType.FINISH:
                 finish_event_process(
                         task_instance=task_instance,

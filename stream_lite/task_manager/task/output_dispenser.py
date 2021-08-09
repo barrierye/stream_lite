@@ -85,6 +85,7 @@ class OutputDispenser(object):
 
         while True:
             seri_record = input_channel.get()
+            #  print("name: {}, type: {}, data: {}".format(subtask_name, seri_record.data_type, seri_record.data.data))
             if seri_record.data_type in need_broadcast_datatype:
                 # broadcast
                 for output_partition_dispensers in partitions.values():
@@ -107,7 +108,7 @@ class OutputDispenser(object):
                 if seri_record.data_type == common_pb2.Record.DataType.MIGRATE:
                     migrate = seri_record.data.data
                     new_cls_name = migrate.new_cls_name
-                    new_partition_idx = migrate.new_partition_id
+                    new_partition_idx = migrate.new_partition_idx
                     new_endpoint = migrate.new_endpoint
                     if new_cls_name == downstream_cls_names[0]:
                         partitions[new_partition_idx][1].connect(new_endpoint)
@@ -168,11 +169,12 @@ class OutputPartitionDispenser(object):
             self.is_connect_completed = True
             
     def push_data(self, record: serializator.SerializableRecord) -> None:
+        # 这里可能会把 event 放入 buffer，但没有啥影响
         self.data_buffer.append(record)
         if self.is_connect_completed:
             for data in self.data_buffer:
                 self.client.pushRecord(
                             from_subtask=self.subtask_name,
                             partition_idx=self.partition_idx,
-                            record=record.instance_to_proto())
+                            record=data.instance_to_proto())
             self.data_buffer = []

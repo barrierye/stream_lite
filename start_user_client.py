@@ -25,7 +25,6 @@ if __name__ == '__main__':
         time.sleep(1)
         #  client.triggerCheckpoint(jobid, cancel_job=False)
         #  client.triggerCheckpoint(jobid, cancel_job=True)
-        
         client.triggerMigrate(
                 jobid=jobid, 
                 src_cls_name="SumOp",
