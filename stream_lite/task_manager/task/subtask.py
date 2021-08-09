@@ -373,11 +373,9 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
             data_type, input_data, data_id, timestamp = \
                     get_input_data(task_instance, is_source_op)
             
-            if subtask_name.startswith("SimpleSink") or subtask_name.startswith("Sum"):
-                print("[{}] get data: {}, type: {}".format(subtask_name, data_id, data_type))
             if data_type == common_pb2.Record.DataType.PICKLE:
                 if int(data_id) <= current_data_id:
-                    print("[{}] get repetitive data: {}".format(subtask_name, data_id))
+                    _LOGGER.info("[{}] get repetitive data: {}".format(subtask_name, data_id))
                     # 过滤重复 data_id
                     continue
                 current_data_id = int(data_id)
@@ -579,8 +577,14 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
         pre_subtask = request.from_subtask
         partition_idx = request.partition_idx
         record = request.record
-        _LOGGER.debug("Recv data(from={}): {}".format(
-            pre_subtask, str(request)))
+
+        # migrate 过程中，过滤掉所有需要 barrier 的 event
+        if pre_subtask.endswith("@MIGRATE"):
+            if record.data_type != common_pb2.Record.DataType.PICKLE:
+                return gen_nil_response()
+
+        #  _LOGGER.debug("Recv data(from={}): {}".format(
+            #  pre_subtask, str(request)))
         self.input_receiver.recv_data(partition_idx, record)
         return gen_nil_response()
 

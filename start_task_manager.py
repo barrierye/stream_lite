@@ -13,7 +13,7 @@ if __name__ == '__main__':
     logging.basicConfig(
             format='%(asctime)s %(levelname)-8s [%(filename)s:%(lineno)d] %(message)s',
             datefmt='%Y-%m-%d %H:%M', 
-            level=logging.INFO)
+            level=logging.DEBUG)
     # for debug
     if len(sys.argv) != 2:
         _LOGGER.fatal("usage: python start_task_manager.py <conf.yaml>")
