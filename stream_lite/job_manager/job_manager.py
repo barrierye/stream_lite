@@ -413,3 +413,19 @@ class JobManagerServicer(job_manager_pb2_grpc.JobManagerServiceServicer):
             return gen_nil_response(
                     err_code=1, message=str(e))
         return gen_nil_response()
+
+    # --------------------------- acknowledge migrate ----------------------------
+    def acknowledgeMigrate(self, request, context):
+        if request.status.err_code != 0:
+            _LOGGER.error(
+                    "Failed to acknowledge migrate: status.err_code != 0 ({})"
+                    .format(request.status.message))
+            return
+        succ = self.job_coordinator.acknowledgeMigrate(request)
+        if succ:
+            _LOGGER.info(
+                    "Success to complete migrate(id={}) of job(id={})"
+                    .format(request.migrate_id, request.jobid))
+        return gen_nil_response()
+
+

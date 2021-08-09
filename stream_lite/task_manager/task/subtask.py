@@ -554,7 +554,7 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
     @staticmethod
     def _migrate(
             task_instance: operator.OperatorBase,
-            migrate_id, int,
+            migrate_id: int,
             migrate: common_pb2.Record.Migrate,
             job_manager_enpoint: str,
             subtask_name: str,
