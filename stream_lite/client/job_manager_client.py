@@ -78,6 +78,23 @@ class JobManagerClient(ClientBase):
         if resp.status.err_code != 0:
             raise Exception(resp.status.message)
 
+    def acknowledgeTerminate(self, 
+            subtask_name: str, 
+            jobid: str,
+            terminate_id: int, 
+            err_code: int = 0, 
+            err_msg: str = "") -> None:
+        resp = self.stub.acknowledgeTerminate(
+                job_manager_pb2.AcknowledgeTerminateRequest(
+                    status=common_pb2.Status(
+                        err_code=err_code,
+                        message=err_msg),
+                    subtask_name=subtask_name,
+                    jobid=jobid,
+                    terminate_id=terminate_id))
+        if resp.status.err_code != 0:
+            raise Exception(resp.status.message)
+
     def notifyMigrateSynchron(self,
             jobid: str,
             migrate_id: int) -> None:

@@ -77,7 +77,8 @@ class InputPartitionReceiver(object):
         need_barrier_datatype = [
                 common_pb2.Record.DataType.FINISH,
                 common_pb2.Record.DataType.CHECKPOINT,
-                common_pb2.Record.DataType.MIGRATE]
+                common_pb2.Record.DataType.MIGRATE,
+                common_pb2.Record.DataType.TERMINATE_SUBTASK]
         while True:
             proto_data = input_queue.get()
             seri_data = serializator.SerializableRecord.from_proto(proto_data)

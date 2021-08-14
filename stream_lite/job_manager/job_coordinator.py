@@ -118,6 +118,15 @@ class JobCoordinator(object):
                         "Failed to ack migrate: can can not found job(jobid={})".format(jobid))
             return self.table[jobid].acknowledgeMigrate(request)
 
+    def acknowledgeTerminate(self, 
+            request: job_manager_pb2.AcknowledgeTerminateRequest) -> bool:
+        jobid = request.jobid
+        with self.rw_lock_pair.gen_wlock():
+            if jobid not in self.table:
+                raise KeyError(
+                        "Failed to ack terminate: can can not found job(jobid={})".format(jobid))
+            return self.table[jobid].acknowledgeTerminate(request)
+
     def notifyMigrateSynchron(self, 
             request: job_manager_pb2.NotifyMigrateSynchronRequest) -> bool:
         jobid = request.jobid
@@ -144,6 +153,15 @@ class JobCoordinator(object):
                 raise KeyError(
                         "Failed to block migrate: can not found job(jobid={})".format(jobid))
         self.table[jobid].block_util_event_completed(migrate_id)
+
+    def block_util_terminate_completed(self,
+            jobid: str,
+            terminate_id: int) -> None:
+        with self.rw_lock_pair.gen_rlock():
+            if jobid not in self.table:
+                raise KeyError(
+                        "Failed to block terminate: can not found job(jobid={})".format(jobid))
+        self.table[jobid].block_util_event_completed(terminate_id)
 
     def block_util_migrate_sync(self,
             jobid: str,
@@ -185,6 +203,10 @@ class SpecificJobInfo(object):
     def acknowledgeMigrate(self, 
             request: job_manager_pb2.AcknowledgeMigrateRequest) -> bool:
         return self.ack_table.acknowledgeMigrate(request)
+
+    def acknowledgeTerminate(self, 
+            request: job_manager_pb2.AcknowledgeTerminateRequest) -> bool:
+        return self.ack_table.acknowledgeTerminate(request)
 
     def block_util_event_completed(self, event_id: int) -> None:
         if not self.ack_table.has_event(event_id):
@@ -379,6 +401,15 @@ class EventAcknowledgeTable(object):
                     "Failed: migrate(id={}) not exists".format(migrate_id))
         subtask_name = request.subtask_name
         return self.pending_events[migrate_id].acknowledgeEvent(subtask_name)
+
+    def acknowledgeTerminate(self,
+            request: job_manager_pb2.AcknowledgeTerminateRequest) -> bool:
+        terminate_id = request.terminate_id
+        if terminate_id not in self.pending_events:
+            raise KeyError(
+                    "Failed: terminate(id={}) not exists".format(terminate_id))
+        subtask_name = request.subtask_name
+        return self.pending_events[terminate_id].acknowledgeEvent(subtask_name)
 
     def notifyMigrateSynchron(self,
             request: job_manager_pb2.NotifyMigrateSynchronRequest) -> None:

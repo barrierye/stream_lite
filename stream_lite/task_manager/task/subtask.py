@@ -247,7 +247,7 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
         is_sink_op = issubclass(cls, operator.SinkOperatorBase)
         is_key_op = issubclass(cls, operator.KeyOperatorBase)
         current_data_id = -1 # 为了过滤 migrate 产生的重复数据
-        migrate_id = -1
+        migrate_id = -1 # 标记是否正处于 migrate
         task_instance = cls()
         task_instance.set_name(subtask_name)
         task_instance.init(resource_path_dict)
@@ -307,7 +307,7 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
         def checkpoint_event_process(
                 task_instance: operator.OperatorBase,
                 is_sink_op: bool,
-                input_data: Any) -> None:
+                input_data: common_pb2.Record.Checkpoint) -> None:
             if not is_sink_op:
                 SubTaskServicer._push_checkpoint_event_to_output_channel(
                         input_data, output_channel)
@@ -323,7 +323,7 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
         def migrate_event_process(
                 task_instance: operator.OperatorBase,
                 is_sink_op: bool,
-                input_data: Any) -> None:
+                input_data: common_pb2.Record.MIGRATE) -> None:
             if not is_sink_op:
                 SubTaskServicer._push_migrate_event_to_output_channel(
                         input_data, output_channel)
@@ -335,6 +335,21 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
                     upstream_cls_names=upstream_cls_names,
                     downstream_cls_names=downstream_cls_names,
                     migrate_id=input_data.id,
+                    jobid=jobid)
+
+        def terminate_event_process(
+                task_instance: operator.OperatorBase,
+                is_sink_op: bool,
+                input_data: common_pb2.Record.TERMINATE_SUBTASK) -> None:
+            if not is_sink_op:
+                SubTaskServicer._push_terminate_event_to_output_channel(
+                        input_data, output_channel)
+            SubTaskServicer._terminate_subtask(
+                    task_instance=task_instance,
+                    terminate=input_data,
+                    job_manager_enpoint=job_manager_enpoint,
+                    subtask_name=subtask_name,
+                    terminate_id=input_data.id,
                     jobid=jobid)
 
         def finish_event_process(
@@ -422,6 +437,13 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
                         input_data=input_data)
                 _LOGGER.info("[{}] finished successfully!".format(subtask_name))
                 break
+            elif data_type == common_pb2.Record.DataType.TERMINATE_SUBTASK:
+                terminate_event_process(
+                        task_instance=task_instance,
+                        is_sink_op=is_sink_op,
+                        input_data=input_data)
+                _LOGGER.info("[{}] ptocess terminate successfully!".format(subtask_name))
+                continue
             else:
                 raise Exception("Failed: unknow data type: {}".format(data_type))
             
@@ -496,6 +518,18 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
                     data_type=common_pb2.Record.DataType.MIGRATE,
                     data=migrate),
                 output_channel=output_channel)
+    
+    @staticmethod
+    def _push_terminate_event_to_output_channel(
+            terminate: common_pb2.Record.TERMINATE_SUBTASK,
+            output_channel: multiprocessing.Queue):
+        SubTaskServicer._push_event_record_to_output_channel(
+                data_id="terminate_data_id",
+                data_type=common_pb2.Record.DataType.TERMINATE_SUBTASK,
+                data=serializator.SerializableData.from_object(
+                    data_type=common_pb2.Record.DataType.TERMINATE_SUBTASK,
+                    data=terminate),
+                output_channel=output_channel)
 
     @staticmethod
     def _save_snapshot_state(
@@ -543,7 +577,24 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
                 migrate_id=migrate_id,
                 err_code=err_code,
                 err_msg=err_msg)
-
+    
+    @staticmethod
+    def _acknowledge_terminate(
+            job_manager_enpoint: str,
+            subtask_name: str, 
+            jobid: str,
+            terminate_id: int, 
+            err_code: int = 0, 
+            err_msg: str = "") -> None:
+        client = JobManagerClient()
+        client.connect(job_manager_enpoint)
+        client.acknowledgeTerminate(
+                subtask_name=subtask_name,
+                jobid=jobid,
+                terminate_id=terminate_id,
+                err_code=err_code,
+                err_msg=err_msg)
+    
     @staticmethod
     def _notify_migrate_synchron(
             job_manager_enpoint: str,
@@ -589,12 +640,33 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
         """
         每个 subtask 执行 migrate 操作
         """
-        # (这部分操作在 output_dispenser 处理): 仅 new_subtask_name 上游的 task 与之建立连接
+        # (这部分操作在 output_dispenser 处理): 
+        #   1. new_subtask_name 上游的 task 与之建立连接
         SubTaskServicer._acknowledge_migrate(
                 job_manager_enpoint=job_manager_enpoint,
                 subtask_name=subtask_name,
                 jobid=jobid,
                 migrate_id=migrate_id)
+
+    @staticmethod
+    def _terminate_subtask(
+            task_instance: operator.OperatorBase,
+            terminate_id: int,
+            terminate: common_pb2.Record.TerminateSubtask,
+            job_manager_enpoint: str,
+            subtask_name: str,
+            jobid: str) -> None:
+        """
+        每个 subtask 执行 migrate 操作
+        """
+        # (这部分操作在 output_dispenser 处理): 
+        #   1. 上游 task 断开对旧 subtask_name 的连接
+        #   2. 终止旧 subtask_name
+        SubTaskServicer._acknowledge_terminate(
+                job_manager_enpoint=job_manager_enpoint,
+                subtask_name=subtask_name,
+                jobid=jobid,
+                terminate_id=terminate_id)
 
     # --------------------------- pushRecord (recv) ----------------------------
     def pushRecord(self, request, context):

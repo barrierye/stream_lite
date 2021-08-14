@@ -303,14 +303,16 @@ class SerializableData(SerializableObject):
         byte_array = None
         if self.data_type == common_pb2.Record.DataType.PICKLE:
             byte_array = pickle.dumps(self.data)
-        elif self.data_type == common_pb2.Record.DataType.CHECKPOINT:
-            byte_array = self.data.SerializeToString()
-        elif self.data_type == common_pb2.Record.DataType.FINISH:
-            byte_array = self.data.SerializeToString()
-        elif self.data_type == common_pb2.Record.DataType.MIGRATE:
-            byte_array = self.data.SerializeToString()
         else:
-            raise TypeError("Failed: unknow data type({})".format(data_type))
+            build_in_events = [
+                    common_pb2.Record.DataType.CHECKPOINT,
+                    common_pb2.Record.DataType.FINISH,
+                    common_pb2.Record.DataType.MIGRATE,
+                    common_pb2.Record.DataType.TERMINATE_SUBTASK]
+            if self.data_type in build_in_events:
+                byte_array = self.data.SerializeToString()
+            else:
+                raise TypeError("Failed: unknow data type({})".format(data_type))
         return byte_array
 
     @staticmethod
@@ -318,17 +320,18 @@ class SerializableData(SerializableObject):
         data = None
         if data_type == common_pb2.Record.DataType.PICKLE:
             data = pickle.loads(byte_array)
-        elif data_type == common_pb2.Record.CHECKPOINT:
-            data = common_pb2.Record.Checkpoint()
-            data.ParseFromString(byte_array)
-        elif data_type == common_pb2.Record.DataType.FINISH:
-            data = common_pb2.Record.Finish()
-            data.ParseFromString(byte_array)
-        elif data_type == common_pb2.Record.DataType.MIGRATE:
-            data = common_pb2.Record.Migrate()
-            data.ParseFromString(byte_array)
         else:
-            raise TypeError("Failed: unknow data type({})".format(data_type))
+            build_in_events = {
+                    common_pb2.Record.DataType.CHECKPOINT: common_pb2.Record.Checkpoint,
+                    common_pb2.Record.DataType.FINISH: common_pb2.Record.Finish,
+                    common_pb2.Record.DataType.MIGRATE: common_pb2.Record.Migrate,
+                    common_pb2.Record.DataType.TERMINATE_SUBTASK: common_pb2.Record.TerminateSubtask}
+            if data_type in build_in_events:
+                cls = build_in_events[data_type]
+                data = cls()
+                data.ParseFromString(byte_array)
+            else:
+                raise TypeError("Failed: unknow data type({})".format(data_type))
         return SerializableData(
                 data_type=data_type,
                 data=data)

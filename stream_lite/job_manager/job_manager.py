@@ -250,7 +250,7 @@ class JobManagerServicer(job_manager_pb2_grpc.JobManagerServiceServicer):
                     "Failed to acknowledge checkpoint: status.err_code != 0 ({})"
                     .format(request.status.message))
             return
-        # migrate 过程中的 event 不处理
+        # migrate 过程中创建的新 subtask，在处于同时状态时，不处理其 event
         if request.subtask_name.endswith("@MIGRATE"):
             return gen_nil_response()
 
@@ -425,6 +425,9 @@ class JobManagerServicer(job_manager_pb2_grpc.JobManagerServiceServicer):
                         idx=src_partition_idx,
                         currency=src_currency),
                     terminate_id=migrate_id)
+            self.job_coordinator.block_util_terminate_completed(
+                    jobid=jobid,
+                    terminate_id=migrate_id)
 
         except Exception as e:
             _LOGGER.error(e, exc_info=True)
@@ -439,7 +442,7 @@ class JobManagerServicer(job_manager_pb2_grpc.JobManagerServiceServicer):
                     "Failed to acknowledge migrate: status.err_code != 0 ({})"
                     .format(request.status.message))
             return
-        # migrate 过程中的 event 不处理
+        # migrate 过程中创建的新 subtask，在处于同时状态时，不处理其 event
         if request.subtask_name.endswith("@MIGRATE"):
             return gen_nil_response()
 
@@ -453,4 +456,22 @@ class JobManagerServicer(job_manager_pb2_grpc.JobManagerServiceServicer):
     # --------------------------- notify migrate synchron ----------------------------
     def notifyMigrateSynchron(self, request, context):
         self.job_coordinator.notifyMigrateSynchron(request)
+        return gen_nil_response()
+
+    # --------------------------- acknowledge terminate ----------------------------
+    def acknowledgeTerminate(self, request, context):
+        if request.status.err_code != 0:
+            _LOGGER.error(
+                    "Failed to acknowledge terminate: status.err_code != 0 ({})"
+                    .format(request.status.message))
+            return
+        # migrate 过程中创建的新 subtask，在处于同时状态时，不处理其 event
+        if request.subtask_name.endswith("@MIGRATE"):
+            return gen_nil_response()
+
+        succ = self.job_coordinator.acknowledgeTerminate(request)
+        if succ:
+            _LOGGER.info(
+                    "Success to complete terminate(id={}) of job(id={})"
+                    .format(request.terminate_id, request.jobid))
         return gen_nil_response()

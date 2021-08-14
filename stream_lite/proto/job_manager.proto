@@ -67,6 +67,13 @@ message NotifyMigrateSynchronRequest {
   required int32 migrate_id = 2;
 }
 
+message AcknowledgeTerminateRequest {
+  required common.Status status = 1;
+  required string subtask_name = 2;
+  required string jobid = 3;
+  required int32 terminate_id = 4;
+}
+
 service JobManagerService {
   // from user front client
   rpc submitJob(SubmitJobRequest) returns (SubmitJobResponse) {}
@@ -83,4 +90,5 @@ service JobManagerService {
   rpc acknowledgeMigrate(AcknowledgeMigrateRequest) returns (common.NilResponse) {}
   rpc notifyMigrateSynchron(NotifyMigrateSynchronRequest) 
       returns (common.NilResponse) {}
+  rpc acknowledgeTerminate(AcknowledgeTerminateRequest) returns (common.NilResponse) {}
 };

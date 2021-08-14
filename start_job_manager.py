@@ -10,7 +10,7 @@ if __name__ == '__main__':
     logging.basicConfig(
             format='%(asctime)s %(levelname)-8s [%(filename)s:%(lineno)d] %(message)s',
             datefmt='%Y-%m-%d %H:%M', 
-            level=logging.DEBUG)
+            level=logging.INFO)
     # for debug
     server = JobManager(8970)
     server.run()

@@ -81,7 +81,8 @@ class OutputDispenser(object):
         need_broadcast_datatype = [
                 common_pb2.Record.DataType.FINISH,
                 common_pb2.Record.DataType.CHECKPOINT,
-                common_pb2.Record.DataType.MIGRATE]
+                common_pb2.Record.DataType.MIGRATE,
+                common_pb2.Record.DataType.TERMINATE_SUBTASK]
 
         while True:
             seri_record = input_channel.get()
@@ -92,8 +93,8 @@ class OutputDispenser(object):
                     for dispenser in output_partition_dispensers:
                         dispenser.push_data(seri_record)
                 
-                # checkpoint event(by migrate): 为下游 task 创建新的 dispenser
                 if seri_record.data_type == common_pb2.Record.DataType.CHECKPOINT:
+                    # checkpoint event(by migrate): 为下游 task 创建新的 dispenser
                     checkpoint = seri_record.data.data
                     migrate_cls_name = checkpoint.migrate_cls_name
                     migrate_partition_idx = checkpoint.migrate_partition_idx
@@ -103,15 +104,24 @@ class OutputDispenser(object):
                                     endpoint=None,
                                     subtask_name=subtask_name,
                                     partition_idx=partition_idx))
-
-                # migrate event: 启动之前创建的 dispenser 
-                if seri_record.data_type == common_pb2.Record.DataType.MIGRATE:
+                elif seri_record.data_type == common_pb2.Record.DataType.MIGRATE:
+                    # migrate event: 启动之前创建的 dispenser 
                     migrate = seri_record.data.data
                     new_cls_name = migrate.new_cls_name
                     new_partition_idx = migrate.new_partition_idx
                     new_endpoint = migrate.new_endpoint
                     if new_cls_name == downstream_cls_names[0]:
                         partitions[new_partition_idx][1].connect(new_endpoint)
+                elif seri_record.data_type == common_pb2.Record.DataType.TERMINATE_SUBTASK:
+                    # terminate event: 上游关闭与旧 subtask 的连接，旧 subtask 停止
+                    terminate = seri_record.data.data
+                    terminate_cls_name = terminate.cls_name
+                    terminate_partition_idx = terminate.partition_idx
+                    terminate_subtask_name = terminate.subtask_name
+                    if terminate_cls_name == downstream_cls_names[0]:
+                        assert len(partitions[terminate_partition_idx]) == 2
+                        dispenser = partitions[migrate_partition_idx].pop(0)
+                        dispenser.close()
             else:
                 # partitioning
                 partition_idx = -1
@@ -178,3 +188,7 @@ class OutputPartitionDispenser(object):
                             partition_idx=self.partition_idx,
                             record=data.instance_to_proto())
             self.data_buffer = []
+
+    def close(self) -> None:
+        #TODO
+        pass
