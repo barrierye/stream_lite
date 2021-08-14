@@ -400,7 +400,7 @@ class JobManagerServicer(job_manager_pb2_grpc.JobManagerServiceServicer):
  
             # step 3: broadcast migrate event to notify upstream subtask
             #         start send data to the new subtask.
-            migrate_id = EventIdGenerator().next()
+            migrate_id = checkpoint_id
             self.job_coordinator.trigger_migrate(
                     jobid=jobid, 
                     new_cls_name=src_cls_name, 
@@ -416,6 +416,7 @@ class JobManagerServicer(job_manager_pb2_grpc.JobManagerServiceServicer):
             self.job_coordinator.block_util_migrate_sync(jobid, migrate_id)
 
             # step 5: terminate old subtask
+            terminate_id = migrate_id
             self.job_coordinator.terminate_subtask(
                     jobid=jobid,
                     cls_name=src_cls_name,
@@ -424,10 +425,10 @@ class JobManagerServicer(job_manager_pb2_grpc.JobManagerServiceServicer):
                         cls_name=src_cls_name,
                         idx=src_partition_idx,
                         currency=src_currency),
-                    terminate_id=migrate_id)
+                    terminate_id=terminate_id)
             self.job_coordinator.block_util_terminate_completed(
                     jobid=jobid,
-                    terminate_id=migrate_id)
+                    terminate_id=terminate_id)
 
         except Exception as e:
             _LOGGER.error(e, exc_info=True)

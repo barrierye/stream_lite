@@ -86,4 +86,4 @@ class UserClient(ClientBase):
         if resp.status.err_code != 0:
             raise Exception(resp.status.message)
         _LOGGER.info(
-                "Success to migrate job(id={})".format(jobid))
+                "Success to migrate job(jobid={})".format(jobid))

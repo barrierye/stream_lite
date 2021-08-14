@@ -9,7 +9,9 @@ from stream_lite import SinkOperatorBase
 class SimpleSink(SinkOperatorBase):
 
     def init(self, resource_path_dict):
-        pass
+        self.fout = open("sink.txt", "w")
 
     def compute(self, inputs):
         print(inputs)
+        self.fout.write("{}\n".format(inputs))
+        self.fout.flush()
