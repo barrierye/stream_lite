@@ -18,7 +18,8 @@ def gen_proto_codes():
     files = ["job_manager.proto", 
              "common.proto",
              "task_manager.proto",
-             "subtask.proto"]
+             "subtask.proto",
+             "resource_manager.proto"]
     for filename in files:
         gen_proto_code(
                 os.path.join(dirpath, filename))

@@ -1,0 +1,44 @@
+syntax = "proto2";
+
+import "stream_lite/proto/common.proto";
+
+package resource_manager;
+
+message RegisterTaskManagerRequest {
+  required common.TaskManagerDescription task_manager_desc = 1;
+}
+
+message RegisterTaskManagerResponse {
+  required string job_manager_endpoint = 1;
+  required common.Status status = 2;
+}
+
+message HeartBeatRequest {
+  required string endpoint = 1;
+  required string name = 2;
+  required common.Coordinate coord = 3;
+  required int64 timestamp = 4;
+}
+
+message HeartBeatResponse {
+  required common.Status status = 1;
+
+}
+
+message GetTaskManagerEndpointRequest {
+  required string task_manager_name = 1;
+}
+
+message GetTaskManagerEndpointResponse {
+  optional string endpoint = 1 [default = ""]; // 不存在时为空
+  required common.Status status = 2;
+}
+
+service ResourceManagerService {
+  // from task manager
+  rpc registerTaskManager(RegisterTaskManagerRequest) returns (RegisterTaskManagerResponse) {}
+  rpc heartBeat(HeartBeatRequest) returns (HeartBeatResponse) {}
+
+  // from job manager
+  rpc getTaskManagerEndpoint(GetTaskManagerEndpointRequest) returns (GetTaskManagerEndpointResponse) {}
+};

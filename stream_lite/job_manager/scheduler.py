@@ -5,7 +5,7 @@
 import logging
 from typing import List, Dict, Tuple
 
-from .registered_task_manager_table import RegisteredTaskManagerTable
+from stream_lite.client import ResourceManagerClient
 from stream_lite.proto import task_manager_pb2
 from stream_lite.network import serializator
 
@@ -14,8 +14,8 @@ _LOGGER = logging.getLogger(__name__)
 
 class Scheduler(object):
 
-    def __init__(self, registered_task_manager_table: RegisteredTaskManagerTable):
-        self.registered_task_manager_table = registered_task_manager_table
+    def __init__(self, resource_manager_client: ResourceManagerClient):
+        self.resource_manager_client = resource_manager_client
 
     def schedule(self, serializable_tasks: List[serializator.SerializableTask]) \
             -> Tuple[Dict[str, List[serializator.SerializableTask]],
@@ -32,7 +32,7 @@ class Scheduler(object):
                     -> Dict[str, List[int]]:
         available_ports_map = {} # taskmanager.name -> List[int]
         for task_manager_name, seri_tasks in logical_map.items():
-            client = self.registered_task_manager_table.get_client(task_manager_name)
+            client = self.resource_manager_client.get_client(task_manager_name)
             
             available_ports = client.requestSlot(seri_tasks)
             _LOGGER.debug(
@@ -52,8 +52,8 @@ class UserDefinedScheduler(Scheduler):
     只能定义不同 Task 在不同的 TaskManager 上，不能定义同个 Task 的不同 subTask
     """
 
-    def __init__(self, registered_task_manager_table: RegisteredTaskManagerTable):
-        super(UserDefinedScheduler, self).__init__(registered_task_manager_table)
+    def __init__(self, resource_manager_client: ResourceManagerClient):
+        super(UserDefinedScheduler, self).__init__(resource_manager_client)
 
     def schedule(self, serializable_tasks: List[serializator.SerializableTask]) \
             -> Tuple[Dict[str, List[serializator.SerializableTask]],
@@ -65,7 +65,7 @@ class UserDefinedScheduler(Scheduler):
         logical_map = {} # taskmanager.name -> List[serializable_task]
         for task in serializable_tasks:
             name = task.locate
-            if not self.registered_task_manager_table.has_task_manager(name):
+            if not self.resource_manager_client.has_task_manager(name):
                 raise RuntimeError(
                         "Failed: task.locate({}) not registerd.".format(name))
             if name not in logical_map:
@@ -81,7 +81,7 @@ class UserDefinedScheduler(Scheduler):
         execute_map = {} # taskmanager.name -> List[serializable_execute_task]
         name_to_executetask = {} # subtask_name -> serializable_execute_task
         for task_manager_name, seri_logical_tasks in logical_map.items():
-            task_manager_host = self.registered_task_manager_table.get_host(task_manager_name)
+            task_manager_host = self.resource_manager_client.get_host(task_manager_name)
             execute_map[task_manager_name] = []
             used_port_idx = 0
             for logical_task in seri_logical_tasks:

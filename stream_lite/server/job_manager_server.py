@@ -14,11 +14,16 @@ _LOGGER = logging.getLogger(__name__)
 class JobManager(ServerBase):
 
     def __init__(self, 
-            rpc_port: int, 
+            job_manger_rpc_port: int, 
+            resource_manager_rpc_port: int,
             worker_num: int = 4):
-        super(JobManager, self).__init__(rpc_port, worker_num)
+        super(JobManager, self).__init__(job_manger_rpc_port, worker_num)
         self.service_name = "Service@JobManager"
+        self.job_manger_rpc_port = job_manger_rpc_port
+        self.resource_manager_rpc_port = resource_manager_rpc_port
 
     def init_service(self, server):
         job_manager_pb2_grpc.add_JobManagerServiceServicer_to_server(
-                 JobManagerServicer(), server)
+                 JobManagerServicer(
+                     self.job_manger_rpc_port,
+                     self.resource_manager_rpc_port), server)

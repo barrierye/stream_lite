@@ -1,4 +1,4 @@
-job_manager_enpoint: "127.0.0.1:8970"
+resource_manager_enpoint: "127.0.0.1:8975"
 name: taskmanager1
 coord:
   x: 116.405419

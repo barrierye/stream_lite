@@ -11,8 +11,7 @@ from stream_lite.proto import common_pb2
 from stream_lite.proto import subtask_pb2
 from stream_lite.proto import job_manager_pb2
 
-from stream_lite.client import SubTaskClient
-from .registered_task_manager_table import RegisteredTaskManagerTable
+from stream_lite.client import SubTaskClient, ResourceManagerClient
 from stream_lite.network import serializator
 
 _LOGGER = logging.getLogger(__name__)
@@ -20,9 +19,9 @@ _LOGGER = logging.getLogger(__name__)
 
 class JobCoordinator(object):
 
-    def __init__(self, registered_task_manager_table: RegisteredTaskManagerTable):
+    def __init__(self, resource_manager_client: ResourceManagerClient):
         self.rw_lock_pair = rwlock.RWLockFair()
-        self.registered_task_manager_table = registered_task_manager_table
+        self.resource_manager_client = resource_manager_client
         self.table = {} # jobid -> SpecificJobInfo
 
     def register_job(self, 
@@ -47,7 +46,7 @@ class JobCoordinator(object):
                         "Failed to trigger checkpoint: can not found job(jobid={})".format(jobid))
             self.table[jobid].trigger_checkpoint(
                     checkpoint_id, 
-                    self.registered_task_manager_table,
+                    self.resource_manager_client,
                     cancel_job,
                     migrate_cls_name,
                     migrate_partition_idx)
@@ -64,7 +63,7 @@ class JobCoordinator(object):
                         "Failed to trigger migrate: can not found job(jobid={})".format(jobid))
             self.table[jobid].trigger_migrate(
                     migrate_id,
-                    self.registered_task_manager_table,
+                    self.resource_manager_client,
                     new_cls_name,
                     new_partition_idx,
                     new_endpoint)
@@ -95,7 +94,7 @@ class JobCoordinator(object):
                         " not found job(jobid={})".format(jobid))
             self.table[jobid].terminate_subtask(
                     terminate_id,
-                    self.registered_task_manager_table,
+                    self.resource_manager_client,
                     cls_name,
                     partition_idx,
                     subtask_name)
@@ -216,20 +215,19 @@ class SpecificJobInfo(object):
 
     def trigger_checkpoint(self, 
             checkpoint_id: int,
-            registered_task_manager_table: RegisteredTaskManagerTable,
+            resource_manager_client: ResourceManagerClient,
             cancel_job: bool,
             migrate_cls_name: str,
             migrate_partition_idx: int) -> None:
         """
-        传入 registered_task_manager_table 是为了找到对应 task_manager 的 endpoint
+        传入 resource_manager_client 是为了找到对应 task_manager 的 endpoint
         """
         if self.ack_table.has_event(checkpoint_id):
             raise KeyError(
                     "Failed: checkpoint(id={}) already exists".format(checkpoint_id))
         for task_manager_name, tasks in self.source_ops.items():
             task_manager_ip = \
-                    registered_task_manager_table.get_task_manager_ip(
-                            task_manager_name)
+                    resource_manager_client.get_host(task_manager_name)
             for task in tasks:
                 self._inner_trigger_checkpoint(
                         task_manager_ip, 
@@ -260,7 +258,7 @@ class SpecificJobInfo(object):
 
     def trigger_migrate(self, 
             migrate_id: int,
-            registered_task_manager_table: RegisteredTaskManagerTable,
+            resource_manager_client: ResourceManagerClient,
             new_cls_name: str,
             new_partition_idx: int,
             new_endpoint: str) -> None:
@@ -269,8 +267,7 @@ class SpecificJobInfo(object):
                     "Failed: migrate(id={}) already exists".format(migrate_id))
         for task_manager_name, tasks in self.source_ops.items():
             task_manager_ip = \
-                    registered_task_manager_table.get_task_manager_ip(
-                            task_manager_name)
+                    resource_manager_client.get_host(task_manager_name)
             for task in tasks:
                 self._inner_trigger_migrate(
                         task_manager_ip,
@@ -300,7 +297,7 @@ class SpecificJobInfo(object):
 
     def terminate_subtask(self,
             terminate_id: int,
-            registered_task_manager_table: RegisteredTaskManagerTable,
+            resource_manager_client: ResourceManagerClient,
             cls_name: str,
             partition_idx: int,
             subtask_name: str) -> None:
@@ -309,8 +306,7 @@ class SpecificJobInfo(object):
                     "Failed: terminate(id={}) already exists".format(terminate_id))
         for task_manager_name, tasks in self.source_ops.items():
             task_manager_ip = \
-                    registered_task_manager_table.get_task_manager_ip(
-                            task_manager_name)
+                    resource_manager_client.get_host(task_manager_name)
             for task in tasks:
                 self._inner_terminate_subtask(
                         task_manager_ip,

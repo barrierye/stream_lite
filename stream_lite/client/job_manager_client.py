@@ -25,23 +25,6 @@ class JobManagerClient(ClientBase):
     def _init_stub(self, channel):
         return job_manager_pb2_grpc.JobManagerServiceStub(channel)
 
-    def registerTaskManager(self, endpoint: str, conf: dict) -> None:
-        job_manager_enpoint = conf["job_manager_enpoint"]
-        resp = self.stub.registerTaskManager(
-                job_manager_pb2.RegisterTaskManagerRequest(
-                    task_manager_desc=serializator.SerializableTaskManagerDesc.to_proto(
-                        host=endpoint.split(":")[0],
-                        endpoint=endpoint,
-                        name=conf["name"],
-                        coord_x=conf["coord"]["x"],
-                        coord_y=conf["coord"]["y"],
-                        resource=conf["resource"])))
-        if resp.status.err_code != 0:
-            raise Exception(resp.status.message)
-        _LOGGER.info(
-                "Success register task manager(name={})".format(conf["name"]) +\
-                " to job manager(endpoint={})".format(job_manager_enpoint))
-
     def acknowledgeCheckpoint(self, 
             subtask_name: str, 
             jobid: str,

@@ -38,6 +38,7 @@ class Slot(object):
         self.status = "DEPLOYED"
 
     def start(self):
+        self.status = "RUNNING"
         self.subtask.run_on_standalone_process(
                 is_process=stream_lite.config.IS_PROCESS)
 

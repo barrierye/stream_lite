@@ -14,7 +14,7 @@ import stream_lite.proto.task_manager_pb2_grpc as task_manager_pb2_grpc
 import stream_lite.proto.common_pb2 as common_pb2
 from stream_lite.proto import task_manager_pb2
 
-from stream_lite.client import JobManagerClient
+from stream_lite.client import JobManagerClient, ResourceManagerClient
 from stream_lite.network import serializator
 from stream_lite.network.util import gen_nil_response
 import stream_lite.utils.util
@@ -29,13 +29,13 @@ class TaskManagerServicer(task_manager_pb2_grpc.TaskManagerServiceServicer):
 
     def __init__(self, rpc_port: int, conf_yaml_path: str):
         super(TaskManagerServicer, self).__init__()
-        self.job_manager_client = None
+        self.resource_manager_client = None
         self.endpoint = "{}:{}".format(
                 stream_lite.utils.util.get_ip(), rpc_port)
         self.conf = self._init_by_yaml(conf_yaml_path)
-        self._register(self.conf)
+        job_manager_enpoint = self._register(self.conf)
         self.slot_table = SlotTable(
-                self.name, self.conf["job_manager_enpoint"],
+                self.name, job_manager_enpoint,
                 self.resource.slot_number)
 
     def _init_by_yaml(self, conf_yaml_path: str) -> dict:
@@ -49,24 +49,25 @@ class TaskManagerServicer(task_manager_pb2_grpc.TaskManagerServiceServicer):
         self.remain_resource = copy.deepcopy(self.resource)
         return conf
 
-    def _register(self, conf: dict):
-        job_manager_enpoint = conf["job_manager_enpoint"]
-        self.job_manager_client = JobManagerClient()
+    def _register(self, conf: dict) -> str:
+        resource_manager_enpoint = conf["resource_manager_enpoint"]
+        self.resource_manager_client = ResourceManagerClient()
         _LOGGER.debug(
-                "Try connect to job manager({}) from task manager(name={})"
-                .format(job_manager_enpoint, conf["name"]))
-        self.job_manager_client.connect(job_manager_enpoint)
+                "Try connect to resource manager({}) from task manager(name={})"
+                .format(resource_manager_enpoint, conf["name"]))
+        self.resource_manager_client.connect(resource_manager_enpoint)
         while True:
             try:
-                self.job_manager_client.registerTaskManager(
+                job_manager_enpoint = self.resource_manager_client.registerTaskManager(
                         self.endpoint, self.conf)
             except grpc._channel._InactiveRpcError as e:
                 _LOGGER.debug(
-                    "Failed to register task manager: connections to job manager"
+                    "Failed to register task manager: connections to resource manager"
                     "failing, waiting for 5 sec...")
                 time.sleep(5)
                 continue
             break
+        return job_manager_enpoint
 
     # --------------------------- request slot ----------------------------
     def requestSlot(self, request, context):

@@ -12,5 +12,5 @@ if __name__ == '__main__':
             datefmt='%Y-%m-%d %H:%M', 
             level=logging.INFO)
     # for debug
-    server = JobManager(8970)
+    server = JobManager(8970, 8975)
     server.run()

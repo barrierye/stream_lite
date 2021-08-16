@@ -14,10 +14,6 @@ message SubmitJobResponse {
   optional string jobid = 2;
 }
 
-message RegisterTaskManagerRequest {
-  required common.TaskManagerDescription task_manager_desc = 1;
-}
-
 message TriggerCheckpointRequest {
   required string jobid = 1;
   optional bool cancel_job = 2 [default = false];
@@ -74,6 +70,7 @@ message AcknowledgeTerminateRequest {
   required int32 terminate_id = 4;
 }
 
+
 service JobManagerService {
   // from user front client
   rpc submitJob(SubmitJobRequest) returns (SubmitJobResponse) {}
@@ -82,9 +79,6 @@ service JobManagerService {
       returns (RestoreFromCheckpointResponse) {}
   rpc triggerMigrate(MigrateRequest) returns (common.NilResponse) {}
   
-  // from task manager
-  rpc registerTaskManager(RegisterTaskManagerRequest) returns (common.NilResponse) {}
-
   // from subtask
   rpc acknowledgeCheckpoint(AcknowledgeCheckpointRequest) returns (common.NilResponse) {}
   rpc acknowledgeMigrate(AcknowledgeMigrateRequest) returns (common.NilResponse) {}

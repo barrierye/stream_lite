@@ -14,27 +14,48 @@ import stream_lite.proto.job_manager_pb2 as job_manager_pb2
 import stream_lite.proto.common_pb2 as common_pb2
 import stream_lite.proto.job_manager_pb2_grpc as job_manager_pb2_grpc
 
+import stream_lite
 from stream_lite import client
 from stream_lite.network.util import gen_nil_response
 from stream_lite.network import serializator
 from stream_lite.utils import JobIdGenerator, EventIdGenerator
+import stream_lite.utils.util
+from stream_lite.server.resource_manager_server import ResourceManager
 
 from . import scheduler
-from .registered_task_manager_table import RegisteredTaskManagerTable
 from .job_coordinator import JobCoordinator, PendingForNotify
 
 _LOGGER = logging.getLogger(__name__)
 
 
+def create_resource_manager(
+        job_manager_rpc_port: int,
+        resource_manager_rpc_port: int) -> \
+                Tuple[ResourceManager, client.ResourceManagerClient]:
+    host = stream_lite.utils.util.get_ip()
+    job_manager_endpoint = "{}:{}".format(host, job_manager_rpc_port)
+    resource_manager = ResourceManager(
+            job_manager_endpoint, resource_manager_rpc_port)
+    resource_manager_enpoint = "{}:{}".format(host, resource_manager_rpc_port)
+    resource_manager_client = client.ResourceManagerClient()
+    resource_manager_client.connect(resource_manager_enpoint)
+    return resource_manager, resource_manager_client
+
+
 class JobManagerServicer(job_manager_pb2_grpc.JobManagerServiceServicer):
 
-    def __init__(self):
+    def __init__(self, job_manager_rpc_port: int, resource_manager_rpc_port: int):
         super(JobManagerServicer, self).__init__()
-        self.registered_task_manager_table = RegisteredTaskManagerTable()
+        self.resource_manager, self.resource_manager_client = \
+                create_resource_manager(job_manager_rpc_port, resource_manager_rpc_port)
+        self.resource_manager.run_on_standalone_process(
+                is_process=stream_lite.config.IS_PROCESS)
+
         self.scheduler = scheduler.UserDefinedScheduler(
-                self.registered_task_manager_table)
+                self.resource_manager_client)
         self.job_coordinator = JobCoordinator(
-                self.registered_task_manager_table)
+                self.resource_manager_client)
+
         self.jobinfo_dir = "./_tmp/jm/jobid_{}" # jobid
         self.taskfile_dir = "./_tmp/jm/jobid_{}/taskfiles"   # jobid
         self.resource_dir = "./_tmp/jm/jobid_{}/resource/{}" # jobid, cls_name
@@ -125,7 +146,7 @@ class JobManagerServicer(job_manager_pb2_grpc.JobManagerServiceServicer):
             chk_jobid: str = "",
             checkpoint_id: int = -1) -> None:
         for task_manager_name, seri_execute_tasks in execute_map.items():
-            client = self.registered_task_manager_table.get_client(task_manager_name)
+            client = self.resource_manager_client.get_client(task_manager_name)
             for execute_task in seri_execute_tasks:
                 self._deployExecuteTask(
                         jobid=jobid,
@@ -202,22 +223,11 @@ class JobManagerServicer(job_manager_pb2_grpc.JobManagerServiceServicer):
     def _innerStartExecuteTask(self, 
             task_manager_name: str,
             execute_task: serializator.SerializableExectueTask):
-        client = self.registered_task_manager_table.get_client(task_manager_name)
+        client = self.resource_manager_client.get_client(task_manager_name)
         client.startTask(execute_task.subtask_name)
 
     def _get_subtask_name(self, cls_name: str, idx: int, currency: int) -> str:
         return "{}#({}/{})".format(cls_name, idx, currency)
-
-    # --------------------------- register task manager ----------------------------
-    def registerTaskManager(self, request, context):
-        try:
-            self.registered_task_manager_table.register(
-                    request.task_manager_desc)
-        except Exception as e:
-            _LOGGER.error(e, exc_info=True)
-            return gen_nil_response(
-                    err_code=1, message=str(e))
-        return gen_nil_response()
 
     # --------------------------- trigger checkpoint ----------------------------
     def triggerCheckpoint(self, request, context):
@@ -359,12 +369,12 @@ class JobManagerServicer(job_manager_pb2_grpc.JobManagerServiceServicer):
                 execute_task_pb.ParseFromString(f.read())
 
             # step 2.2: ask for slot resource
-            if not self.registered_task_manager_table.has_task_manager(target_task_manager_locate):
+            if not self.resource_manager_client.has_task_manager(target_task_manager_locate):
                 return gen_nil_response(
                         err_code=1,
                         message="Failed: can not found task_manager(name={})".format(
                             target_task_manager_locate))
-            client = self.registered_task_manager_table.get_client(target_task_manager_locate)
+            client = self.resource_manager_client.get_client(target_task_manager_locate)
             available_ports = client.requestSlot([
                 serializator.SerializableTask(
                         cls_name=execute_task_pb.cls_name,
@@ -377,12 +387,12 @@ class JobManagerServicer(job_manager_pb2_grpc.JobManagerServiceServicer):
             # update exe_task params
             exe_task.port = available_ports[0]
             exe_task_endpoint = "{}:{}".format(
-                    self.registered_task_manager_table.get_host(target_task_manager_locate),
+                    self.resource_manager_client.get_host(target_task_manager_locate),
                     exe_task.port)
             exe_task.subtask_name = "{}@MIGRATE".format(exe_task.subtask_name)
 
             # step 2.3: deploy subtask (with state)
-            client = self.registered_task_manager_table.get_client(target_task_manager_locate)
+            client = self.resource_manager_client.get_client(target_task_manager_locate)
             self._deployExecuteTask(
                     jobid=jobid,
                     client=client,
