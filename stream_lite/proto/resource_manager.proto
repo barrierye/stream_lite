@@ -17,12 +17,15 @@ message HeartBeatRequest {
   required string endpoint = 1;
   required string name = 2;
   required common.Coordinate coord = 3;
-  required int64 timestamp = 4;
+  required int32 max_nearby_num = 4 [default = 3];
+  required int64 timestamp = 5;
 }
 
 message HeartBeatResponse {
   required common.Status status = 1;
-
+  required int32 nearby_size = 2;
+  repeated string names = 3;
+  repeated string endpoints = 4;
 }
 
 message GetTaskManagerEndpointRequest {
@@ -36,9 +39,11 @@ message GetTaskManagerEndpointResponse {
 
 service ResourceManagerService {
   // from task manager
-  rpc registerTaskManager(RegisterTaskManagerRequest) returns (RegisterTaskManagerResponse) {}
-  rpc heartBeat(HeartBeatRequest) returns (HeartBeatResponse) {}
+  rpc registerTaskManager(RegisterTaskManagerRequest) 
+      returns (RegisterTaskManagerResponse) {}
+  rpc heartbeat(HeartBeatRequest) returns (HeartBeatResponse) {} // query nearby task manager
 
   // from job manager
-  rpc getTaskManagerEndpoint(GetTaskManagerEndpointRequest) returns (GetTaskManagerEndpointResponse) {}
+  rpc getTaskManagerEndpoint(GetTaskManagerEndpointRequest) 
+      returns (GetTaskManagerEndpointResponse) {}
 };

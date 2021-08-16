@@ -5,6 +5,7 @@
 import grpc
 import logging
 import time
+from typing import List, Dict, Union
 
 from stream_lite.proto import resource_manager_pb2, resource_manager_pb2_grpc
 import stream_lite.proto.common_pb2 as common_pb2
@@ -62,3 +63,28 @@ class ResourceManagerClient(ClientBase):
                 "Success register task manager(name={})".format(conf["name"]) +\
                 " to resource manager(endpoint={})".format(resource_manager_enpoint))
         return resp.job_manager_endpoint
+
+    def heartbeat(self, 
+            task_manager_name: str,
+            task_manager_endpoint: str,
+            coord_x: float,
+            coord_y: float,
+            max_nearby_num: int = 3,
+            timestamp: Union[None, int] = None) \
+                    -> Dict[str, str]:
+        if timestamp is None:
+            timestamp = util.get_timestamp()
+        resp = self.stub.heartbeat(
+                resource_manager_pb2.HeartBeatRequest(
+                    endpoint=task_manager_endpoint,
+                    name=task_manager_name,
+                    coord=common_pb2.Coordinate(
+                        x=coord_x, y=coord_y),
+                    max_nearby_num=max_nearby_num,
+                    timestamp=timestamp))
+        if resp.status.err_code != 0:
+            raise Exception(resp.status.message)
+        nearby_task_managers = {}
+        for idx, name in enumerate(resp.names):
+            nearby_task_managers[name] = resp.endpoints[idx]
+        return nearby_task_managers

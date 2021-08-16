@@ -679,8 +679,9 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
             if record.data_type != common_pb2.Record.DataType.PICKLE:
                 return gen_nil_response()
 
-        #  _LOGGER.debug("Recv data(from={}): {}".format(
-            #  pre_subtask, str(request)))
+        #  _LOGGER.info("Recv data(from={}): {}".format(
+            #  pre_subtask, str(partition_idx)))
+        # FIXME: 有时候partition_idx会异常
         self.input_receiver.recv_data(partition_idx, record)
         return gen_nil_response()
 

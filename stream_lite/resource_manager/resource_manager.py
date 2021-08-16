@@ -60,3 +60,27 @@ class ResourceManagerServicer(resource_manager_pb2_grpc.ResourceManagerServiceSe
                         err_code=1, message=str(e)))
         return resource_manager_pb2.GetTaskManagerEndpointResponse(
                 endpoint=endpoint, status=common_pb2.Status())
+
+    # --------------------------- heartbeat(query nearby task manager) ----------------------------
+    def heartbeat(self, request, context):
+        try:
+            timestamp = request.timestamp
+            task_manager_name = request.name
+            coord = request.coord
+            max_nearby_num = request.max_nearby_num
+            self.registered_task_manager_table.update_task_manager_coordinate(
+                    task_manager_name, coord)
+            neary_task_manager_names, neary_task_manager_endpoints \
+                    = self.registered_task_manager_table.get_nearby_task_manager(
+                            task_manager_name, coord, max_nearby_num)
+        except Exception as e:
+            return resource_manager_pb2.HeartBeatResponse(
+                    status=common_pb2.Status(
+                        err_code=1, message=str(e)),
+                    nearby_size=0)
+        nearby_size = len(neary_task_manager_names)
+        return resource_manager_pb2.HeartBeatResponse(
+                status=common_pb2.Status(),
+                nearby_size=nearby_size,
+                names=neary_task_manager_names,
+                endpoints=neary_task_manager_endpoints)

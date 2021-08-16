@@ -5,6 +5,8 @@
 import multiprocessing
 from readerwriterlock import rwlock
 import logging
+import math
+from typing import List, Dict, Union, Optional, Tuple
 
 import stream_lite.proto.common_pb2 as common_pb2
 from stream_lite.network import serializator
@@ -44,19 +46,32 @@ class RegisteredTaskManagerTable(object):
         endpoint = self.get_task_manager_endpoint(name)
         return endpoint.split(":")[0]
 
-    def get_client(self, name: str) -> TaskManagerClient:
+    def update_task_manager_coordinate(self,
+            name: str, 
+            coord: common_pb2.Coordinate) -> None:
         with self.rw_lock_pair.gen_rlock():
             if name not in self.table:
                 raise KeyError(
                         "Failed: task_manager(name={}) not registered".format(name))
-            return self.table[name].get_client()
+            self.table[name].update_coordinate(coord)
 
-    def get_host(self, name: str) -> str:
+    def get_nearby_task_manager(self, 
+            task_manager_name: str,
+            coord: common_pb2.Coordinate,
+            max_nearby_num: int) -> \
+                    Tuple[List[str], List[str]]:
         with self.rw_lock_pair.gen_rlock():
-            if name not in self.table:
-                raise KeyError(
-                        "Failed: task_manager(name={}) not registered".format(name))
-            return self.table[name].get_host()
+            dist_map = {} # name: dist
+            for name, registered_task_manager in self.table.items():
+                if name == task_manager_name:
+                    continue
+                dist_map[name] = registered_task_manager.get_distance(coord)
+            nearly_task_managers = sorted(dist_map.items(), key=lambda x: x[1])
+            nearly_task_manager_names = [x[0] \
+                    for x in nearly_task_managers[:max_nearby_num]]
+            nearly_task_manager_endpoints = [self.table[name].get_endpoint() \
+                    for name in nearly_task_manager_names]
+            return nearly_task_manager_names, nearly_task_manager_endpoints
 
 
 class RegisteredTaskManager(object):
@@ -64,21 +79,16 @@ class RegisteredTaskManager(object):
     def __init__(self, task_manager_desc):
         self.task_manager_desc = task_manager_desc
         self.task_manager_endpoint = self.task_manager_desc.endpoint
-        self.client = self._init_client()
 
     def get_endpoint(self) -> str:
         return self.task_manager_endpoint
 
-    def _init_client(self) -> TaskManagerClient:
-        client = TaskManagerClient()
-        client.connect(self.task_manager_endpoint)
-        _LOGGER.debug(
-                "Succ init register task manager(name={}) client"
-                .format(self.task_manager_desc.name))
-        return client
+    def update_coordinate(self, coord: common_pb2.Coordinate) -> None:
+        self.task_manager_desc.coord.x = coord.x
+        self.task_manager_desc.coord.y = coord.y
 
-    def get_client(self) -> TaskManagerClient:
-        return self.client
-
-    def get_host(self) -> str:
-        return self.task_manager_desc.host
+    def get_distance(self, coord: common_pb2.Coordinate) -> float:
+        self_coord = self.task_manager_desc.coord
+        horizontal_dist = (self_coord.x - coord.x) ** 2
+        vertical_dist = (self_coord.y - coord.y) ** 2
+        return math.sqrt(horizontal_dist + vertical_dist)
