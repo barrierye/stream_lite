@@ -24,10 +24,21 @@ message StartTaskRequest {
   required string subtask_name = 1;
 }
 
+message TestLatencyRequest {
+  required int64 timestamp = 1;
+}
+
+message TestLatencyResponse {
+  required int64 latency = 1;
+  required common.Status status = 2;
+}
 
 service TaskManagerService {
   // from job manager
   rpc requestSlot(RequiredSlotRequest) returns (RequiredSlotResponse) {}
   rpc deployTask(DeployTaskRequest) returns (common.NilResponse) {}
   rpc startTask(StartTaskRequest) returns (common.NilResponse) {}
+
+  // from task manager
+  rpc testLatency(TestLatencyRequest) returns (TestLatencyResponse) {} 
 };

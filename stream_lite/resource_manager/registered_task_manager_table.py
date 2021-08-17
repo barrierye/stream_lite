@@ -49,17 +49,32 @@ class RegisteredTaskManagerTable(object):
     def update_task_manager_coordinate(self,
             name: str, 
             coord: common_pb2.Coordinate) -> None:
-        with self.rw_lock_pair.gen_rlock():
+        with self.rw_lock_pair.gen_wlock():
             if name not in self.table:
                 raise KeyError(
                         "Failed: task_manager(name={}) not registered".format(name))
             self.table[name].update_coordinate(coord)
+
+    def update_task_manager_nearby_peers(self,
+            task_manager_name: str,
+            peers: List[common_pb2.HeartBeatRequest.NearbyPeer]) -> None:
+        """
+        更新 task_manager 附近 peer 的通信延迟
+        """
+        with self.rw_lock_pair.gen_wlock():
+            if name not in self.table:
+                raise KeyError(
+                        "Failed: task_manager(name={}) not registered".format(name))
+            self.table[name].update_nearby_peers(peers)
 
     def get_nearby_task_manager(self, 
             task_manager_name: str,
             coord: common_pb2.Coordinate,
             max_nearby_num: int) -> \
                     Tuple[List[str], List[str]]:
+        """
+        根据欧氏距离获取最近的 max_nearby_num 个 task_manager
+        """
         with self.rw_lock_pair.gen_rlock():
             dist_map = {} # name: dist
             for name, registered_task_manager in self.table.items():
@@ -79,16 +94,24 @@ class RegisteredTaskManager(object):
     def __init__(self, task_manager_desc):
         self.task_manager_desc = task_manager_desc
         self.task_manager_endpoint = self.task_manager_desc.endpoint
+        self.coord = self.task_manager_desc.coord
+        self.peer_latencies = {} # peer_name -> latency
 
     def get_endpoint(self) -> str:
         return self.task_manager_endpoint
 
     def update_coordinate(self, coord: common_pb2.Coordinate) -> None:
-        self.task_manager_desc.coord.x = coord.x
-        self.task_manager_desc.coord.y = coord.y
+        self.coord.x = coord.x
+        self.coord.y = coord.y
 
     def get_distance(self, coord: common_pb2.Coordinate) -> float:
-        self_coord = self.task_manager_desc.coord
-        horizontal_dist = (self_coord.x - coord.x) ** 2
-        vertical_dist = (self_coord.y - coord.y) ** 2
+        horizontal_dist = (self.coord.x - coord.x) ** 2
+        vertical_dist = (self.coord.y - coord.y) ** 2
         return math.sqrt(horizontal_dist + vertical_dist)
+
+    def update_nearby_peers(self,
+            peers: List[common_pb2.HeartBeatRequest.NearbyPeer]) -> None:
+        for peer in peers:
+            name = peer.name
+            latency = peer.latency
+            self.peer_latencies[name] = latency

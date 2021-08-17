@@ -69,11 +69,15 @@ class ResourceManagerClient(ClientBase):
             task_manager_endpoint: str,
             coord_x: float,
             coord_y: float,
+            peers: Dict[str, int],
             max_nearby_num: int = 3,
             timestamp: Union[None, int] = None) \
                     -> Dict[str, str]:
         if timestamp is None:
             timestamp = util.get_timestamp()
+
+        pb_peers = [resource_manager_pb2.HeartBeatRequest.NearbyPeer(
+            name=name, latency=latency) for name, latency in peers.items()]
         resp = self.stub.heartbeat(
                 resource_manager_pb2.HeartBeatRequest(
                     endpoint=task_manager_endpoint,
@@ -81,7 +85,8 @@ class ResourceManagerClient(ClientBase):
                     coord=common_pb2.Coordinate(
                         x=coord_x, y=coord_y),
                     max_nearby_num=max_nearby_num,
-                    timestamp=timestamp))
+                    timestamp=timestamp,
+                    peers=pb_peers))
         if resp.status.err_code != 0:
             raise Exception(resp.status.message)
         nearby_task_managers = {}

@@ -68,8 +68,11 @@ class ResourceManagerServicer(resource_manager_pb2_grpc.ResourceManagerServiceSe
             task_manager_name = request.name
             coord = request.coord
             max_nearby_num = request.max_nearby_num
+            peers = request.peers
             self.registered_task_manager_table.update_task_manager_coordinate(
                     task_manager_name, coord)
+            self.registered_task_manager_table.update_task_manager_nearby_peers(
+                    task_manager_name, peers)
             neary_task_manager_names, neary_task_manager_endpoints \
                     = self.registered_task_manager_table.get_nearby_task_manager(
                             task_manager_name, coord, max_nearby_num)

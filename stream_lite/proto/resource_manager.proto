@@ -19,6 +19,12 @@ message HeartBeatRequest {
   required common.Coordinate coord = 3;
   required int32 max_nearby_num = 4 [default = 3];
   required int64 timestamp = 5;
+  repeated NearbyPeer peers = 6;
+
+  message NearbyPeer {
+    required string name = 2;
+    required int32 latency = 3;
+  }
 }
 
 message HeartBeatResponse {
