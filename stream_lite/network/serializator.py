@@ -122,6 +122,15 @@ class SerializableTaskManagerDesc(SerializableObject):
         required_attrs = ["host", "endpoint", "name", "coord", "resource"]
         self.check_attrs(required_attrs)
 
+    def instance_to_proto(self) -> common_pb2.TaskManagerDescription:
+        return SerializableTaskManagerDesc.to_proto(
+                host=self.host,
+                endpoint=self.endpoint,
+                name=self.name,
+                coord_x=self.coord.x,
+                coord_y=self.coord.y,
+                resource=self.resource.instance_to_dict())
+
     @staticmethod
     def to_proto(
             host: str,
@@ -157,6 +166,10 @@ class SerializableMachineResource(SerializableObject):
         super(SerializableMachineResource, self).__init__(**kwargs)
         required_attrs = ["slot_number"]
         self.check_attrs(required_attrs)
+
+    def instance_to_dict(self) -> dict:
+        resource = {"slot_number": self.slot_number}
+        return resource
 
     @staticmethod
     def to_proto(resource: dict) -> common_pb2.MachineResource:

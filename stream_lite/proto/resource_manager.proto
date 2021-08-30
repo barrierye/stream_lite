@@ -43,6 +43,11 @@ message GetTaskManagerEndpointResponse {
   required common.Status status = 2;
 }
 
+message GetAllTaskManagerDescResponse {
+  required common.Status status = 1;
+  repeated common.TaskManagerDescription task_manager_descs = 2;
+}
+
 service ResourceManagerService {
   // from task manager
   rpc registerTaskManager(RegisterTaskManagerRequest) 
@@ -52,4 +57,7 @@ service ResourceManagerService {
   // from job manager
   rpc getTaskManagerEndpoint(GetTaskManagerEndpointRequest) 
       returns (GetTaskManagerEndpointResponse) {}
+
+  // from streamlit
+  rpc getAllTaskManagerDesc(common.NilRequest) returns (GetAllTaskManagerDescResponse) {}
 };

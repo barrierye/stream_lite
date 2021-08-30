@@ -62,3 +62,13 @@ class TaskManagerClient(ClientBase):
                     subtask_name=subtask_name))
         if resp.status.err_code != 0:
             raise Exception(resp.status.message)
+
+    def testLatency(self) -> int:
+        timestamp = util.get_timestamp()
+        resp = self.stub.testLatency(
+                task_manager_pb2.TestLatencyRequest(timestamp=timestamp))
+        
+        if resp.status.err_code != 0:
+            raise Exception(resp.status.message)
+
+        return resp.latency

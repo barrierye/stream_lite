@@ -4,6 +4,7 @@
 # Create time: 2021-08-16
 import grpc
 import logging
+import pandas as pd
 import time
 from typing import List, Dict, Union
 
@@ -93,3 +94,33 @@ class ResourceManagerClient(ClientBase):
         for idx, name in enumerate(resp.names):
             nearby_task_managers[name] = resp.endpoints[idx]
         return nearby_task_managers
+
+    def getAllTaskManagerDesc(self) -> pd.DataFrame:
+        resp = self.stub.getAllTaskManagerDesc(common_pb2.NilRequest())
+
+        map_data = {
+            "name": [],
+            "lon": [],
+            "lat": [],
+            "endpoint": []
+        }
+        for desc in resp.task_manager_descs:
+            map_data["name"].append(desc.name)
+            map_data["lon"].append(desc.coord.x)
+            map_data["lat"].append(desc.coord.y)
+            map_data["endpoint"].append(desc.endpoint)
+        map_df = pd.DataFrame(map_data)
+
+        latency_data = {
+            "name": [],
+            "peer": [],
+            "latency": []
+        }
+        for desc in resp.task_manager_descs:
+            for peer in desc.peers:
+                latency_data["name"].append(desc.name)
+                latency_data["peer"].append(peer.name)
+                latency_data["latency"].append(peer.latency)
+        latency_df = pd.DataFrame(latency_data)
+
+        return map_df, latency_df

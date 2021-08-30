@@ -1,5 +1,5 @@
 resource_manager_enpoint: "127.0.0.1:8975"
-name: taskmanager1
+name: TM_1
 coord:
   x: 116.405419
   y: 39.913828

@@ -53,6 +53,12 @@ message TaskManagerDescription {
   required Coordinate coord = 3;
   required MachineResource resource = 4;
   optional string host = 5;
+  repeated NearbyPeer peers = 6;
+
+  message NearbyPeer {
+    required string name = 1;
+    required int32 latency = 2;
+  }
 }
 
 message RequiredSlotDescription {

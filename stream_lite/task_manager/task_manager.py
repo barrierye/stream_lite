@@ -14,6 +14,8 @@ import stream_lite.proto.task_manager_pb2_grpc as task_manager_pb2_grpc
 import stream_lite.proto.common_pb2 as common_pb2
 from stream_lite.proto import task_manager_pb2
 
+import stream_lite
+from stream_lite.utils import util
 from stream_lite.client import JobManagerClient, ResourceManagerClient
 from stream_lite.network import serializator
 from stream_lite.network.util import gen_nil_response
@@ -21,6 +23,7 @@ import stream_lite.utils.util
 from stream_lite.utils import AvailablePortGenerator
 
 from .slot_table import SlotTable
+from .heart_beat_helper import HeartBeatHelper
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -33,23 +36,33 @@ class TaskManagerServicer(task_manager_pb2_grpc.TaskManagerServiceServicer):
         self.endpoint = "{}:{}".format(
                 stream_lite.utils.util.get_ip(), rpc_port)
         self.conf = self._init_by_yaml(conf_yaml_path)
-        job_manager_enpoint = self._register(self.conf)
+        job_manager_enpoint, resource_manager_enpoint = self._register(self.conf)
         self.slot_table = SlotTable(
                 self.name, job_manager_enpoint,
                 self.resource.slot_number)
+        
+        self.heart_beat_helper = HeartBeatHelper(
+                self.name,
+                self.endpoint,
+                self.coord,
+                resource_manager_enpoint)
+        _LOGGER.info("[{}] Start HeartbeatHelper".format(self.name))
+        self.heart_beat_helper.run_on_standalone_process(stream_lite.config.IS_PROCESS)
 
     def _init_by_yaml(self, conf_yaml_path: str) -> dict:
         with open(conf_yaml_path) as f:
             conf = yaml.load(f.read(), Loader=yaml.Loader)
         
         self.name = conf["name"]
-        self.coord = (conf["coord"]["x"], conf["coord"]["y"])
+        self.coord = common_pb2.Coordinate(
+                x=conf["coord"]["x"], 
+                y=conf["coord"]["y"])
         self.resource = serializator.SerializableMachineResource(
                 slot_number=conf["resource"]["slot_number"])
         self.remain_resource = copy.deepcopy(self.resource)
         return conf
 
-    def _register(self, conf: dict) -> str:
+    def _register(self, conf: dict) -> (str, str):
         resource_manager_enpoint = conf["resource_manager_enpoint"]
         self.resource_manager_client = ResourceManagerClient()
         _LOGGER.debug(
@@ -67,7 +80,7 @@ class TaskManagerServicer(task_manager_pb2_grpc.TaskManagerServiceServicer):
                 time.sleep(5)
                 continue
             break
-        return job_manager_enpoint
+        return job_manager_enpoint, resource_manager_enpoint
 
     # --------------------------- request slot ----------------------------
     def requestSlot(self, request, context):
@@ -121,3 +134,11 @@ class TaskManagerServicer(task_manager_pb2_grpc.TaskManagerServiceServicer):
                     err_code=1, message=str(e))
         return gen_nil_response()
     
+    # --------------------------- start task ----------------------------
+    def testLatency(self, request, context):
+        current_timestamp = util.get_timestamp()
+        req_timestamp = request.timestamp
+        latency = current_timestamp - req_timestamp
+        return task_manager_pb2.TestLatencyResponse(
+                latency=latency,
+                status=common_pb2.Status())

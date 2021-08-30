@@ -8,6 +8,7 @@ import grpc
 import logging
 import pickle
 import inspect
+import pandas as pd
 from typing import List, Dict, Tuple, Set
 
 import stream_lite.proto.resource_manager_pb2 as resource_manager_pb2
@@ -55,6 +56,7 @@ class ResourceManagerServicer(resource_manager_pb2_grpc.ResourceManagerServiceSe
             return resource_manager_pb2.GetTaskManagerEndpointResponse(
                     endpoint="", state=common_pb2.Status())
         except Exception as e:
+            _LOGGER.error(e, exc_info=True)
             return resource_manager_pb2.GetTaskManagerEndpointResponse(
                     state=common_pb2.Status(
                         err_code=1, message=str(e)))
@@ -77,6 +79,7 @@ class ResourceManagerServicer(resource_manager_pb2_grpc.ResourceManagerServiceSe
                     = self.registered_task_manager_table.get_nearby_task_manager(
                             task_manager_name, coord, max_nearby_num)
         except Exception as e:
+            _LOGGER.error(e, exc_info=True)
             return resource_manager_pb2.HeartBeatResponse(
                     status=common_pb2.Status(
                         err_code=1, message=str(e)),
@@ -87,3 +90,10 @@ class ResourceManagerServicer(resource_manager_pb2_grpc.ResourceManagerServiceSe
                 nearby_size=nearby_size,
                 names=neary_task_manager_names,
                 endpoints=neary_task_manager_endpoints)
+
+    # --------------------------- heartbeat(query nearby task manager) ----------------------------
+    def getAllTaskManagerDesc(self, request, context):
+        all_descs = self.registered_task_manager_table.get_all_task_manager_descs()
+        return resource_manager_pb2.GetAllTaskManagerDescResponse(
+                status=common_pb2.Status(),
+                task_manager_descs=all_descs)

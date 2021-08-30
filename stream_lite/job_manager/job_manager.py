@@ -28,6 +28,17 @@ from .job_coordinator import JobCoordinator, PendingForNotify
 _LOGGER = logging.getLogger(__name__)
 
 
+def run_streamlit_script(resource_manager_enpoint: str):
+    streamlit_script_path \
+            = "/Users/barriery/Desktop/StreamLite/stream_lite/resource_manager/streamlit_script.py"
+    streamlit_port = 8080
+    #cmd = "streamlit run --server.port {} {} {} &>/dev/null &".format(
+    #        streamlit_port, streamlit_script_path, resource_manager_enpoint)
+    cmd = "streamlit run --server.port {} {} {} &".format(
+            streamlit_port, streamlit_script_path, resource_manager_enpoint)
+    _LOGGER.info("Run: {}".format(cmd))
+    os.system(cmd)
+
 def create_resource_manager(
         job_manager_rpc_port: int,
         resource_manager_rpc_port: int) -> \
@@ -39,6 +50,7 @@ def create_resource_manager(
     resource_manager_enpoint = "{}:{}".format(host, resource_manager_rpc_port)
     resource_manager_client = client.ResourceManagerClient()
     resource_manager_client.connect(resource_manager_enpoint)
+    run_streamlit_script(resource_manager_enpoint)
     return resource_manager, resource_manager_client
 
 

@@ -9,6 +9,7 @@ import math
 from typing import List, Dict, Union, Optional, Tuple
 
 import stream_lite.proto.common_pb2 as common_pb2
+import stream_lite.proto.resource_manager_pb2 as resource_manager_pb2
 from stream_lite.network import serializator
 from stream_lite.client.task_manager_client import TaskManagerClient
 
@@ -56,8 +57,8 @@ class RegisteredTaskManagerTable(object):
             self.table[name].update_coordinate(coord)
 
     def update_task_manager_nearby_peers(self,
-            task_manager_name: str,
-            peers: List[common_pb2.HeartBeatRequest.NearbyPeer]) -> None:
+            name: str,
+            peers: List[resource_manager_pb2.HeartBeatRequest.NearbyPeer]) -> None:
         """
         更新 task_manager 附近 peer 的通信延迟
         """
@@ -88,6 +89,14 @@ class RegisteredTaskManagerTable(object):
                     for name in nearly_task_manager_names]
             return nearly_task_manager_names, nearly_task_manager_endpoints
 
+    def get_all_task_manager_descs(self) -> List[common_pb2.TaskManagerDescription]:
+        resp = []
+        with self.rw_lock_pair.gen_rlock():
+            for name, registered_task_manager in self.table.items():
+                desc = registered_task_manager.get_description_with_latency()
+                resp.append(desc)
+        return resp
+
 
 class RegisteredTaskManager(object):
 
@@ -96,6 +105,15 @@ class RegisteredTaskManager(object):
         self.task_manager_endpoint = self.task_manager_desc.endpoint
         self.coord = self.task_manager_desc.coord
         self.peer_latencies = {} # peer_name -> latency
+
+    def get_description_with_latency(self) -> common_pb2.TaskManagerDescription:
+        desc = self.task_manager_desc.instance_to_proto()
+        # add latency
+        for peer_name, latency in self.peer_latencies.items():
+            peer = desc.peers.add()
+            peer.name = peer_name
+            peer.latency = latency
+        return desc
 
     def get_endpoint(self) -> str:
         return self.task_manager_endpoint
@@ -110,7 +128,7 @@ class RegisteredTaskManager(object):
         return math.sqrt(horizontal_dist + vertical_dist)
 
     def update_nearby_peers(self,
-            peers: List[common_pb2.HeartBeatRequest.NearbyPeer]) -> None:
+            peers: List[resource_manager_pb2.HeartBeatRequest.NearbyPeer]) -> None:
         for peer in peers:
             name = peer.name
             latency = peer.latency

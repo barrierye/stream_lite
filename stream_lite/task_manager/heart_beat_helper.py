@@ -3,11 +3,14 @@
 # Python release: 3.7.0
 # Create time: 2021-08-18
 import multiprocessing
+import threading
 import logging
 import time
+import os
+from stream_lite.utils import util
 
 from stream_lite.proto import common_pb2
-from stream_lite.client import ResourceManagerClient
+from stream_lite.client import ResourceManagerClient, TaskManagerClient
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -33,7 +36,7 @@ class HeartBeatHelper(object):
         self._process = None
 
     def _inner_run(self, 
-            name: str,
+            tm_name: str,
             endpoint: str,
             coord: common_pb2.Coordinate,
             resource_manager_enpoint: str) -> None: 
@@ -51,15 +54,26 @@ class HeartBeatHelper(object):
                 peer_latencies[name] = latency
 
             # 汇报给 resource_manager
-            resource_manager_client.heartbeat(
-                    task_manager_name=name,
+            peer_endpoints = resource_manager_client.heartbeat(
+                    task_manager_name=tm_name,
                     task_manager_endpoint=endpoint,
                     coord_x=coord.x,
                     coord_y=coord.y,
                     peers=peer_latencies)
+
+            # update peers
+            new_peers = {}
+            for name, endpoint in peer_endpoints.items():
+                if name not in peers:
+                    peer = TaskManagerClient()
+                    peer.connect(endpoint)
+                    new_peers[name] = peer
+                else:
+                    new_peers[name] = peers[name]
+            peers = new_peers
+
             # sleep for 5 sec
             time.sleep(5)
-
 
     def run(self, 
             name: str,
