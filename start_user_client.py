@@ -21,10 +21,9 @@ if __name__ == '__main__':
     restart = False #True
 
     if not restart:
-        jobid = client.submitJob(conf_path)
+        jobid = client.submitJob(conf_path, 1)
+        exit(0)
         time.sleep(1)
-        #  client.triggerCheckpoint(jobid, cancel_job=False)
-        #  client.triggerCheckpoint(jobid, cancel_job=True)
         client.triggerMigrate(
                 jobid=jobid, 
                 src_cls_name="SumOp",

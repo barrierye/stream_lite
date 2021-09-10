@@ -25,6 +25,22 @@ class JobManagerClient(ClientBase):
     def _init_stub(self, channel):
         return job_manager_pb2_grpc.JobManagerServiceStub(channel)
 
+    def triggerCheckpoint(self, 
+            jobid: str, 
+            cancel_job: bool = False) -> int:
+        resp = self.stub.triggerCheckpoint(
+                job_manager_pb2.TriggerCheckpointRequest(
+                    jobid=jobid,
+                    cancel_job=cancel_job))
+        if resp.status.err_code != 0:
+            raise Exception(resp.status.message)
+        '''
+        _LOGGER.info(
+                "Success to checkpoint (jobid={}, chk_id={})"
+                .format(jobid, resp.checkpoint_id))
+        '''
+        return resp.checkpoint_id
+
     def acknowledgeCheckpoint(self, 
             subtask_name: str, 
             jobid: str,

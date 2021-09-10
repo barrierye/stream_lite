@@ -29,6 +29,10 @@ class RegisteredTaskManagerTable(object):
             if name in self.table:
                 raise KeyError(
                         "Failed to register task manager: name({}) already exists".format(name))
+            if len(self.table) >= 1:
+                raise RuntimeError(
+                        "Failed to register task manager: " +\
+                                "Currently only a single job run is supported.")
             self.table[name] = RegisteredTaskManager(task_manager_desc)
             _LOGGER.info("Succ register task manager: {}".format(name))
 
