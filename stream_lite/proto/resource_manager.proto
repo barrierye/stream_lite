@@ -57,6 +57,8 @@ service ResourceManagerService {
   // from job manager
   rpc getTaskManagerEndpoint(GetTaskManagerEndpointRequest) 
       returns (GetTaskManagerEndpointResponse) {}
+  rpc getAutoMigrateSubtasks (GetAutoMigrateSubtasksRequest)
+      returns (GetAutoMigrateSubtasksResponse) {}
 
   // from streamlit
   rpc getAllTaskManagerDesc(common.NilRequest) returns (GetAllTaskManagerDescResponse) {}

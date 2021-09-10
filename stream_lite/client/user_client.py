@@ -25,7 +25,10 @@ class UserClient(ClientBase):
     def _init_stub(self, channel):
         return job_manager_pb2_grpc.JobManagerServiceStub(channel)
 
-    def submitJob(self, yaml_path: str) -> str:
+    def submitJob(self, 
+            yaml_path: str, 
+            periodicity_checkpoint_interval_s: float,
+            auto_migrate: bool = False) -> str:
         with open(yaml_path) as f:
             conf = yaml.load(f.read(), Loader=yaml.FullLoader)
 
@@ -35,27 +38,16 @@ class UserClient(ClientBase):
                     serializator.SerializableTask.to_proto(
                         task_dict, conf["task_files_dir"]))
 
-        req = job_manager_pb2.SubmitJobRequest(tasks=seri_tasks)
+        req = job_manager_pb2.SubmitJobRequest(
+                tasks=seri_tasks,
+                periodicity_checkpoint_interval_s=periodicity_checkpoint_interval_s,
+                auto_migrate=auto_migrate)
         resp = self.stub.submitJob(req)
         if resp.status.err_code != 0:
             raise Exception(resp.status.message)
         _LOGGER.info("Success to submit job (jobid={})".format(resp.jobid))
         return resp.jobid
-    
-    def triggerCheckpoint(self, 
-            jobid: str, 
-            cancel_job: bool = False) -> int:
-        resp = self.stub.triggerCheckpoint(
-                job_manager_pb2.TriggerCheckpointRequest(
-                    jobid=jobid,
-                    cancel_job=cancel_job))
-        if resp.status.err_code != 0:
-            raise Exception(resp.status.message)
-        _LOGGER.info(
-                "Success to checkpoint (jobid={}, chk_id={})"
-                .format(jobid, resp.checkpoint_id))
-        return resp.checkpoint_id
-
+   
     def restoreFromCheckpoint(self, 
             jobid: str, 
             checkpoint_id: int) -> str:

@@ -8,6 +8,7 @@ import grpc
 import logging
 import pickle
 import inspect
+import threading
 from typing import List, Dict, Tuple, Set
 
 import stream_lite.proto.job_manager_pb2 as job_manager_pb2
@@ -23,6 +24,7 @@ import stream_lite.utils.util
 from stream_lite.server.resource_manager_server import ResourceManager
 
 from . import scheduler
+from .checkpoint_helper import CheckpointHelper
 from .job_coordinator import JobCoordinator, PendingForNotify
 
 _LOGGER = logging.getLogger(__name__)
@@ -63,10 +65,18 @@ class JobManagerServicer(job_manager_pb2_grpc.JobManagerServiceServicer):
         self.resource_manager.run_on_standalone_process(
                 is_process=stream_lite.config.IS_PROCESS)
 
+        self.lock = threading.Lock()
+
+        self.jobid = None
+        self.auto_migrate = None
+        self.addr = "{}:{}".format(
+                stream_lite.utils.util.get_ip(), 
+                job_manager_rpc_port)
         self.scheduler = scheduler.UserDefinedScheduler(
                 self.resource_manager_client)
         self.job_coordinator = JobCoordinator(
                 self.resource_manager_client)
+        self.checkpoint_helper = None # 定时 checkpoint，以 job 为粒度
 
         self.jobinfo_dir = "./_tmp/jm/jobid_{}" # jobid
         self.taskfile_dir = "./_tmp/jm/jobid_{}/taskfiles"   # jobid
@@ -76,7 +86,16 @@ class JobManagerServicer(job_manager_pb2_grpc.JobManagerServiceServicer):
 
     # --------------------------- submit job ----------------------------
     def submitJob(self, request, context):
-        jobid = JobIdGenerator().next()
+        with self.lock:
+            if self.jobid is not None:
+                err_str = "Failed to create job more than one."
+                _LOGGER.error(err_str)
+                return job_manager_pb2.SubmitJobResponse(
+                        status=common_pb2.Status(
+                            err_code=1, message=err_str))
+            
+            jobid = JobIdGenerator().next()
+            self.jobid = jobid
 
         # persistence_to_localfs: whole request
         jobinfo_path = self.jobinfo_dir.format(jobid)
@@ -86,6 +105,8 @@ class JobManagerServicer(job_manager_pb2_grpc.JobManagerServiceServicer):
             f.write(request.SerializeToString())
         
         seri_tasks = []
+        periodicity_checkpoint_interval_s = request.periodicity_checkpoint_interval_s
+        self.auto_migrate = request.auto_migrate
         for task in request.tasks:
             seri_task = serializator.SerializableTask.from_proto(task)
             seri_tasks.append(seri_task)
@@ -105,6 +126,14 @@ class JobManagerServicer(job_manager_pb2_grpc.JobManagerServiceServicer):
 
             # 把所有 Op 信息注册到 CheckpointCoordinator 里
             self.job_coordinator.register_job(jobid, execute_map)
+
+            # 周期性地 checkpoint
+            self.checkpoint_helper = CheckpointHelper(
+                    jobid=jobid,
+                    job_manager_enpoint=self.addr,
+                    interval=periodicity_checkpoint_interval_s)
+            self.checkpoint_helper.run_on_standalone_process(
+                    is_process=stream_lite.config.IS_PROCESS)
         except Exception as e:
             _LOGGER.error(e, exc_info=True)
             return job_manager_pb2.SubmitJobResponse(
@@ -243,6 +272,7 @@ class JobManagerServicer(job_manager_pb2_grpc.JobManagerServiceServicer):
 
     # --------------------------- trigger checkpoint ----------------------------
     def triggerCheckpoint(self, request, context):
+        # 仅支持由框架进行 checkpoint，不支持由用户进行 checkpoint
         try:
             jobid = request.jobid
             checkpoint_id = EventIdGenerator().next()
@@ -287,6 +317,14 @@ class JobManagerServicer(job_manager_pb2_grpc.JobManagerServiceServicer):
             _LOGGER.info(
                     "Success to complete checkpoint(id={}) of job(id={})"
                     .format(request.checkpoint_id, request.jobid))
+
+            # 获取自动迁移信息
+            # 若无自动迁移，则只根据该信息进行状态预迁移
+            if self.auto_migrate:
+                _LOGGER.info("Try to auto migrate...")
+                # TODO:
+                # 1. query loction
+                # 2. 状态预迁移
         return gen_nil_response()
 
     # --------------------------- restore from checkpoint ----------------------------

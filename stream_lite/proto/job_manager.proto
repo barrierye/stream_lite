@@ -7,6 +7,8 @@ package job_manager;
 
 message SubmitJobRequest {
   repeated common.Task tasks = 1;
+  required double periodicity_checkpoint_interval_s = 2;
+  required bool auto_migrate = 3 [default = false];
 };
 
 message SubmitJobResponse {
