@@ -91,9 +91,27 @@ class ResourceManagerServicer(resource_manager_pb2_grpc.ResourceManagerServiceSe
                 names=neary_task_manager_names,
                 endpoints=neary_task_manager_endpoints)
 
-    # --------------------------- heartbeat(query nearby task manager) ----------------------------
+    # --------------------------- getAllTaskManagerDesc (by streamlit)  ----------------------------
     def getAllTaskManagerDesc(self, request, context):
         all_descs = self.registered_task_manager_table.get_all_task_manager_descs()
         return resource_manager_pb2.GetAllTaskManagerDescResponse(
                 status=common_pb2.Status(),
                 task_manager_descs=all_descs)
+
+    # --------------------------- getAutoMigrateSubtasks ----------------------------
+    def getAutoMigrateSubtasks(self, request, context):
+        jobid = request.jobid
+        checkpoint_id = request.checkpoint_id
+        
+        # TODO
+        # 自动迁移逻辑
+
+        # mock
+        return resource_manager_pb2.GetAutoMigrateSubtasksResponse(
+                status=common_pb2.Status(),
+                infos=[common_pb2.MigrateInfo(
+                    src_cls_name="SumOp",
+                    src_partition_idx=0,
+                    target_task_manager_locate="TM_2",
+                    jobid=jobid,
+                    src_currency=2)])

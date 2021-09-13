@@ -124,3 +124,14 @@ class ResourceManagerClient(ClientBase):
         latency_df = pd.DataFrame(latency_data)
 
         return map_df, latency_df
+
+    def getAutoMigrateSubtasks(self,
+            jobid: str,
+            checkpoint_id: int) -> List[common_pb2.MigrateInfo]:
+        resp = self.stub.getAutoMigrateSubtasks(
+                resource_manager_pb2.GetAutoMigrateSubtasksRequest(
+                    jobid=jobid,
+                    checkpoint_id=checkpoint_id))
+        if resp.status.err_code != 0:
+            raise Exception(resp.status.message)
+        return list(resp.infos)

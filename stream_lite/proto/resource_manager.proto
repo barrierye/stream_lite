@@ -48,6 +48,16 @@ message GetAllTaskManagerDescResponse {
   repeated common.TaskManagerDescription task_manager_descs = 2;
 }
 
+message GetAutoMigrateSubtasksRequest {
+  required string jobid = 1;
+  required int32 checkpoint_id = 2;
+}
+
+message GetAutoMigrateSubtasksResponse {
+  required common.Status status = 1;
+  repeated common.MigrateInfo infos = 2;
+}
+
 service ResourceManagerService {
   // from task manager
   rpc registerTaskManager(RegisterTaskManagerRequest) 

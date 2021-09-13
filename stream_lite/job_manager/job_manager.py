@@ -319,12 +319,17 @@ class JobManagerServicer(job_manager_pb2_grpc.JobManagerServiceServicer):
                     .format(request.checkpoint_id, request.jobid))
 
             # 获取自动迁移信息
+            migrate_infos = self.resource_manager_client.getAutoMigrateSubtasks(
+                    jobid=self.jobid,
+                    checkpoint_id=request.checkpoint_id)
+
             # 若无自动迁移，则只根据该信息进行状态预迁移
+            _LOGGER.info("Try to pre migrate...")
+            #TODO
+
             if self.auto_migrate:
                 _LOGGER.info("Try to auto migrate...")
-                # TODO:
-                # 1. query loction
-                # 2. 状态预迁移
+                # TODO
         return gen_nil_response()
 
     # --------------------------- restore from checkpoint ----------------------------
