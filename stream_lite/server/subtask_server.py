@@ -7,6 +7,7 @@ from typing import List, Dict, Union
 
 from stream_lite.proto import subtask_pb2_grpc
 from stream_lite.proto import common_pb2
+from stream_lite.proto import task_manager_pb2
 
 from stream_lite.network import serializator
 from stream_lite.server.server_base import ServerBase
@@ -25,7 +26,7 @@ class SubTaskServer(ServerBase):
             execute_task: serializator.SerializableExectueTask,
             rpc_port: int = -1,
             worker_num: int = 4,
-            state: Union[None, common_pb2.File] = None):
+            state: Union[None, task_manager_pb2.DeployTaskRequest.State] = None):
         if rpc_port != -1:
             raise ValueError(
                     "Failed: can not set rpc_port for SubTaskServer")

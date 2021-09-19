@@ -45,12 +45,26 @@ class TaskManagerClient(ClientBase):
 
     def deployTask(self, jobid: str,
             exec_task: serializator.SerializableExectueTask,
-            state: Union[None, common_pb2.File]) -> None:
+            checkpoint_id: int,
+            state_file: Union[None, common_pb2.File]) -> None:
         req = task_manager_pb2.DeployTaskRequest(
                 exec_task=exec_task.instance_to_proto(),
                 jobid=jobid)
-        if state is not None:
-            req.state.CopyFrom(state)
+        if state_file is not None:
+            # job manager 发送状态文件
+            req.state.CopyFrom(
+                    task_manager_pb2.DeployTaskRequest.State(
+                        type="FILE",
+                        state_file=state_file))
+        elif checkpoint_id >= 0:
+            # task manager 从本地查找对应的状态文件
+            req.state.CopyFrom(
+                    task_manager_pb2.DeployTaskRequest.State(
+                        type="LOCAL",
+                        local_checkpoint_id=checkpoint_id))
+        else:
+            # 没有状态文件
+            pass
         resp = self.stub.deployTask(req)
         
         if resp.status.err_code != 0:

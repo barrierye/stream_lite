@@ -17,8 +17,14 @@ message RequiredSlotResponse {
 message DeployTaskRequest {
   required common.ExecuteTask exec_task = 1;
   required string jobid = 2;
-  optional common.File state = 3;
-};
+  optional State state = 3;
+
+  message State {
+    required string type = 1; // FILE or LOCAL
+    optional string local_checkpoint_id = 2;
+    optional common.File state_file = 3;
+  }
+}
 
 message StartTaskRequest {
   required string subtask_name = 1;

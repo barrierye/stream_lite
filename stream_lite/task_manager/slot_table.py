@@ -9,6 +9,7 @@ import os
 from typing import List, Dict, Union, Optional
 
 import stream_lite.proto.common_pb2 as common_pb2
+from stream_lite.proto import task_manager_pb2
 
 import stream_lite.config
 from stream_lite.network import serializator
@@ -24,7 +25,7 @@ class Slot(object):
             jobid: str,
             job_manager_enpoint: str,
             execute_task: serializator.SerializableExectueTask,
-            state: Union[None, common_pb2.File]):
+            state: Union[None, task_manager_pb2.DeployTaskRequest.State]):
         self.tm_name = tm_name
         self.jobid = jobid
         self.job_manager_enpoint = job_manager_enpoint
@@ -61,7 +62,7 @@ class SlotTable(object):
     def deployExecuteTask(self, 
             jobid: str,
             proto: common_pb2.ExecuteTask,
-            state: Union[None, common_pb2.File]) -> None:
+            state: Union[None, task_manager_pb2.DeployTaskRequest.State]) -> None:
         """
         add a slot by execute_task
         """

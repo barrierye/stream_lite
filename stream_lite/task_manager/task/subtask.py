@@ -17,6 +17,7 @@ from typing import List, Dict, Any, Tuple, Union
 import stream_lite
 from stream_lite.proto import subtask_pb2_grpc
 from stream_lite.proto import common_pb2
+from stream_lite.proto import task_manager_pb2
 
 from stream_lite.network import serializator
 from stream_lite.network.util import gen_nil_response
@@ -45,7 +46,7 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
             jobid: str,
             job_manager_enpoint: str,
             execute_task: serializator.SerializableExectueTask,
-            state: Union[None, common_pb2.File]):
+            state: Union[None, task_manager_pb2.DeployTaskRequest.State]):
         super(SubTaskServicer, self).__init__()
         self.tm_name = tm_name
         self.jobid = jobid
@@ -194,7 +195,7 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
             downstream_cls_names: List[str],
             snapshot_dir: str,
             job_manager_enpoint: str,
-            state: Union[None, common_pb2.File]):
+            state: Union[None, task_manager_pb2.DeployTaskRequest.State]):
         try:
             SubTaskServicer._inner_compute_core(
                     jobid, full_task_filename, cls_name, subtask_name,
@@ -234,14 +235,14 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
             downstream_cls_names: List[str],
             snapshot_dir: str,
             job_manager_enpoint: str,
-            state_pb: Union[None, common_pb2.File]):
+            state_pb: Union[None, task_manager_pb2.DeployTaskRequest.State]):
         """
         具体执行逻辑
         """
         cls = SubTaskServicer._import_cls_from_file(
                 cls_name, full_task_filename)
         if not issubclass(cls, operator.OperatorBase):
-            raise SystemExit(
+            raise TypeError(
                     "Failed: {} is not a subclass of OperatorBase".format(cls_name))
         is_source_op = issubclass(cls, operator.SourceOperatorBase)
         is_sink_op = issubclass(cls, operator.SinkOperatorBase)
@@ -252,12 +253,23 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
         task_instance.set_name(subtask_name)
         task_instance.init(resource_path_dict)
 
-        # restore from checkpoint
+        # restore from checkpoint (load state)
         if state_pb is not None:
-            seri_state = serializator.SerializableFile.from_proto(state_pb)
-            if seri_state.content:
-                state = pickle.loads(seri_state.content)
-                task_instance.restore_from_checkpoint(state)
+            if state_pb.type == "":
+                pass
+            elif state_pb.type == "FILE":
+                seri_state = serializator.SerializableFile.from_proto(state_pb.state_file)
+                if seri_state.content:
+                    state = pickle.loads(seri_state.content)
+                    task_instance.restore_from_checkpoint(state)
+            elif state_pb.type == "LOCAL":
+                file_path = os.path.join(
+                        snapshot_dir, "chk_{}".format(state_pb.local_checkpoint_id))
+                with open(file_path, "rb") as f:
+                    state = pickle.loads(f.read())
+                    task_instance.restore_from_checkpoint(state)
+            else:
+                raise TypeError("Failed load state: unknow state type ({})".format(state_pb.type)) 
 
         # --------------------- get input ----------------------
         def get_input_data(
@@ -381,7 +393,7 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
                         timestamp=timestamp,
                         partition_key=partition_key))
 
-
+        print("[{}] succ run".format(subtask_name))
         while True:
             partition_key = -1
             output_data = None
