@@ -86,3 +86,20 @@ class TaskManagerClient(ClientBase):
             raise Exception(resp.status.message)
 
         return resp.latency
+
+    def preCopyState(self,
+            jobid: str,
+            checkpoint_id: int,
+            state_files: List[common_pb2.File],
+            cls_name: str,
+            currency: int) -> None:
+        assert len(state_files) == currency
+        resp = self.stub.preCopyState(
+                task_manager_pb2.PreCopyStateRequest(
+                    jobid=jobid,
+                    checkpoint_id=checkpoint_id,
+                    state_files=state_files,
+                    cls_name=cls_name,
+                    currency=currency))
+        if resp.status.err_code != 0:
+            raise Exception(resp.status.message)

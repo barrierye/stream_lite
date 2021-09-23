@@ -48,6 +48,8 @@ class TaskManagerServicer(task_manager_pb2_grpc.TaskManagerServiceServicer):
                 resource_manager_enpoint)
         _LOGGER.info("[{}] Start HeartbeatHelper".format(self.name))
         self.heart_beat_helper.run_on_standalone_process(stream_lite.config.IS_PROCESS)
+        # jobid, cls_name, partition_idx
+        self.snapshot_dir = "_tmp/tm/{}".format(self.name) + "/jobid_{}/{}/partition_{}/snapshot"
 
     def _init_by_yaml(self, conf_yaml_path: str) -> dict:
         with open(conf_yaml_path) as f:
@@ -134,7 +136,7 @@ class TaskManagerServicer(task_manager_pb2_grpc.TaskManagerServiceServicer):
                     err_code=1, message=str(e))
         return gen_nil_response()
     
-    # --------------------------- start task ----------------------------
+    # --------------------------- test latency ----------------------------
     def testLatency(self, request, context):
         current_timestamp = util.get_timestamp()
         req_timestamp = request.timestamp
@@ -142,3 +144,22 @@ class TaskManagerServicer(task_manager_pb2_grpc.TaskManagerServiceServicer):
         return task_manager_pb2.TestLatencyResponse(
                 latency=latency,
                 status=common_pb2.Status())
+    
+    # --------------------------- pre copy state ----------------------------
+    def preCopyState(self, request, context):
+        try:
+            jobid = request.jobid
+            checkpoint_id = request.checkpoint_id
+            cls_name = request.cls_name
+            currency = request.currency
+            for i in range(currency):
+                state_file = serializator.SerializableFile.from_proto(
+                        request.state_files[i])
+                # jobid, cls_name, partition_idx
+                chk_prefix_path = self.snapshot_dir.format(jobid, cls_name, i)
+                state_file.persistence_to_localfs(chk_prefix_path)
+        except Exception as e:
+            _LOGGER.error(e, exc_info=True)
+            return gen_nil_response(
+                    err_code=1, message=str(e))
+        return gen_nil_response()

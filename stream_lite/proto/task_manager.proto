@@ -39,11 +39,20 @@ message TestLatencyResponse {
   required common.Status status = 2;
 }
 
+message PreCopyStateRequest {
+  repeated common.File state_files = 1;
+  required string jobid = 2;
+  required int32 checkpoint_id = 3;
+  required string cls_name = 4;
+  required int32 currency = 5;
+}
+
 service TaskManagerService {
   // from job manager
   rpc requestSlot(RequiredSlotRequest) returns (RequiredSlotResponse) {}
   rpc deployTask(DeployTaskRequest) returns (common.NilResponse) {}
   rpc startTask(StartTaskRequest) returns (common.NilResponse) {}
+  rpc preCopyState(PreCopyStateRequest) returns (common.NilResponse) {}
 
   // from task manager
   rpc testLatency(TestLatencyRequest) returns (TestLatencyResponse) {} 

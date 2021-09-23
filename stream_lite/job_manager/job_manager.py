@@ -326,18 +326,40 @@ class JobManagerServicer(job_manager_pb2_grpc.JobManagerServiceServicer):
         seri_file.persistence_to_localfs(
                 self.snapshot_dir.format(jobid, cls_name, partition_idx))
         if succ:
+            checkpoint_id = request.checkpoint_id
             _LOGGER.info(
                     "Success to complete checkpoint(id={}) of job(id={})"
-                    .format(request.checkpoint_id, request.jobid))
+                    .format(checkpoint_id, request.jobid))
 
             # 获取自动迁移信息
             migrate_infos = self.resource_manager_client.getAutoMigrateSubtasks(
                     jobid=self.jobid,
-                    checkpoint_id=request.checkpoint_id)
+                    checkpoint_id=checkpoint_id)
 
             # 若无自动迁移，则只根据该信息进行状态预迁移
             _LOGGER.info("Try to pre migrate...")
-            #TODO
+            for migrate_info in migrate_infos:
+                cls_name = migrate_info.src_cls_name
+                target_task_manager_locate = migrate_info.target_task_manager_locate
+                jobid = migrate_info.jobid
+                currency = migrate_info.src_currency
+                client = self.resource_manager_client.get_client(
+                        target_task_manager_locate)
+                state_files = []
+                for i in range(currency):
+                    # jobid, cls_name, part
+                    # self.snapshot_dir = "./_tmp/jm/jobid_{}/snapshot/{}/partition_{}" 
+                    file_name = "chk_{}".format(checkpoint_id)
+                    state_path = self.snapshot_dir.format(jobid, cls_name, i)
+                    state_file = serializator.SerializableFile.to_proto(
+                            path=os.path.join(state_path, file_name), name=file_name)
+                    state_files.append(state_file)
+                client.preCopyState(
+                        jobid=jobid,
+                        checkpoint_id=checkpoint_id,
+                        state_files=state_files,
+                        cls_name=cls_name,
+                        currency=currency)
 
             if self.auto_migrate:
                 _LOGGER.info("Try to auto migrate...")

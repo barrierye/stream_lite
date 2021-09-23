@@ -62,12 +62,12 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
         self.partition_idx = execute_task.partition_idx
         self.port = execute_task.port
         self.state = state
-        self.resource_dir = "_tmp/tm/{}/{}/partition_{}/resource".format(
-                self.tm_name, self.cls_name, self.partition_idx)
-        self.taskfile_dir = "_tmp/tm/{}/{}/partition_{}/taskfile".format(
-                self.tm_name, self.cls_name, self.partition_idx)
-        self.snapshot_dir = "_tmp/tm/{}/{}/partition_{}/snapshot".format(
-                self.tm_name, self.cls_name, self.partition_idx)
+        self.resource_dir = "_tmp/tm/jobid_{}/{}/{}/partition_{}/resource".format(
+                self.tm_name, self.jobid, self.cls_name, self.partition_idx)
+        self.taskfile_dir = "_tmp/tm/jobid_{}/{}/{}/partition_{}/taskfile".format(
+                self.tm_name, self.jobid, self.cls_name, self.partition_idx)
+        self.snapshot_dir = "_tmp/tm/jobid_{}/{}/{}/partition_{}/snapshot".format(
+                self.tm_name, self.jobid, self.cls_name, self.partition_idx)
         self.resource_path_dict = self._save_resources(
                 self.resource_dir, list(execute_task.resources))
         if self.cls_name not in operator.BUILDIN_OPS:

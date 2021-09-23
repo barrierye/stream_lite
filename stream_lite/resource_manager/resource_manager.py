@@ -54,7 +54,7 @@ class ResourceManagerServicer(resource_manager_pb2_grpc.ResourceManagerServiceSe
             endpoint = self.registered_task_manager_table.get_task_manager_endpoint(task_manager_name)
         except KeyError:
             return resource_manager_pb2.GetTaskManagerEndpointResponse(
-                    endpoint="", state=common_pb2.Status())
+                    endpoint="", status=common_pb2.Status())
         except Exception as e:
             _LOGGER.error(e, exc_info=True)
             return resource_manager_pb2.GetTaskManagerEndpointResponse(
@@ -111,7 +111,6 @@ class ResourceManagerServicer(resource_manager_pb2_grpc.ResourceManagerServiceSe
                 status=common_pb2.Status(),
                 infos=[common_pb2.MigrateInfo(
                     src_cls_name="SumOp",
-                    src_partition_idx=0,
                     target_task_manager_locate="TM_2",
                     jobid=jobid,
                     src_currency=2)])

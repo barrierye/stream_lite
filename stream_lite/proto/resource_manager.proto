@@ -72,4 +72,4 @@ service ResourceManagerService {
 
   // from streamlit
   rpc getAllTaskManagerDesc(common.NilRequest) returns (GetAllTaskManagerDescResponse) {}
-};
+}
