@@ -362,8 +362,23 @@ class JobManagerServicer(job_manager_pb2_grpc.JobManagerServiceServicer):
                         currency=currency)
 
             if self.auto_migrate:
+                # 自动 Migrate
                 _LOGGER.info("Try to auto migrate...")
-                # TODO
+                for migrate_info in migrate_infos:
+                    cls_name = migrate_info.src_cls_name
+                    target_task_manager_locate = migrate_info.target_task_manager_locate
+                    jobid = migrate_info.jobid
+                    currency = migrate_info.src_currency
+                    for i in range(currency):
+                        self._inner_trigger_migrate_without_checkpoint(
+                            jobid=jobid,
+                            src_cls_name=cls_name,
+                            src_partition_idx=i,
+                            src_currency=currency,
+                            target_task_manager_locate=target_task_manager_locate,
+                            checkpoint_id=checkpoint_id),
+                            with_file_state=False) 
+                _LOGGER.info("Success auto migrate!")
         return gen_nil_response()
 
     # --------------------------- restore from checkpoint ----------------------------
@@ -456,8 +471,25 @@ class JobManagerServicer(job_manager_pb2_grpc.JobManagerServiceServicer):
                 jobid=jobid,
                 checkpoint_id=checkpoint_id)
 
+        self._inner_trigger_migrate_without_checkpoint(
+                jobid=jobid,
+                src_cls_name=src_cls_name,
+                src_partition_idx=src_partition_idx,
+                src_currency=src_currency,
+                target_task_manager_locate=target_task_manager_locate,
+                checkpoint_id=checkpoint_id,
+                with_file_state=True)
+
+    def _inner_trigger_migrate_without_checkpoint(self,
+            jobid: str,
+            src_cls_name: str,
+            src_partition_idx: int,
+            src_currency: int,
+            target_task_manager_locate: str,
+            checkpoint_id: int,
+            with_file_state: bool) -> None:
         # step 2: deploy and start new subtask in target_task_manager_locate
-        # step 2.1: find subtask file, resources and snapshot
+        # step 2.1: find subtask file, resources
         task_path = self.exetasks_dir.format(
                 jobid, src_cls_name, src_partition_idx)
         prototxt_path = os.path.join(task_path, "task.prototxt")
@@ -498,7 +530,7 @@ class JobManagerServicer(job_manager_pb2_grpc.JobManagerServiceServicer):
                 jobid=jobid,
                 client=client,
                 execute_task=exe_task,
-                with_file_state=True,
+                with_file_state=with_file_state,
                 chk_jobid=jobid,
                 checkpoint_id=checkpoint_id)
         _LOGGER.info("Success deploy a new task.")
