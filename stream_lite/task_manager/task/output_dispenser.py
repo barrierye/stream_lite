@@ -6,6 +6,8 @@ import os
 import logging
 import threading
 import multiprocessing
+import time
+import grpc
 from typing import List, Dict, Union
 
 from stream_lite.proto import common_pb2
@@ -82,7 +84,8 @@ class OutputDispenser(object):
                 common_pb2.Record.DataType.FINISH,
                 common_pb2.Record.DataType.CHECKPOINT,
                 common_pb2.Record.DataType.MIGRATE,
-                common_pb2.Record.DataType.TERMINATE_SUBTASK]
+                common_pb2.Record.DataType.TERMINATE_SUBTASK,
+                common_pb2.Record.DataType.CHECKPOINT_PREPARE_FOR_MIGRATE]
 
         while True:
             seri_record = input_channel.get()
@@ -93,8 +96,9 @@ class OutputDispenser(object):
                     for dispenser in output_partition_dispensers:
                         dispenser.push_data(seri_record)
                 
-                if seri_record.data_type == common_pb2.Record.DataType.CHECKPOINT:
-                    # checkpoint event(by migrate): 为下游 task 创建新的 dispenser
+                # TODO
+                if seri_record.data_type == common_pb2.Record.DataType.CHECKPOINT_PREPARE_FOR_MIGRATE:
+                    # checkpoint_prepare_for_migrate: 为下游 task 创建新的 dispenser
                     checkpoint = seri_record.data.data
                     migrate_cls_name = checkpoint.migrate_cls_name
                     migrate_partition_idx = checkpoint.migrate_partition_idx
@@ -104,6 +108,9 @@ class OutputDispenser(object):
                                     endpoint=None,
                                     subtask_name=subtask_name,
                                     partition_idx=partition_idx))
+                elif seri_record.data_type == common_pb2.Record.DataType.CHECKPOINT:
+                    # checkpoint event
+                    pass
                 elif seri_record.data_type == common_pb2.Record.DataType.MIGRATE:
                     # migrate event: 启动之前创建的 dispenser 
                     migrate = seri_record.data.data
@@ -166,7 +173,7 @@ class OutputPartitionDispenser(object):
         self.partition_idx = partition_idx
         self.client = SubTaskClient()
 
-        self.is_connect_completed = False
+        self.is_connect_completed = False # 完成下游节点连接
         self.data_buffer = []
         self.connect(endpoint)
 
@@ -182,12 +189,20 @@ class OutputPartitionDispenser(object):
         # 这里可能会把 event 放入 buffer，但没有啥影响
         self.data_buffer.append(record)
         if self.is_connect_completed:
-            for data in self.data_buffer:
-                self.client.pushRecord(
-                            from_subtask=self.subtask_name,
-                            partition_idx=self.partition_idx,
-                            record=data.instance_to_proto())
-            self.data_buffer = []
+            while True:
+                try:
+                    for data in self.data_buffer:
+                        self.client.pushRecord(
+                                    from_subtask=self.subtask_name,
+                                    partition_idx=self.partition_idx,
+                                    record=data.instance_to_proto())
+                    self.data_buffer = []
+                    break
+                except grpc._channel._InactiveRpcError as e:
+                    _LOGGER.warning(
+                            "Failed to push data: Maybe downstream not prepared"
+                            " yet, wait for 0.1s...")
+                    time.sleep(0.1)
 
     def close(self) -> None:
         #TODO

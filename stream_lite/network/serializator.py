@@ -321,7 +321,8 @@ class SerializableData(SerializableObject):
                     common_pb2.Record.DataType.CHECKPOINT,
                     common_pb2.Record.DataType.FINISH,
                     common_pb2.Record.DataType.MIGRATE,
-                    common_pb2.Record.DataType.TERMINATE_SUBTASK]
+                    common_pb2.Record.DataType.TERMINATE_SUBTASK,
+                    common_pb2.Record.DataType.CHECKPOINT_PREPARE_FOR_MIGRATE]
             if self.data_type in build_in_events:
                 byte_array = self.data.SerializeToString()
             else:
@@ -338,7 +339,9 @@ class SerializableData(SerializableObject):
                     common_pb2.Record.DataType.CHECKPOINT: common_pb2.Record.Checkpoint,
                     common_pb2.Record.DataType.FINISH: common_pb2.Record.Finish,
                     common_pb2.Record.DataType.MIGRATE: common_pb2.Record.Migrate,
-                    common_pb2.Record.DataType.TERMINATE_SUBTASK: common_pb2.Record.TerminateSubtask}
+                    common_pb2.Record.DataType.TERMINATE_SUBTASK: common_pb2.Record.TerminateSubtask,
+                    common_pb2.Record.DataType.CHECKPOINT_PREPARE_FOR_MIGRATE: \
+                            common_pb2.Record.CheckpointPrepareForMigrate}
             if data_type in build_in_events:
                 cls = build_in_events[data_type]
                 data = cls()

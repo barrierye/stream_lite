@@ -102,3 +102,21 @@ class JobManagerClient(ClientBase):
                     jobid=jobid, migrate_id=migrate_id))
         if resp.status.err_code != 0:
             raise Exception(resp.status.message)
+
+    def triggerMigrate(self, 
+            jobid: str,
+            src_cls_name: str,
+            src_partition_idx: int,
+            src_currency: int,
+            target_task_manager_locate: str) -> None:
+        resp = self.stub.triggerMigrate(
+                job_manager_pb2.MigrateRequest(
+                    jobid=jobid,
+                    src_cls_name=src_cls_name,
+                    src_partition_idx=src_partition_idx,
+                    src_currency=src_currency,
+                    target_task_manager_locate=target_task_manager_locate))
+        if resp.status.err_code != 0:
+            raise Exception(resp.status.message)
+        _LOGGER.info(
+                "Success to migrate job(jobid={})".format(jobid))

@@ -15,6 +15,10 @@ message TriggerCheckpointRequest {
   required common.Record.Checkpoint checkpoint = 1;
 }
 
+message TriggerCheckpointPrepareForMigrateRequest {
+  required common.Record.CheckpointPrepareForMigrate checkpoint = 1;
+}
+
 message TriggerMigrateRequest {
   required common.Record.Migrate migrate = 1;
 }
@@ -29,6 +33,8 @@ service SubTaskService {
 
   // from job manager
   rpc triggerCheckpoint(TriggerCheckpointRequest) returns (common.NilResponse) {}
+  rpc triggerCheckpointPrepareForMigrate(TriggerCheckpointPrepareForMigrateRequest) 
+      returns (common.NilResponse) {}
   rpc triggerMigrate(TriggerMigrateRequest) returns (common.NilResponse) {}
   rpc terminateSubtask(TerminateSubtaskRequest) returns (common.NilResponse) {}
 };

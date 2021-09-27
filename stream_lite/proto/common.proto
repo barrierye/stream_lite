@@ -74,7 +74,7 @@ message MigrateInfo {
   required string target_task_manager_locate = 2;
   required string jobid = 3;
   required int32 src_currency = 4;
-  // optional int32 src_partition_idx = 5 [default = 0]; # all partitions
+  required int32 src_partition_idx = 5 [default = 0];
 }
 
 message Record {
@@ -90,13 +90,18 @@ message Record {
     FINISH = 3;
     MIGRATE = 4;
     TERMINATE_SUBTASK = 5;
+    CHECKPOINT_PREPARE_FOR_MIGRATE = 6;
   }
   
   message Checkpoint {
     required int32 id = 1;
     optional bool cancel_job = 2 [default = false];
-    optional string migrate_cls_name = 3 [default = ""]; // for migrate cache
-    optional int32 migrate_partition_idx = 4 [default = 0]; // for migrate cache
+  }
+
+  message CheckpointPrepareForMigrate {
+    required int32 id = 1;
+    required string migrate_cls_name = 2; // for migrate cache
+    required int32 migrate_partition_idx = 3; // for migrate cache
   }
 
   message Migrate {

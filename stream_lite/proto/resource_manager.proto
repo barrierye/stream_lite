@@ -50,7 +50,6 @@ message GetAllTaskManagerDescResponse {
 
 message GetAutoMigrateSubtasksRequest {
   required string jobid = 1;
-  required int32 checkpoint_id = 2;
 }
 
 message GetAutoMigrateSubtasksResponse {

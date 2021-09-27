@@ -80,7 +80,7 @@ service JobManagerService {
   rpc restoreFromCheckpoint(RestoreFromCheckpointRequest) 
       returns (RestoreFromCheckpointResponse) {}
   rpc triggerMigrate(MigrateRequest) returns (common.NilResponse) {}
-  
+
   // from subtask
   rpc acknowledgeCheckpoint(AcknowledgeCheckpointRequest) returns (common.NilResponse) {}
   rpc acknowledgeMigrate(AcknowledgeMigrateRequest) returns (common.NilResponse) {}

@@ -17,4 +17,5 @@ class SumOp(OperatorBase):
         if data not in self.counter:
             self.counter[data] = 0
         self.counter[data] += 1
+        #  print((data, self.counter[data]))
         return (data, self.counter[data])

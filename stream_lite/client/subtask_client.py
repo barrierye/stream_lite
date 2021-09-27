@@ -42,18 +42,28 @@ class SubTaskClient(ClientBase):
 
     def triggerCheckpoint(self, 
             checkpoint_id: int, 
-            cancel_job: bool,
-            migrate_cls_name: str,
-            migrate_partition_idx: int) -> None:
+            cancel_job: bool) -> None:
         resp = self.stub.triggerCheckpoint(
                 subtask_pb2.TriggerCheckpointRequest(
                     checkpoint=common_pb2.Record.Checkpoint(
                         id=checkpoint_id,
-                        cancel_job=cancel_job,
+                        cancel_job=cancel_job)))
+        if resp.status.err_code != 0:
+            raise SystemExit(resp.status.message)
+
+    def triggerCheckpointPrepareForMigrate(self, 
+            checkpoint_id: int, 
+            migrate_cls_name: List[str],
+            migrate_partition_idx: List[List[int]]) -> None:
+        resp = self.stub.triggerCheckpointPrepareForMigrate(
+                subtask_pb2.TriggerCheckpointPrepareForMigrateRequest(
+                    checkpoint=common_pb2.Record.CheckpointPrepareForMigrate(
+                        id=checkpoint_id,
                         migrate_cls_name=migrate_cls_name,
                         migrate_partition_idx=migrate_partition_idx)))
         if resp.status.err_code != 0:
             raise SystemExit(resp.status.message)
+
 
     def triggerMigrate(self,
             migrate_id: int, 

@@ -2,7 +2,7 @@
 # Copyright (c) 2021 barriery
 # Python release: 3.7.0
 # Create time: 2021-08-01
-from typing import List, Dict, Tuple
+from typing import List, Dict, Tuple, Union
 from readerwriterlock import rwlock
 import logging
 import threading
@@ -31,15 +31,16 @@ class JobCoordinator(object):
             if jobid in self.table:
                 raise KeyError(
                         "Failed to register job: jobid({}) already exists".format(jobid))
+            if len(self.table) > 0:
+                raise RuntimeError(
+                        "Failed to register job: here only supports one job now.")
             self.table[jobid] = SpecificJobInfo(execute_task_map)
             #  _LOGGER.debug("Registering job: jobid({})".format(jobid))
 
     def trigger_checkpoint(self, 
             jobid: str,
             checkpoint_id: int,
-            cancel_job: bool,
-            migrate_cls_name: str,
-            migrate_partition_idx: int) -> None:
+            cancel_job: bool) -> None:
         with self.rw_lock_pair.gen_wlock():
             if jobid not in self.table:
                 raise KeyError(
@@ -47,7 +48,20 @@ class JobCoordinator(object):
             self.table[jobid].trigger_checkpoint(
                     checkpoint_id, 
                     self.resource_manager_client,
-                    cancel_job,
+                    cancel_job)
+
+    def trigger_checkpoint_for_migrate(self, 
+            jobid: str,
+            checkpoint_id: int,
+            migrate_cls_name: List[str],
+            migrate_partition_idx: List[List[int]]) -> None:
+        with self.rw_lock_pair.gen_wlock():
+            if jobid not in self.table:
+                raise KeyError(
+                        "Failed to trigger checkpoint: can not found job(jobid={})".format(jobid))
+            self.table[jobid].trigger_checkpoint_for_migrate(
+                    checkpoint_id, 
+                    self.resource_manager_client,
                     migrate_cls_name,
                     migrate_partition_idx)
 
@@ -138,7 +152,7 @@ class JobCoordinator(object):
     def block_util_checkpoint_completed(self,
             jobid: str,
             checkpoint_id: int) -> None:
-        with self.rw_lock_pair.gen_rlock():
+        with self.rw_lock_pair.gen_wlock():
             if jobid not in self.table:
                 raise KeyError(
                         "Failed to block checkpoint: can not found job(jobid={})".format(jobid))
@@ -147,7 +161,7 @@ class JobCoordinator(object):
     def block_util_migrate_completed(self,
             jobid: str,
             migrate_id: int) -> None:
-        with self.rw_lock_pair.gen_rlock():
+        with self.rw_lock_pair.gen_wlock():
             if jobid not in self.table:
                 raise KeyError(
                         "Failed to block migrate: can not found job(jobid={})".format(jobid))
@@ -156,7 +170,7 @@ class JobCoordinator(object):
     def block_util_terminate_completed(self,
             jobid: str,
             terminate_id: int) -> None:
-        with self.rw_lock_pair.gen_rlock():
+        with self.rw_lock_pair.gen_wlock():
             if jobid not in self.table:
                 raise KeyError(
                         "Failed to block terminate: can not found job(jobid={})".format(jobid))
@@ -165,7 +179,7 @@ class JobCoordinator(object):
     def block_util_migrate_sync(self,
             jobid: str,
             migrate_id: int) -> None:
-        with self.rw_lock_pair.gen_rlock():
+        with self.rw_lock_pair.gen_wlock():
             if jobid not in self.table:
                 raise KeyError(
                         "Failed to block migrate: can not found job(jobid={})".format(jobid))
@@ -216,9 +230,27 @@ class SpecificJobInfo(object):
     def trigger_checkpoint(self, 
             checkpoint_id: int,
             resource_manager_client: ResourceManagerClient,
-            cancel_job: bool,
-            migrate_cls_name: str,
-            migrate_partition_idx: int) -> None:
+            cancel_job: bool) -> None:
+        if self.ack_table.has_event(checkpoint_id):
+            raise KeyError(
+                    "Failed: checkpoint(id={}) already exists".format(checkpoint_id))
+        for task_manager_name, tasks in self.source_ops.items():
+            task_manager_ip = \
+                    resource_manager_client.get_host(task_manager_name)
+            for task in tasks:
+                self._inner_trigger_checkpoint(
+                        subtask_ip=task_manager_ip, 
+                        subtask_port=task.port, 
+                        subtask_name=task.subtask_name,
+                        checkpoint_id=checkpoint_id,
+                        cancel_job=cancel_job)
+        self.ack_table.register_pending_event(checkpoint_id)
+
+    def trigger_checkpoint_for_migrate(self,
+            checkpoint_id: int,
+            resource_manager_client: ResourceManagerClient,
+            migrate_cls_name: List[str],
+            migrate_partition_idx: List[List[int]]) -> None:
         """
         传入 resource_manager_client 是为了找到对应 task_manager 的 endpoint
         """
@@ -230,13 +262,12 @@ class SpecificJobInfo(object):
                     resource_manager_client.get_host(task_manager_name)
             for task in tasks:
                 self._inner_trigger_checkpoint(
-                        task_manager_ip, 
-                        task.port, 
-                        task.subtask_name,
-                        checkpoint_id,
-                        cancel_job,
-                        migrate_cls_name,
-                        migrate_partition_idx)
+                        subtask_ip=task_manager_ip, 
+                        subtask_port=task.port, 
+                        subtask_name=task.subtask_name,
+                        checkpoint_id=checkpoint_id,
+                        migrate_cls_name=migrate_cls_name,
+                        migrate_partition_idx=migrate_partition_idx)
         self.ack_table.register_pending_event(checkpoint_id)
 
     def _inner_trigger_checkpoint(self, 
@@ -244,17 +275,25 @@ class SpecificJobInfo(object):
             subtask_port: int, 
             subtask_name: str,
             checkpoint_id: int,
-            cancel_job: bool,
-            migrate_cls_name: str,
-            migrate_partition_idx: int) -> None:
+            cancel_job: bool = False,
+            migrate_cls_name: Union[None, List[str]] = None,
+            migrate_partition_idx: Union[None, List[List[int]]] = None) -> None:
         subtask_endpoint = "{}:{}".format(subtask_ip, subtask_port)
         client = SubTaskClient()
         client.connect(subtask_endpoint)
-        _LOGGER.info(
-                "Try to trigger checkpoint(id={}) for subtask [{}] (endpoint={})"
-                .format(checkpoint_id, subtask_name, subtask_endpoint))
-        client.triggerCheckpoint(checkpoint_id, cancel_job,
-                migrate_cls_name, migrate_partition_idx)
+        if migrate_cls_name is None and migrate_partition_idx is None:
+            # checkpoint
+            _LOGGER.info(
+                    "Try to trigger checkpoint(id={}) for subtask [{}] (endpoint={})"
+                    .format(checkpoint_id, subtask_name, subtask_endpoint))
+            client.triggerCheckpoint(checkpoint_id, cancel_job)
+        else:
+            # checkpoint prepare for migrate
+            _LOGGER.info(
+                    "Try to trigger checkpoint for migrate (id={}) for subtask [{}] (endpoint={})"
+                    .format(checkpoint_id, subtask_name, subtask_endpoint))
+            client.triggerCheckpointPrepareForMigrate(
+                    checkpoint_id, migrate_cls_name, migrate_partition_idx)
 
     def trigger_migrate(self, 
             migrate_id: int,

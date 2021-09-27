@@ -12,7 +12,7 @@ _LOGGER = logging.getLogger(__name__)
 if __name__ == '__main__':
     logging.basicConfig(
             format='%(asctime)s %(levelname)-8s [%(filename)s:%(lineno)d] %(message)s',
-            datefmt='%Y-%m-%d %H:%M', 
+            datefmt='%Y-%m-%d %H:%M:%S', 
             level=logging.INFO)
     # for debug
     if len(sys.argv) != 2:

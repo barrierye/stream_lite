@@ -78,7 +78,8 @@ class InputPartitionReceiver(object):
                 common_pb2.Record.DataType.FINISH,
                 common_pb2.Record.DataType.CHECKPOINT,
                 common_pb2.Record.DataType.MIGRATE,
-                common_pb2.Record.DataType.TERMINATE_SUBTASK]
+                common_pb2.Record.DataType.TERMINATE_SUBTASK,
+                common_pb2.Record.DataType.CHECKPOINT_PREPARE_FOR_MIGRATE]
         while True:
             proto_data = input_queue.get()
             seri_data = serializator.SerializableRecord.from_proto(proto_data)

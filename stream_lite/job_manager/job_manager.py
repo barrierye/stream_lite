@@ -24,7 +24,7 @@ import stream_lite.utils.util
 from stream_lite.server.resource_manager_server import ResourceManager
 
 from . import scheduler
-from .checkpoint_helper import CheckpointHelper
+from .checkpoint_helper import CheckpointHelper, MigrateHelper
 from .job_coordinator import JobCoordinator, PendingForNotify
 
 _LOGGER = logging.getLogger(__name__)
@@ -53,14 +53,14 @@ def create_resource_manager(
     resource_manager_client = client.ResourceManagerClient()
     resource_manager_client.connect(resource_manager_enpoint)
     run_streamlit_script(resource_manager_enpoint)
-    return resource_manager, resource_manager_client
+    return resource_manager, resource_manager_client, resource_manager_enpoint
 
 
 class JobManagerServicer(job_manager_pb2_grpc.JobManagerServiceServicer):
 
     def __init__(self, job_manager_rpc_port: int, resource_manager_rpc_port: int):
         super(JobManagerServicer, self).__init__()
-        self.resource_manager, self.resource_manager_client = \
+        self.resource_manager, self.resource_manager_client, self.resource_manager_enpoint = \
                 create_resource_manager(job_manager_rpc_port, resource_manager_rpc_port)
         self.resource_manager.run_on_standalone_process(
                 is_process=stream_lite.config.IS_PROCESS)
@@ -76,7 +76,7 @@ class JobManagerServicer(job_manager_pb2_grpc.JobManagerServiceServicer):
                 self.resource_manager_client)
         self.job_coordinator = JobCoordinator(
                 self.resource_manager_client)
-        self.checkpoint_helper = None # 定时 checkpoint，以 job 为粒度
+        self.periodic_executor_helper = None # 定时 checkpoint/migrate，以 job 为粒度
 
         self.jobinfo_dir = "./_tmp/jm/jobid_{}" # jobid
         self.taskfile_dir = "./_tmp/jm/jobid_{}/taskfiles"   # jobid
@@ -127,12 +127,22 @@ class JobManagerServicer(job_manager_pb2_grpc.JobManagerServiceServicer):
             # 把所有 Op 信息注册到 CheckpointCoordinator 里
             self.job_coordinator.register_job(jobid, execute_map)
 
-            # 周期性地 checkpoint
-            self.checkpoint_helper = CheckpointHelper(
-                    jobid=jobid,
-                    job_manager_enpoint=self.addr,
-                    interval=periodicity_checkpoint_interval_s)
-            self.checkpoint_helper.run_on_standalone_process(
+            if self.auto_migrate:
+                # 周期性地 migrate
+                self.periodic_executor_helper = MigrateHelper(
+                        jobid=jobid,
+                        job_manager_endpoint=self.addr,
+                        resource_manager_enpoint=self.resource_manager_enpoint,
+                        interval=periodicity_checkpoint_interval_s)
+            else:
+                # 周期性地 checkpoint & 预迁移状态
+                self.periodic_executor_helper = CheckpointHelper(
+                        jobid=jobid,
+                        job_manager_endpoint=self.addr,
+                        resource_manager_enpoint=self.resource_manager_enpoint,
+                        snapshot_dir=self.snapshot_dir,
+                        interval=periodicity_checkpoint_interval_s)
+            self.periodic_executor_helper.run_on_standalone_process(
                     is_process=stream_lite.config.IS_PROCESS)
         except Exception as e:
             _LOGGER.error(e, exc_info=True)
@@ -291,9 +301,7 @@ class JobManagerServicer(job_manager_pb2_grpc.JobManagerServiceServicer):
             self.job_coordinator.trigger_checkpoint(
                     jobid=jobid, 
                     checkpoint_id=checkpoint_id, 
-                    cancel_job=request.cancel_job,
-                    migrate_cls_name="",
-                    migrate_partition_idx=0)
+                    cancel_job=request.cancel_job)
             self.job_coordinator.block_util_checkpoint_completed(
                     jobid=jobid,
                     checkpoint_id=checkpoint_id)
@@ -331,54 +339,6 @@ class JobManagerServicer(job_manager_pb2_grpc.JobManagerServiceServicer):
                     "Success to complete checkpoint(id={}) of job(id={})"
                     .format(checkpoint_id, request.jobid))
 
-            # 获取自动迁移信息
-            migrate_infos = self.resource_manager_client.getAutoMigrateSubtasks(
-                    jobid=self.jobid,
-                    checkpoint_id=checkpoint_id)
-
-            # 若无自动迁移，则只根据该信息进行状态预迁移
-            _LOGGER.info("Try to pre migrate...")
-            for migrate_info in migrate_infos:
-                cls_name = migrate_info.src_cls_name
-                target_task_manager_locate = migrate_info.target_task_manager_locate
-                jobid = migrate_info.jobid
-                currency = migrate_info.src_currency
-                client = self.resource_manager_client.get_client(
-                        target_task_manager_locate)
-                state_files = []
-                for i in range(currency):
-                    # jobid, cls_name, part
-                    # self.snapshot_dir = "./_tmp/jm/jobid_{}/snapshot/{}/partition_{}" 
-                    file_name = "chk_{}".format(checkpoint_id)
-                    state_path = self.snapshot_dir.format(jobid, cls_name, i)
-                    state_file = serializator.SerializableFile.to_proto(
-                            path=os.path.join(state_path, file_name), name=file_name)
-                    state_files.append(state_file)
-                client.preCopyState(
-                        jobid=jobid,
-                        checkpoint_id=checkpoint_id,
-                        state_files=state_files,
-                        cls_name=cls_name,
-                        currency=currency)
-
-            if self.auto_migrate:
-                # 自动 Migrate
-                _LOGGER.info("Try to auto migrate...")
-                for migrate_info in migrate_infos:
-                    cls_name = migrate_info.src_cls_name
-                    target_task_manager_locate = migrate_info.target_task_manager_locate
-                    jobid = migrate_info.jobid
-                    currency = migrate_info.src_currency
-                    for i in range(currency):
-                        self._inner_trigger_migrate_without_checkpoint(
-                            jobid=jobid,
-                            src_cls_name=cls_name,
-                            src_partition_idx=i,
-                            src_currency=currency,
-                            target_task_manager_locate=target_task_manager_locate,
-                            checkpoint_id=checkpoint_id),
-                            with_file_state=False) 
-                _LOGGER.info("Success auto migrate!")
         return gen_nil_response()
 
     # --------------------------- restore from checkpoint ----------------------------
@@ -461,10 +421,9 @@ class JobManagerServicer(job_manager_pb2_grpc.JobManagerServiceServicer):
             target_task_manager_locate: str) -> None:
         # step 1: checkpoint for migrate
         checkpoint_id = EventIdGenerator().next()
-        self.job_coordinator.trigger_checkpoint(
+        self.job_coordinator.trigger_checkpoint_for_migrate(
                 jobid=jobid, 
                 checkpoint_id=checkpoint_id, 
-                cancel_job=False,
                 migrate_cls_name=src_cls_name,
                 migrate_partition_idx=src_partition_idx)
         self.job_coordinator.block_util_checkpoint_completed(
@@ -478,7 +437,8 @@ class JobManagerServicer(job_manager_pb2_grpc.JobManagerServiceServicer):
                 src_currency=src_currency,
                 target_task_manager_locate=target_task_manager_locate,
                 checkpoint_id=checkpoint_id,
-                with_file_state=True)
+                with_file_state=True,
+                migrate_id=checkpoint_id)
 
     def _inner_trigger_migrate_without_checkpoint(self,
             jobid: str,
@@ -487,9 +447,11 @@ class JobManagerServicer(job_manager_pb2_grpc.JobManagerServiceServicer):
             src_currency: int,
             target_task_manager_locate: str,
             checkpoint_id: int,
-            with_file_state: bool) -> None:
+            with_file_state: bool,
+            migrate_id: int = -1) -> None:
         # step 2: deploy and start new subtask in target_task_manager_locate
         # step 2.1: find subtask file, resources
+        #  _LOGGER.info("[Migrate] step 2.1: find subtask file, resources.")
         task_path = self.exetasks_dir.format(
                 jobid, src_cls_name, src_partition_idx)
         prototxt_path = os.path.join(task_path, "task.prototxt")
@@ -502,6 +464,7 @@ class JobManagerServicer(job_manager_pb2_grpc.JobManagerServiceServicer):
             execute_task_pb.ParseFromString(f.read())
 
         # step 2.2: ask for slot resource
+        #  _LOGGER.info("[Migrate] step 2.2: ask for slot resource.")
         if not self.resource_manager_client.has_task_manager(target_task_manager_locate):
             return gen_nil_response(
                     err_code=1,
@@ -525,6 +488,7 @@ class JobManagerServicer(job_manager_pb2_grpc.JobManagerServiceServicer):
         exe_task.subtask_name = "{}@MIGRATE".format(exe_task.subtask_name)
 
         # step 2.3: deploy subtask (with state)
+        #  _LOGGER.info("[Migrate] step 2.3: deploy subtask (with state).")
         client = self.resource_manager_client.get_client(target_task_manager_locate)
         self._deployExecuteTask(
                 jobid=jobid,
@@ -536,6 +500,7 @@ class JobManagerServicer(job_manager_pb2_grpc.JobManagerServiceServicer):
         _LOGGER.info("Success deploy a new task.")
 
         # step 2.4: start subtask
+        #  _LOGGER.info("[Migrate] step 2.4: start subtask.")
         self._innerStartExecuteTask(
                 task_manager_name=target_task_manager_locate,
                 execute_task=exe_task)
@@ -543,7 +508,8 @@ class JobManagerServicer(job_manager_pb2_grpc.JobManagerServiceServicer):
  
         # step 3: broadcast migrate event to notify upstream subtask
         #         start send data to the new subtask.
-        migrate_id = checkpoint_id
+        if migrate_id == -1:
+            migrate_id = EventIdGenerator().next()
         self.job_coordinator.trigger_migrate(
                 jobid=jobid, 
                 new_cls_name=src_cls_name, 

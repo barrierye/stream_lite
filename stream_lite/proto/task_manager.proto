@@ -21,7 +21,7 @@ message DeployTaskRequest {
 
   message State {
     required string type = 1; // FILE or LOCAL
-    optional string local_checkpoint_id = 2;
+    optional int32 local_checkpoint_id = 2;
     optional common.File state_file = 3;
   }
 }
@@ -40,11 +40,11 @@ message TestLatencyResponse {
 }
 
 message PreCopyStateRequest {
-  repeated common.File state_files = 1;
+  required common.File state_files = 1;
   required string jobid = 2;
   required int32 checkpoint_id = 3;
   required string cls_name = 4;
-  required int32 currency = 5;
+  required int32 partition_idx = 5;
 }
 
 service TaskManagerService {

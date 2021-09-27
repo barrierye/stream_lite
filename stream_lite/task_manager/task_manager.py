@@ -151,13 +151,14 @@ class TaskManagerServicer(task_manager_pb2_grpc.TaskManagerServiceServicer):
             jobid = request.jobid
             checkpoint_id = request.checkpoint_id
             cls_name = request.cls_name
-            currency = request.currency
-            for i in range(currency):
-                state_file = serializator.SerializableFile.from_proto(
-                        request.state_files[i])
-                # jobid, cls_name, partition_idx
-                chk_prefix_path = self.snapshot_dir.format(jobid, cls_name, i)
-                state_file.persistence_to_localfs(chk_prefix_path)
+            partition_idx = request.partition_idx
+            
+            state_file = serializator.SerializableFile.from_proto(
+                    request.state_file)
+            # jobid, cls_name, partition_idx
+            chk_prefix_path = self.snapshot_dir.format(
+                    jobid, cls_name, partition_idx)
+            state_file.persistence_to_localfs(chk_prefix_path)
         except Exception as e:
             _LOGGER.error(e, exc_info=True)
             return gen_nil_response(

@@ -101,7 +101,6 @@ class ResourceManagerServicer(resource_manager_pb2_grpc.ResourceManagerServiceSe
     # --------------------------- getAutoMigrateSubtasks ----------------------------
     def getAutoMigrateSubtasks(self, request, context):
         jobid = request.jobid
-        checkpoint_id = request.checkpoint_id
         
         # TODO
         # 自动迁移逻辑
@@ -113,4 +112,5 @@ class ResourceManagerServicer(resource_manager_pb2_grpc.ResourceManagerServiceSe
                     src_cls_name="SumOp",
                     target_task_manager_locate="TM_2",
                     jobid=jobid,
-                    src_currency=2)])
+                    src_currency=2,
+                    src_partition_idx=0)])

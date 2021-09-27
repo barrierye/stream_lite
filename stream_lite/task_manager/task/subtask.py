@@ -332,6 +332,22 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
                     subtask_name=subtask_name,
                     jobid=jobid)
 
+        def checkpoint_prepare_for_migrate_event_process(
+                task_instance: operator.OperatorBase,
+                is_sink_op: bool,
+                input_data: common_pb2.Record.Checkpoint) -> None:
+            if not is_sink_op:
+                SubTaskServicer._push_checkpoint_prepare_for_migrate_event_to_output_channel(
+                        input_data, output_channel)
+            SubTaskServicer._checkpoint(
+                    task_instance=task_instance,
+                    snapshot_dir=snapshot_dir,
+                    checkpoint=input_data,
+                    checkpoint_id=input_data.id,
+                    job_manager_enpoint=job_manager_enpoint,
+                    subtask_name=subtask_name,
+                    jobid=jobid)
+
         def migrate_event_process(
                 task_instance: operator.OperatorBase,
                 is_sink_op: bool,
@@ -433,6 +449,13 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
                     break
                 else:
                     continue
+            elif data_type == common_pb2.Record.DataType.CHECKPOINT_PREPARE_FOR_MIGRATE:
+                checkpoint_prepare_for_migrate_event_process(
+                        task_instance=task_instance, 
+                        is_sink_op=is_sink_op,
+                        input_data=input_data)
+                _LOGGER.debug("[{}] success save snapshot state for migrate".format(subtask_name))
+                continue
             elif data_type == common_pb2.Record.DataType.MIGRATE:
                 assert migrate_id == -1
                 migrate_id = input_data.id
@@ -454,7 +477,7 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
                         task_instance=task_instance,
                         is_sink_op=is_sink_op,
                         input_data=input_data)
-                _LOGGER.info("[{}] ptocess terminate successfully!".format(subtask_name))
+                _LOGGER.info("[{}] process terminate successfully!".format(subtask_name))
                 continue
             else:
                 raise Exception("Failed: unknow data type: {}".format(data_type))
@@ -519,6 +542,18 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
                     data=checkpoint),
                 output_channel=output_channel)
     
+    @staticmethod
+    def _push_checkpoint_prepare_for_migrate_event_to_output_channel(
+            checkpoint: common_pb2.Record.CheckpointPrepareForMigrate,
+            output_channel: multiprocessing.Queue) -> None:
+        SubTaskServicer._push_event_record_to_output_channel(
+                data_id="checkpoint_prepare_for_migrate_data_id",
+                data_type=common_pb2.Record.DataType.CHECKPOINT_PREPARE_FOR_MIGRATE,
+                data=serializator.SerializableData.from_object(
+                    data_type=common_pb2.Record.DataType.CHECKPOINT_PREPARE_FOR_MIGRATE,
+                    data=checkpoint),
+                output_channel=output_channel)
+
     @staticmethod
     def _push_migrate_event_to_output_channel(
             migrate: common_pb2.Record.MIGRATE,
@@ -708,6 +743,23 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
                 data_type=common_pb2.Record.DataType.CHECKPOINT,
                 data=serializator.SerializableData.from_object(
                     data_type=common_pb2.Record.DataType.CHECKPOINT,
+                    data=checkpoint),
+                timestamp=util.get_timestamp(),
+                partition_key=-1)
+        self.input_channel.put(seri_data)
+        return gen_nil_response()
+
+    # --------------------------- triggerCheckpointPrepareForMigrate ----------------------------
+    def triggerCheckpointPrepareForMigrate(self, request, context):
+        """
+        只有 SourceOp 才会被调用该函数
+        """
+        checkpoint = request.checkpoint
+        seri_data = serializator.SerializableRecord(
+                data_id="checkpoint_data_id",
+                data_type=common_pb2.Record.DataType.CHECKPOINT_PREPARE_FOR_MIGRATE,
+                data=serializator.SerializableData.from_object(
+                    data_type=common_pb2.Record.DataType.CHECKPOINT_PREPARE_FOR_MIGRATE,
                     data=checkpoint),
                 timestamp=util.get_timestamp(),
                 partition_key=-1)
