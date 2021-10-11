@@ -25,7 +25,7 @@ class PeerLatencyTable(object):
             for peer in peers:
                 self.latencies[name][peer.name] = peer.latency
 
-    def get_latency(self, name: Union[str, None]) -> dict:
+    def get_latency(self, name: Union[str, None] = None) -> dict:
         with self.rw_lock_pair.gen_rlock():
             if name:
                 if name not in self.latencies:

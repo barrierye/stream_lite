@@ -19,10 +19,10 @@ _LOGGER = logging.getLogger(__name__)
 
 class RegisteredTaskManagerTable(object):
 
-    def __init__(self):
+    def __init__(self, latency_table: PeerLatencyTable):
         self.rw_lock_pair = rwlock.RWLockFair()
         self.table = {} # name -> RegisteredTaskManager
-        self.latency_table = PeerLatencyTable()
+        self.latency_table = latency_table
 
     def register(self, proto: common_pb2.TaskManagerDescription) -> None:
         task_manager_desc = serializator.SerializableTaskManagerDesc.from_proto(proto)

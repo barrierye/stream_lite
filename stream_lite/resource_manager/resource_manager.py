@@ -20,6 +20,7 @@ from stream_lite.network.util import gen_nil_response
 from stream_lite.network import serializator
 from stream_lite.utils import JobIdGenerator, EventIdGenerator
 
+from .peer_latency_table import PeerLatencyTable
 from .registered_task_manager_table import RegisteredTaskManagerTable
 
 _LOGGER = logging.getLogger(__name__)
@@ -29,7 +30,8 @@ class ResourceManagerServicer(resource_manager_pb2_grpc.ResourceManagerServiceSe
 
     def __init__(self, job_manager_endpoint: str):
         super(ResourceManagerServicer, self).__init__()
-        self.registered_task_manager_table = RegisteredTaskManagerTable()
+        self.latency_table = PeerLatencyTable()
+        self.registered_task_manager_table = RegisteredTaskManagerTable(latency_table)
         self.job_manager_endpoint = job_manager_endpoint
 
     # --------------------------- register task manager ----------------------------
