@@ -12,6 +12,7 @@ import stream_lite.proto.common_pb2 as common_pb2
 import stream_lite.proto.resource_manager_pb2 as resource_manager_pb2
 from stream_lite.network import serializator
 from stream_lite.client.task_manager_client import TaskManagerClient
+from stream_lite.resource_manager.peer_latency_table import PeerLatencyTable
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -21,6 +22,7 @@ class RegisteredTaskManagerTable(object):
     def __init__(self):
         self.rw_lock_pair = rwlock.RWLockFair()
         self.table = {} # name -> RegisteredTaskManager
+        self.latency_table = PeerLatencyTable()
 
     def register(self, proto: common_pb2.TaskManagerDescription) -> None:
         task_manager_desc = serializator.SerializableTaskManagerDesc.from_proto(proto)
@@ -29,7 +31,8 @@ class RegisteredTaskManagerTable(object):
             if name in self.table:
                 raise KeyError(
                         "Failed to register task manager: name({}) already exists".format(name))
-            self.table[name] = RegisteredTaskManager(task_manager_desc)
+            self.table[name] = RegisteredTaskManager(
+                    name, task_manager_desc, self.latency_table)
             _LOGGER.info("Succ register task manager: {}".format(name))
 
     def has_task_manager(self, name: str) -> bool:
@@ -100,16 +103,19 @@ class RegisteredTaskManagerTable(object):
 
 class RegisteredTaskManager(object):
 
-    def __init__(self, task_manager_desc):
+    def __init__(self, name: str, task_manager_desc, latency_table: PeerLatencyTable):
+        self.name = name
         self.task_manager_desc = task_manager_desc
         self.task_manager_endpoint = self.task_manager_desc.endpoint
         self.coord = self.task_manager_desc.coord
-        self.peer_latencies = {} # peer_name -> latency
+        latency_table.add_task_manager(name)
+        self.latency_table = latency_table
 
     def get_description_with_latency(self) -> common_pb2.TaskManagerDescription:
         desc = self.task_manager_desc.instance_to_proto()
         # add latency
-        for peer_name, latency in self.peer_latencies.items():
+        latency_dict = self.latency_table.get_latency(self.name)
+        for peer_name, latency in latency_dict.items():
             peer = desc.peers.add()
             peer.name = peer_name
             peer.latency = latency
@@ -129,7 +135,4 @@ class RegisteredTaskManager(object):
 
     def update_nearby_peers(self,
             peers: List[resource_manager_pb2.HeartBeatRequest.NearbyPeer]) -> None:
-        for peer in peers:
-            name = peer.name
-            latency = peer.latency
-            self.peer_latencies[name] = latency
+        self.latency_table.update_latency(self.name, peers)
