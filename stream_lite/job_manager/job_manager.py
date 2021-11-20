@@ -31,7 +31,7 @@ _LOGGER = logging.getLogger(__name__)
 
 
 def run_streamlit_script(resource_manager_enpoint: str):
-    pkg_path = stream_lite.__path__
+    pkg_path = stream_lite.__path__[0]
     streamlit_script_path = os.path.join(pkg_path, "resource_manager/streamlit_script.py")
     streamlit_port = 8080
     #cmd = "streamlit run --server.port {} {} {} &>/dev/null &".format(
