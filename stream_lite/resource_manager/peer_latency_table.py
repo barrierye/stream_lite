@@ -3,6 +3,8 @@
 # Python release: 3.7.0
 # Create time: 2021-10-12
 from readerwriterlock import rwlock
+from typing import List, Dict, Union
+from stream_lite.proto import resource_manager_pb2
 
 
 class PeerLatencyTable(object):

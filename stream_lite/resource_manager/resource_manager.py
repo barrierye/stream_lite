@@ -31,7 +31,7 @@ class ResourceManagerServicer(resource_manager_pb2_grpc.ResourceManagerServiceSe
     def __init__(self, job_manager_endpoint: str):
         super(ResourceManagerServicer, self).__init__()
         self.latency_table = PeerLatencyTable()
-        self.registered_task_manager_table = RegisteredTaskManagerTable(latency_table)
+        self.registered_task_manager_table = RegisteredTaskManagerTable(self.latency_table)
         self.job_manager_endpoint = job_manager_endpoint
 
     # --------------------------- register task manager ----------------------------
