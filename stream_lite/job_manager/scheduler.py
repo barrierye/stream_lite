@@ -109,7 +109,7 @@ class UserDefinedScheduler(Scheduler):
         for logical_tasks in logical_map.values():
             for logical_task in logical_tasks:
                 cls_name = logical_task.cls_name
-                # TODO
+                # TODO: 目前只支持单个input_task
                 assert(len(logical_task.input_tasks) <= 1)
                 for input_task_name in logical_task.input_tasks:
                     # 找前继节点: 获取并发数

@@ -99,9 +99,9 @@ class OutputDispenser(object):
                 # TODO
                 if seri_record.data_type == common_pb2.Record.DataType.CHECKPOINT_PREPARE_FOR_MIGRATE:
                     # checkpoint_prepare_for_migrate: 为下游 task 创建新的 dispenser
-                    checkpoint = seri_record.data.data
-                    migrate_cls_name = checkpoint.migrate_cls_name
-                    migrate_partition_idx = checkpoint.migrate_partition_idx
+                    checkpoint_prepare_for_migrate = seri_record.data.data
+                    migrate_cls_name = checkpoint_prepare_for_migrate.migrate_cls_name
+                    migrate_partition_idx = checkpoint_prepare_for_migrate.migrate_partition_idx
                     if migrate_cls_name == downstream_cls_names[0]:
                         partitions[migrate_partition_idx].append(
                                 OutputPartitionDispenser(
@@ -109,7 +109,6 @@ class OutputDispenser(object):
                                     subtask_name=subtask_name,
                                     partition_idx=partition_idx))
                 elif seri_record.data_type == common_pb2.Record.DataType.CHECKPOINT:
-                    # checkpoint event
                     pass
                 elif seri_record.data_type == common_pb2.Record.DataType.MIGRATE:
                     # migrate event: 启动之前创建的 dispenser 
@@ -205,5 +204,5 @@ class OutputPartitionDispenser(object):
                     time.sleep(0.1)
 
     def close(self) -> None:
-        #TODO
+        #TODO: close OutputPartitionDispenser
         pass
