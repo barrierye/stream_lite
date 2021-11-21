@@ -57,6 +57,13 @@ message GetAutoMigrateSubtasksResponse {
   repeated common.MigrateInfo infos = 2;
 }
 
+message RegisterJobExecuteInfoRequest {
+  required string jobid = 1;
+  repeated string task_manager_names = 2;
+  repeated common.ExecuteTask exec_tasks = 3;
+}
+
+
 service ResourceManagerService {
   // from task manager
   rpc registerTaskManager(RegisterTaskManagerRequest) 
@@ -64,6 +71,8 @@ service ResourceManagerService {
   rpc heartbeat(HeartBeatRequest) returns (HeartBeatResponse) {} // query nearby task manager
 
   // from job manager
+  rpc registerJobExecuteInfo(RegisterJobExecuteInfoRequest)
+      returns (common.NilResponse) {}
   rpc getTaskManagerEndpoint(GetTaskManagerEndpointRequest) 
       returns (GetTaskManagerEndpointResponse) {}
   rpc getAutoMigrateSubtasks (GetAutoMigrateSubtasksRequest)

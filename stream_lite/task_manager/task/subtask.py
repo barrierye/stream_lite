@@ -419,8 +419,7 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
             
             if data_type == common_pb2.Record.DataType.PICKLE:
                 if int(data_id) <= current_data_id:
-                    # 过滤重复 data_id
-                    # 遇到重复 data_id，说明新旧数据流已经同步，可以终止旧数据流
+                    # 过滤重复 data_id: 遇到重复 data_id，说明新旧数据流已经同步，可以终止旧数据流
                     _LOGGER.info(
                             "[{}] get repetitive data: {}, try to terminate the old subtask."
                             .format(subtask_name, data_id))

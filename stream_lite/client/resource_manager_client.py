@@ -131,3 +131,22 @@ class ResourceManagerClient(ClientBase):
         if resp.status.err_code != 0:
             raise Exception(resp.status.message)
         return list(resp.infos)
+
+    def registerJobExecuteInfo(self, jobid: str, 
+            execute_map: Dict[str, List[serializator.SerializableExectueTask]]):
+        task_manager_names = []
+        exec_tasks = []
+
+        for task_manager_name, execute_tasks in execute_map.items():
+            for task in execute_tasks:
+                task_manager_names.append(task_manager_name)
+                exec_tasks.append(task.instance_to_proto())
+
+        resp = self.stub.registerJobExecuteInfo(
+                resource_manager_pb2.RegisterJobExecuteInfoRequest(
+                    jobid=jobid,
+                    task_manager_names=task_manager_names,
+                    exec_tasks=exec_tasks))
+
+        if resp.status.err_code != 0:
+            raise Exception(resp.status.message)

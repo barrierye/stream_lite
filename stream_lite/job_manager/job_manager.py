@@ -126,6 +126,8 @@ class JobManagerServicer(job_manager_pb2_grpc.JobManagerServiceServicer):
 
             # 把所有 Op 信息注册到 CheckpointCoordinator 里
             self.job_coordinator.register_job(jobid, execute_map)
+            # TODO: 把所有 Op 信息注册到 ResourceManager 里
+            self.resource_manager_client.registerJobExecuteInfo(jobid, execute_map)
 
             if self.auto_migrate:
                 # 周期性地 migrate

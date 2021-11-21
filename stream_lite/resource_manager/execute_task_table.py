@@ -8,6 +8,17 @@ from stream_lite.proto import resource_manager_pb2
 from stream_lite.job_manager import scheduler
 
 
+class ExecuteTaskInfo(object):
+
+    def __init__(self, subtask_name: str, downstream_cls_names: List[str],
+            cls_name: str, partition_idx: int, task_manager_name: str):
+        self.subtask_name = subtask_name
+        self.downstream_cls_names = downstream_cls_names
+        self.cls_name = cls_name
+        self.partition_idx = partition_idx
+        self.task_manager_name = task_manager_name
+
+
 class ExecuteTaskTable(object):
 
     def __init__(self):
@@ -22,12 +33,15 @@ class ExecuteTaskTable(object):
             exec_task = exec_tasks[idx]
             
             downstream_currency = len(exec_task.output_endpoints)
-            assert len(exec_task.downstream_cls_names) == 1
-            downstream_cls_names = [
-                    scheduler.Scheduler._get_subtask_name(
-                        exec_task.downstream_cls_names[0],
-                        downstream_idx, downstream_currency) for 
-                    downstream_idx in range(downstream_currency)]
+            downstream_cls_names = []
+            if downstream_currency != 0:
+                assert len(exec_task.downstream_cls_names) == 1, "except 1 but get {}".format(
+                        len(exec_task.downstream_cls_names))
+                downstream_cls_names = [
+                        scheduler.Scheduler._get_subtask_name(
+                            exec_task.downstream_cls_names[0],
+                            downstream_idx, downstream_currency) for 
+                        downstream_idx in range(downstream_currency)]
 
             subtask_name = exec_task.subtask_name
             cls_name = exec_task.cls_name
@@ -55,7 +69,7 @@ class ExecuteTaskTable(object):
         with self.rw_lock_pair.gen_wlock():
             self.exec_task_infos[subtask_name] = info
 
-    def get_info(self, name: str) -> ExecuteTaskTable:
+    def get_info(self, name: str) -> ExecuteTaskInfo:
         with self.rw_lock_pair.gen_rlock():
             if name not in self.exec_task_infos:
                 raise KeyError(
@@ -63,12 +77,3 @@ class ExecuteTaskTable(object):
             return self.exec_task_infos[name]
 
 
-class ExecuteTaskInfo(object):
-
-    def __init__(self, subtask_name: str, downstream_cls_names: List[str],
-            cls_name: str, partition_idx: int, task_manager_name: str):
-        self.subtask_name = subtask_name
-        self.downstream_cls_names = downstream_cls_names
-        self.cls_name = cls_name
-        self.partition_idx = partition_idx
-        self.task_manager_name = task_manager_name
