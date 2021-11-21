@@ -21,6 +21,7 @@ from stream_lite.network import serializator
 from stream_lite.utils import JobIdGenerator, EventIdGenerator
 
 from .peer_latency_table import PeerLatencyTable
+from .execute_task_table import ExecuteTaskTable
 from .registered_task_manager_table import RegisteredTaskManagerTable
 
 _LOGGER = logging.getLogger(__name__)
@@ -30,7 +31,8 @@ class ResourceManagerServicer(resource_manager_pb2_grpc.ResourceManagerServiceSe
 
     def __init__(self, job_manager_endpoint: str):
         super(ResourceManagerServicer, self).__init__()
-        self.latency_table = PeerLatencyTable()
+        self.latency_table = PeerLatencyTable() # 与每个节点的延迟记录
+        self.execute_task_table = ExecuteTaskTable() # 记录每个task在哪个节点 TODO: 仅单个jobid
         self.registered_task_manager_table = RegisteredTaskManagerTable(self.latency_table)
         self.job_manager_endpoint = job_manager_endpoint
 
@@ -100,8 +102,15 @@ class ResourceManagerServicer(resource_manager_pb2_grpc.ResourceManagerServiceSe
                 status=common_pb2.Status(),
                 task_manager_descs=all_descs)
 
+    # --------------------------- registerJobExecuteInfo ----------------------------
+    def registerJobExecuteInfo(self, request, context):
+        self.execute_task_table
+        #TODO
+
     # --------------------------- getAutoMigrateSubtasks ----------------------------
     def getAutoMigrateSubtasks(self, request, context):
+        # TODO: 哪个subtask在哪个节点需要记录
+
         jobid = request.jobid
         
         # TODO
@@ -116,3 +125,6 @@ class ResourceManagerServicer(resource_manager_pb2_grpc.ResourceManagerServiceSe
                     jobid=jobid,
                     src_currency=2,
                     src_partition_idx=0)])
+
+    def _get_compressed_graph(self):
+        pass
