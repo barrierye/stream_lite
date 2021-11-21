@@ -27,12 +27,25 @@ class PeerLatencyTable(object):
             for peer in peers:
                 self.latencies[name][peer.name] = peer.latency
 
-    def get_latency(self, name: Union[str, None] = None) -> dict:
+    def get_latency(self, src_name: Union[str, None] = None,
+            dst_name: Union[str, None] = None) -> dict:
+        """
+        有三种用法：
+        1. src_name 和 dst_name 均为 None, 返回整张表
+        2. src_name 不为 None，返回 src_name 的子表
+        3. src_name 和 dst_name 均不为 None，返回两者之间的 latency
+        """
         with self.rw_lock_pair.gen_rlock():
-            if name:
-                if name not in self.latencies:
+            if src_name is not None:
+                if src_name not in self.latencies:
                     raise KeyError(
-                            "Failed to get latency: {} does not exist".format(name))
-                return self.latencies[name]
+                            "Failed to get latency: src {} does not exist".format(src_name))
+                if dst_name is not None:
+                    if dst_name not in self.latencies[src_name]:
+                        raise KeyError(
+                                "Failed to get latency: dst {} does not exist".format(dst_name))
+                    return self.latencies[src_name][dst_name]
+                else:
+                    return self.latencies[src_name]
             else:
                 return self.latencies

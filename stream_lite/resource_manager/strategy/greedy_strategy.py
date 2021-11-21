@@ -6,6 +6,7 @@ import copy
 import stream_lite.proto.common_pb2 as common_pb2
 from stream_lite.resource_manager.subtask_table import SubTaskTable, SubTaskDesc
 from stream_lite.resource_manager.peer_latency_table import PeerLatencyTable
+from stream_lite.resource_manager.execute_task_table import ExecuteTaskInfo
 
 
 class DynamicProgrammingStrategy(object):
@@ -14,45 +15,32 @@ class DynamicProgrammingStrategy(object):
     def get_migrate_infos(
             exec_task_infos: Dict[str, ExecuteTaskInfo],
             latency_table: PeerLatencyTable) -> List[common_pb2.MigrateInfo]:
-        # TODO: 1. 图缩点
+        # 0. 找所有 souce
+        sources = []
+        for subtask_name, exec_task_info in exec_task_infos.items():
+            if exec_task_info.is_source():
+                sources.append(subtask_name)
+
+        # 1. 图缩点
+        chain_graph = [] # 缩点后的链式图
+        que = copy.deepcopy(sources)
+        while True:
+            maxL = -1.0
+            newQue = []
+            unique_names = set()
+            for curr_subtask_name in que:
+                curr_info = exec_task_infos[curr_subtask_name]
+                unique_names.add(curr_info.cls_name)
+                curr_task_manager_name = curr_info.task_manager_name
+                for next_subtask_name in curr_info.downstream_cls_names:
+                    newQue.append(next_subtask_name)
+                    next_info = exec_task_infos[next_subtask_name]
+                    next_task_manager_name = next_info.task_manager_name
+                    latency = latency_table.get_latency(
+                            curr_task_manager_name, next_task_manager_name)
+                    maxL = max(maxL, latency)
+            chain_graph.append((unique_names, maxL))
+            if len(newQue) == 0:
+                break
 
         # TODO: 2. 最短路
-
-
-
-
-        virtual_task_manager_name = "virtual_task_manager"
-        subtask_table = copy.deepcopy(src_subtask_table)
-
-        # add super souce
-        source_subtaks = subtask_table.get_sources()
-        super_souce = SubTaskDesc(
-                name="super_souce",
-                task_manager_name=virtual_task_manager_name,
-                is_source=False,
-                is_sink=False,
-                downstream_name=[x.name for x in source_subtaks])
-        subtask_table.add_subtask(super_souce)
-
-        # add super sink
-        sink_subtasks = subtask_table.get_sinks()
-        super_sink = SubTaskDesc(
-                name="super_sink",
-                task_manager_name=virtual_task_manager_name,
-                is_source=False,
-                is_sink=False,
-                downstream_name=[])
-        for sink_subtask in sink_subtasks:
-            sink_subtask.downstream_name = super_sink.name
-        subtask_table.add_subtask(super_sink)
-
-        subtasks = subtask_table.get_subtasks()
-        total = len(subtasks)
-        dp = [float('inf') for _ in range(total)]
-
-        latency_table = copy.deepcopy(src_latency_table.get_latency())
-        for peer_latency_table in latency_table.values():
-            peer_latency_table[virtual_task_manager_name] = 0
-        latency_table[virtual_task_manager_name] = \
-                {key: 0 for key in latency_table.keys()}
-        
