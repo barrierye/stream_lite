@@ -10,7 +10,7 @@ class StrategyBase(object):
 
     @staticmethod
     def get_migrate_infos(
-            sub_task_table: SubTaskTable,
+            exec_task_infos: Dict[str, ExecuteTaskInfo],
             latency_table: PeerLatencyTable) -> List[common_pb2.MigrateInfo]:
         """
         source 和 sink 所在的TaskManager不能变更

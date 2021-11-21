@@ -2,6 +2,8 @@
 # Copyright (c) 2021 barriery
 # Python release: 3.7.0
 # Create time: 2021-10-12
+import copy
+
 from readerwriterlock import rwlock
 from typing import List, Dict, Union
 from stream_lite.proto import resource_manager_pb2
@@ -10,13 +12,23 @@ from stream_lite.job_manager import scheduler
 
 class ExecuteTaskInfo(object):
 
-    def __init__(self, subtask_name: str, downstream_cls_names: List[str],
-            cls_name: str, partition_idx: int, task_manager_name: str):
+    def __init__(self, subtask_name: str, 
+            upstream_cls_names: List[str],
+            downstream_cls_names: List[str],
+            cls_name: str, partition_idx: int, 
+            task_manager_name: str):
         self.subtask_name = subtask_name
+        self.upstream_cls_names = downstream_cls_names
         self.downstream_cls_names = downstream_cls_names
         self.cls_name = cls_name
         self.partition_idx = partition_idx
         self.task_manager_name = task_manager_name
+
+    def is_souce(self):
+        return len(self.upstream_cls_names) == 0
+
+    def is_sink(self):
+        return len(self.downstream_cls_names) == 0
 
 
 class ExecuteTaskTable(object):
@@ -32,6 +44,17 @@ class ExecuteTaskTable(object):
         for idx, task_manager_name in enumerate(task_manager_names):
             exec_task = exec_tasks[idx]
             
+            upstream_currency = len(exec_task.input_endpoints)
+            upstream_cls_names = []
+            if upstream_currency != 0:
+                assert len(exec_task.upstream_cls_names) == 1, "except 1 but get {}".format(
+                        len(exec_task.upstream_cls_names))
+                upstream_cls_names = [
+                        scheduler.Scheduler._get_subtask_name(
+                            exec_task.upstream_cls_names[0],
+                            upstream_idx, upstream_currency) for 
+                        upstream_idx in range(upstream_currency)]
+
             downstream_currency = len(exec_task.output_endpoints)
             downstream_cls_names = []
             if downstream_currency != 0:
@@ -50,6 +73,7 @@ class ExecuteTaskTable(object):
                     subtask_name=subtask_name,
                     info=ExecuteTaskInfo(
                         subtask_name=subtask_name,
+                        upstream_cls_names=upstream_cls_names,
                         downstream_cls_names=downstream_cls_names,
                         cls_name=cls_name,
                         partition_idx=partition_idx,
@@ -76,4 +100,6 @@ class ExecuteTaskTable(object):
                        "Failed to get info: {} does not exist".format(name))
             return self.exec_task_infos[name]
 
-
+    def get_infos(self) -> Dict[str, ExecuteTaskInfo]:
+        with self.rw_lock_pair.gen_rlock():
+            return copy.deepcopy(self.exec_task_infos)

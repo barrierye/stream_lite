@@ -114,8 +114,6 @@ class ResourceManagerServicer(resource_manager_pb2_grpc.ResourceManagerServiceSe
 
     # --------------------------- getAutoMigrateSubtasks ----------------------------
     def getAutoMigrateSubtasks(self, request, context):
-        # TODO: 哪个subtask在哪个节点需要记录
-
         jobid = request.jobid
         
         # TODO
