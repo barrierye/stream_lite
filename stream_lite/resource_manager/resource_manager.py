@@ -104,8 +104,13 @@ class ResourceManagerServicer(resource_manager_pb2_grpc.ResourceManagerServiceSe
 
     # --------------------------- registerJobExecuteInfo ----------------------------
     def registerJobExecuteInfo(self, request, context):
-        self.execute_task_table
-        #TODO
+        try:
+            self.execute_task_table.build_from_rpc_request(request)
+        except Exception as e:
+            _LOGGER.error(e, exc_info=True)
+            return gen_nil_response(
+                    err_code=1, message=str(e))
+        return gen_nil_response()
 
     # --------------------------- getAutoMigrateSubtasks ----------------------------
     def getAutoMigrateSubtasks(self, request, context):
