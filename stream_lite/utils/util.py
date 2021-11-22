@@ -42,7 +42,8 @@ def get_dirname(uri: str) -> str:
     return path
 
 def get_timestamp() -> int:
-    return int(time.time())
+    # ms
+    return int(round(time.time() * 1000))
 
 
 class FinishJobError(RuntimeError):
