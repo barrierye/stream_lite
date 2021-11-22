@@ -6,10 +6,20 @@ from contextlib import closing
 import socket
 import os
 import time
+import requests
 
+"""
 def get_ip() -> str:
     hostname = socket.gethostname()
     ip = socket.gethostbyname(hostname)
+    return ip
+"""
+
+def get_ip() -> str:
+    """
+    获取公网ip
+    """
+    ip = requests.get("http://ifconfig.me/ip", timeout=1).text.strip()
     return ip
 
 def get_filename(uri: str) -> str:
