@@ -8,6 +8,5 @@ stream_lite.egg-info/
 .DS_Store
 *.swp
 test.py
-document*
 *.log
 sink.txt*
