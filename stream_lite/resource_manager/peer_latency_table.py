@@ -41,6 +41,8 @@ class PeerLatencyTable(object):
                     raise KeyError(
                             "Failed to get latency: src {} does not exist".format(src_name))
                 if dst_name is not None:
+                    if src_name == dst_name:
+                        return 0.0
                     if dst_name not in self.latencies[src_name]:
                         raise KeyError(
                                 "Failed to get latency: dst {} does not exist".format(dst_name))

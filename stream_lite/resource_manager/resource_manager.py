@@ -119,9 +119,17 @@ class ResourceManagerServicer(resource_manager_pb2_grpc.ResourceManagerServiceSe
         
         # TODO
         # 自动迁移逻辑
-        GreedyStrategy.get_migrate_infos(
-                self.execute_task_table.get_infos().
-                self.latency_table)
+        print(">>> run auto")
+        try:
+            migrate_info_list = GreedyStrategy.get_migrate_infos(
+                    jobid,
+                    self.execute_task_table.get_infos(),
+                    self.latency_table)
+        except Exception as e:
+            _LOGGER.error(e, exc_info=True)
+        print(">>> finish auto")
+
+        print(migrate_info_list)
 
         # mock
         return resource_manager_pb2.GetAutoMigrateSubtasksResponse(

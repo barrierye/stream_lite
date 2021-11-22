@@ -18,17 +18,28 @@ class ExecuteTaskInfo(object):
             cls_name: str, partition_idx: int, 
             task_manager_name: str):
         self.subtask_name = subtask_name
-        self.upstream_cls_names = downstream_cls_names
+        self.upstream_cls_names = upstream_cls_names
         self.downstream_cls_names = downstream_cls_names
         self.cls_name = cls_name
         self.partition_idx = partition_idx
         self.task_manager_name = task_manager_name
+        # defined in schduler
+        self.currency = int(subtask_name.split("/")[1][:-1])
 
-    def is_souce(self):
+    def is_source(self):
         return len(self.upstream_cls_names) == 0
 
     def is_sink(self):
         return len(self.downstream_cls_names) == 0
+
+    def __str__(self):
+        return "subtask_name: {}\n".format(self.subtask_name) +\
+                "upstream_cls_names: {}\n".format(self.upstream_cls_names) +\
+                "downstream_cls_names: {}\n".format(self.downstream_cls_names) +\
+                "cls_name: {}\n".format(self.cls_name) +\
+                "partition_idx: {}\n".format(self.partition_idx) +\
+                "task_manager_name: {}\n".format(self.task_manager_name) +\
+                "currency: {}\n".format(self.currency)
 
 
 class ExecuteTaskTable(object):
@@ -78,6 +89,9 @@ class ExecuteTaskTable(object):
                         cls_name=cls_name,
                         partition_idx=partition_idx,
                         task_manager_name=task_manager_name))
+
+        for name, info in self.exec_task_infos.items():
+            print("[{}]: {}".format(name, info))
 
     def _add_exec_task_info(self, subtask_name: str,
             info: ExecuteTaskInfo) -> None:

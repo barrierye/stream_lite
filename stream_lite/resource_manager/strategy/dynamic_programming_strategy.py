@@ -15,6 +15,7 @@ class DynamicProgrammingStrategy(StrategyBase):
 
     @staticmethod
     def get_migrate_infos(
+            jobid: str,
             src_subtask_table: SubTaskTable,
             src_latency_table: PeerLatencyTable) -> List[common_pb2.MigrateInfo]:
         virtual_task_manager_name = "virtual_task_manager"

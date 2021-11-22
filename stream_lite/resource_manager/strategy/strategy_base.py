@@ -14,6 +14,7 @@ class StrategyBase(object):
 
     @staticmethod
     def get_migrate_infos(
+            jobid: str,
             exec_task_infos: Dict[str, ExecuteTaskInfo],
             latency_table: PeerLatencyTable) -> List[common_pb2.MigrateInfo]:
         """
