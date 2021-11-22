@@ -9,6 +9,5 @@ stream_lite.egg-info/
 *.swp
 test.py
 document*
-*.txt
 *.log
 sink.txt*
