@@ -131,6 +131,7 @@ class ResourceManagerServicer(resource_manager_pb2_grpc.ResourceManagerServiceSe
 
         print(migrate_info_list)
 
+        '''
         # mock
         return resource_manager_pb2.GetAutoMigrateSubtasksResponse(
                 status=common_pb2.Status(),
@@ -140,3 +141,7 @@ class ResourceManagerServicer(resource_manager_pb2_grpc.ResourceManagerServiceSe
                     jobid=jobid,
                     src_currency=2,
                     src_partition_idx=0)])
+        '''
+        return resource_manager_pb2.GetAutoMigrateSubtasksResponse(
+                status=common_pb2.Status(),
+                infos=migrate_info_list)
