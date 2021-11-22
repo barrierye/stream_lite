@@ -70,27 +70,33 @@ class GreedyStrategy(StrategyBase):
             # 可能有多个source，故找多个最短路
             src_info = exec_task_infos[source_subtask_name]
             src_node_name = src_info.task_manager_name
-            path, shortest_latency = self._dijkstra(src_node_name, dst_node_name, latency_table)
+            path, shortest_latency = GreedyStrategy._dijkstra(src_node_name, dst_node_name, latency_table)
             print(">>> path: {}".format(path))
             if total_latency > shortest_latency:
                 _LOGGER.info(
                     "current latency({}) > shortest latency({}), try to gen migrate info...".format(
                         total_latency, shortest_latency))
             # 匹配一下
-            for idx, chain_node in enumerate(chain_graph):
-                subtask_name = chain_node[0]
-                m_src_info = exec_task_infos[subtask_name]
-                if m_src_info.task_manager_name != path[idx]:
-                    migrate_info_list.append(
-                            common_pb2.MigrateInfo(
-                                src_cls_name=m_src_info.cls_name,
-                                target_task_manager_locate=path[idx],
-                                jobid=jobid,
-                                src_currency=m_src_info.currency,
-                                src_partition_idx=m_src_info.partition_idx))
+            if len(chain_graph) < len(path):
+                return []
+            else:
+                for idx, chain_node in enumerate(chain_graph):
+                    subtask_name_set = chain_node[0]
+                    for subtask_name in subtask_name_set:
+                        m_src_info = exec_task_infos[subtask_name]
+                        target_task_manager_name = path[min(idx, len(path) - 1)]
+                        if m_src_info.task_manager_name != target_task_manager_name:
+                            migrate_info_list.append(
+                                    common_pb2.MigrateInfo(
+                                        src_cls_name=m_src_info.cls_name,
+                                        target_task_manager_locate=target_task_manager_name,
+                                        jobid=jobid,
+                                        src_currency=m_src_info.currency,
+                                        src_partition_idx=m_src_info.partition_idx))
         return migrate_info_list
 
-    def _dijkstra(self, src: str, dst: str, latency_table: PeerLatencyTable) \
+    @staticmethod
+    def _dijkstra(src: str, dst: str, latency_table: PeerLatencyTable) \
             -> Tuple[List[str], float]:
         # 返回path数组以及最短路
         class Edge:
