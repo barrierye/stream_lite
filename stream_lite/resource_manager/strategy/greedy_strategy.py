@@ -3,13 +3,17 @@
 # Python release: 3.7.0
 # Create time: 2021-10-12
 import copy
+from typing import List, Dict
+
 import stream_lite.proto.common_pb2 as common_pb2
 from stream_lite.resource_manager.subtask_table import SubTaskTable, SubTaskDesc
 from stream_lite.resource_manager.peer_latency_table import PeerLatencyTable
 from stream_lite.resource_manager.execute_task_table import ExecuteTaskInfo
 
+from .strategy_base import StrategyBase
 
-class DynamicProgrammingStrategy(object):
+
+class GreedyStrategy(StrategyBase):
 
     @staticmethod
     def get_migrate_infos(
@@ -42,5 +46,7 @@ class DynamicProgrammingStrategy(object):
             chain_graph.append((unique_names, maxL))
             if len(newQue) == 0:
                 break
+
+        print(chain_graph)
 
         # TODO: 2. 最短路

@@ -8,7 +8,10 @@ from stream_lite.resource_manager.subtask_table import SubTaskTable, SubTaskDesc
 from stream_lite.resource_manager.peer_latency_table import PeerLatencyTable
 
 
-class DynamicProgrammingStrategy(object):
+from .strategy_base import StrategyBase
+
+
+class DynamicProgrammingStrategy(StrategyBase):
 
     @staticmethod
     def get_migrate_infos(

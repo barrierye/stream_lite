@@ -2,8 +2,12 @@
 # Copyright (c) 2021 barriery
 # Python release: 3.7.0
 # Create time: 2021-10-12
+from typing import Optional, Tuple, List, Dict
+
 import stream_lite.proto.common_pb2 as common_pb2
 from stream_lite.resource_manager.peer_latency_table import PeerLatencyTable
+
+from ..execute_task_table import ExecuteTaskInfo
 
 
 class StrategyBase(object):

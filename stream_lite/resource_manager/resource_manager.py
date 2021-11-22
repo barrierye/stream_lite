@@ -23,6 +23,7 @@ from stream_lite.utils import JobIdGenerator, EventIdGenerator
 from .peer_latency_table import PeerLatencyTable
 from .execute_task_table import ExecuteTaskTable
 from .registered_task_manager_table import RegisteredTaskManagerTable
+from .strategy.greedy_strategy import GreedyStrategy
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -118,6 +119,9 @@ class ResourceManagerServicer(resource_manager_pb2_grpc.ResourceManagerServiceSe
         
         # TODO
         # 自动迁移逻辑
+        GreedyStrategy.get_migrate_infos(
+                self.execute_task_table.get_infos().
+                self.latency_table)
 
         # mock
         return resource_manager_pb2.GetAutoMigrateSubtasksResponse(
@@ -128,6 +132,3 @@ class ResourceManagerServicer(resource_manager_pb2_grpc.ResourceManagerServiceSe
                     jobid=jobid,
                     src_currency=2,
                     src_partition_idx=0)])
-
-    def _get_compressed_graph(self):
-        pass

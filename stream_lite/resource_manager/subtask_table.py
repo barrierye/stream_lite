@@ -3,6 +3,7 @@
 # Python release: 3.7.0
 # Create time: 2021-10-12
 import copy
+from typing import List, Dict
 
 
 class SubTaskDesc(object):
