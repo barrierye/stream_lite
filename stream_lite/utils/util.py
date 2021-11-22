@@ -8,19 +8,24 @@ import os
 import time
 import requests
 
-"""
 def get_ip() -> str:
-    hostname = socket.gethostname()
-    ip = socket.gethostbyname(hostname)
-    return ip
-"""
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    try:
+        # doesn't even have to be reachable
+        s.connect(('10.255.255.255', 1))
+        IP = s.getsockname()[0]
+    except Exception:
+        IP = '127.0.0.1'
+    finally:
+        s.close()
+    return IP
 
+"""
 def get_ip() -> str:
-    """
-    获取公网ip
-    """
+    # 获取公网ip
     ip = requests.get("http://ifconfig.me/ip", timeout=1).text.strip()
     return ip
+"""
 
 def get_filename(uri: str) -> str:
     """
