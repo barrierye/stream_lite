@@ -39,7 +39,7 @@ if __name__ == '__main__':
                 jobid=jobid, 
                 src_cls_name="SumOp",
                 src_partition_idx=0,
-                src_currency=2,
+                src_currency=1,
                 target_task_manager_locate="TM_39")
     else:
         _LOGGER.fatal("stepN cannot be: {}".format(step))
