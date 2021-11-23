@@ -420,12 +420,12 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
             
             if data_type == common_pb2.Record.DataType.PICKLE:
                 if migrate_window.duplicate_or_update(int(data_id)):
-                    # 过滤重复 data_id: 新旧数据流已经同步，可以终止旧数据流
-                    _LOGGER.info(
-                            "[{}] get repetitive data: {}, try to terminate the old subtask."
-                            .format(subtask_name, data_id))
-                    
                     if migrate_id != -1:
+                        # 过滤重复 data_id: 新旧数据流已经同步，可以终止旧数据流
+                        _LOGGER.info(
+                                "[{}] stream sync({})! try to terminate the old subtask."
+                                .format(subtask_name, data_id))
+                    
                         SubTaskServicer._notify_migrate_synchron(
                                 job_manager_enpoint=job_manager_enpoint,
                                 jobid=jobid,
