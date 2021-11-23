@@ -61,6 +61,7 @@ class MigrateFilterWindow(object):
                [  window  ]
         """
         self._add_data_to_duplicate_window(data_id)
+        return True
 
     def _add_in_window_data(self, data_id: int):
         """
@@ -70,17 +71,21 @@ class MigrateFilterWindow(object):
              v     
         [  window  ]
         """
+        is_duplicate = False
         if self.window[data_id - self.window_base_id] == False:
             self.window[data_id - self.window_base_id] = True
         else:
             # 重复元素，更新duplicate_window
             self._add_data_to_duplicate_window(data_id)
+            is_duplicate = True
 
         # update base_id
         while self.window[0] == True:
             self.window_base_id += 1
             self.window.pop(0)
             self.window.append(False)
+
+        return is_duplicate
 
     def _add_out_window_new_data(self, data_id: int):
         """
@@ -105,18 +110,21 @@ class MigrateFilterWindow(object):
             self.window.pop(0)
             self.window.append(False)
 
+        return False
+
     def duplicate_or_update(self, data_id: int):
+        is_duplicate = False
         if data_id < self.window_base_id:
             # 只能为重复元素
-            self._add_out_window_duplicate_data(data_id)
+            is_duplicate = self._add_out_window_duplicate_data(data_id)
         elif data_id < self.window_base_id + self.window_size:
             # 可能为重复元素，也可能为新元素
-            self._add_in_window_data(data_id)
+            is_duplicate = self._add_in_window_data(data_id)
         else:
             # 新元素，需要强制移动窗口
-            self._add_out_window_new_data(data_id)
+            is_duplicate = self._add_out_window_new_data(data_id)
 
-        return self._judge_if_reached()
+        return [is_duplicate, self._judge_if_reached()]
 
     def _judge_if_reached(self):
         return self.window_base_id == self.duplicate_window_base_id

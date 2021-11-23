@@ -419,7 +419,9 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
                     get_input_data(task_instance, is_source_op)
             
             if data_type == common_pb2.Record.DataType.PICKLE:
-                if migrate_window.duplicate_or_update(int(data_id)):
+                is_duplicate, stream_sync = \
+                        migrate_window.duplicate_or_update(int(data_id))
+                if is_duplicate:
                     if migrate_id != -1:
                         # 过滤重复 data_id: 新旧数据流已经同步，可以终止旧数据流
                         _LOGGER.info(
