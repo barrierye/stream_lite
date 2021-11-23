@@ -108,7 +108,7 @@ class MigrateFilterWindow(object):
             # 新元素，需要强制移动窗口
             self._add_out_window_new_data(data_id)
 
-        return _judge_if_reached()
+        return self._judge_if_reached()
 
     def _judge_if_reached(self):
         return self.window_base_id == self.duplicate_window_base_id
