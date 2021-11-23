@@ -78,14 +78,18 @@ class TaskManagerClient(ClientBase):
             raise Exception(resp.status.message)
 
     def testLatency(self) -> int:
-        timestamp = util.get_timestamp()
+        s_timestamp = util.get_timestamp()
         resp = self.stub.testLatency(
-                task_manager_pb2.TestLatencyRequest(timestamp=timestamp))
+                task_manager_pb2.TestLatencyRequest(
+                    timestamp=s_timestamp))
+        latency = resp.latency
+        e_timestamp = util.get_timestamp()
+        latency = e_timestamp - s_timestamp
         
         if resp.status.err_code != 0:
             raise Exception(resp.status.message)
 
-        return resp.latency
+        return latency
 
     def preCopyState(self,
             jobid: str,
