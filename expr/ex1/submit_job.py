@@ -6,6 +6,7 @@ import logging
 import inspect
 import yaml
 import time
+import sys
 
 from stream_lite import UserClient
 
