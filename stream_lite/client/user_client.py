@@ -28,7 +28,8 @@ class UserClient(ClientBase):
     def submitJob(self, 
             yaml_path: str, 
             periodicity_checkpoint_interval_s: float,
-            auto_migrate: bool = False) -> str:
+            auto_migrate: bool = False,
+            enable_precopy: bool = False) -> str:
         with open(yaml_path) as f:
             conf = yaml.load(f.read(), Loader=yaml.FullLoader)
 
@@ -41,7 +42,8 @@ class UserClient(ClientBase):
         req = job_manager_pb2.SubmitJobRequest(
                 tasks=seri_tasks,
                 periodicity_checkpoint_interval_s=periodicity_checkpoint_interval_s,
-                auto_migrate=auto_migrate)
+                auto_migrate=auto_migrate,
+                enable_precopy=enable_precopy)
         resp = self.stub.submitJob(req)
         if resp.status.err_code != 0:
             raise Exception(resp.status.message)

@@ -69,6 +69,7 @@ class JobManagerServicer(job_manager_pb2_grpc.JobManagerServiceServicer):
 
         self.jobid = None
         self.auto_migrate = None
+        self.enable_precopy = None
         self.addr = "{}:{}".format(
                 stream_lite.utils.util.get_ip(), 
                 job_manager_rpc_port)
@@ -107,6 +108,7 @@ class JobManagerServicer(job_manager_pb2_grpc.JobManagerServiceServicer):
         seri_tasks = []
         periodicity_checkpoint_interval_s = request.periodicity_checkpoint_interval_s
         self.auto_migrate = request.auto_migrate
+        self.enable_precopy = request.enable_precopy
         for task in request.tasks:
             seri_task = serializator.SerializableTask.from_proto(task)
             seri_tasks.append(seri_task)
@@ -126,7 +128,7 @@ class JobManagerServicer(job_manager_pb2_grpc.JobManagerServiceServicer):
 
             # 把所有 Op 信息注册到 CheckpointCoordinator 里
             self.job_coordinator.register_job(jobid, execute_map)
-            # TODO: 把所有 Op 信息注册到 ResourceManager 里
+            # 把所有 Op 信息注册到 ResourceManager 里
             self.resource_manager_client.registerJobExecuteInfo(jobid, execute_map)
 
             if self.auto_migrate:
@@ -136,16 +138,19 @@ class JobManagerServicer(job_manager_pb2_grpc.JobManagerServiceServicer):
                         job_manager_endpoint=self.addr,
                         resource_manager_enpoint=self.resource_manager_enpoint,
                         interval=periodicity_checkpoint_interval_s)
+                self.periodic_executor_helper.run_on_standalone_process(
+                        is_process=stream_lite.config.IS_PROCESS)
             else:
-                # 周期性地 checkpoint & 预迁移状态
-                self.periodic_executor_helper = CheckpointHelper(
-                        jobid=jobid,
-                        job_manager_endpoint=self.addr,
-                        resource_manager_enpoint=self.resource_manager_enpoint,
-                        snapshot_dir=self.snapshot_dir,
-                        interval=periodicity_checkpoint_interval_s)
-            self.periodic_executor_helper.run_on_standalone_process(
-                    is_process=stream_lite.config.IS_PROCESS)
+                if self.enable_precopy:
+                    # 周期性地 checkpoint & 预迁移状态
+                    self.periodic_executor_helper = CheckpointHelper(
+                            jobid=jobid,
+                            job_manager_endpoint=self.addr,
+                            resource_manager_enpoint=self.resource_manager_enpoint,
+                            snapshot_dir=self.snapshot_dir,
+                            interval=periodicity_checkpoint_interval_s)
+                    self.periodic_executor_helper.run_on_standalone_process(
+                            is_process=stream_lite.config.IS_PROCESS)
         except Exception as e:
             _LOGGER.error(e, exc_info=True)
             return job_manager_pb2.SubmitJobResponse(
