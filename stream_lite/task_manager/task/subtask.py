@@ -24,6 +24,7 @@ from stream_lite.network.util import gen_nil_response
 from stream_lite.client import SubTaskClient, JobManagerClient
 from stream_lite.utils import util, FinishJobError, DataIdGenerator
 
+from .migrate_filter_window import MigrateFilterWindow
 from .input_receiver import InputReceiver
 from .output_dispenser import OutputDispenser
 from . import operator
@@ -247,7 +248,7 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
         is_source_op = issubclass(cls, operator.SourceOperatorBase)
         is_sink_op = issubclass(cls, operator.SinkOperatorBase)
         is_key_op = issubclass(cls, operator.KeyOperatorBase)
-        current_data_id = -1 # 为了过滤 migrate 产生的重复数据
+        migrate_window = MigrateFilterWindow() # 为了过滤 migrate 产生的重复数据
         migrate_id = -1 # 标记是否正处于 migrate
         task_instance = cls()
         task_instance.set_name(subtask_name)
@@ -418,8 +419,8 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
                     get_input_data(task_instance, is_source_op)
             
             if data_type == common_pb2.Record.DataType.PICKLE:
-                if int(data_id) <= current_data_id:
-                    # 过滤重复 data_id: 遇到重复 data_id，说明新旧数据流已经同步，可以终止旧数据流
+                if migrate_window.duplicate_or_update(int(data_id)):
+                    # 过滤重复 data_id: 新旧数据流已经同步，可以终止旧数据流
                     _LOGGER.info(
                             "[{}] get repetitive data: {}, try to terminate the old subtask."
                             .format(subtask_name, data_id))
@@ -431,7 +432,6 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
                                 migrate_id=migrate_id)
                         migrate_id = -1
                     continue
-                current_data_id = int(data_id)
                 output_data, partition_key = pickle_data_process(
                         task_instance=task_instance,
                         is_key_op=is_key_op, 
