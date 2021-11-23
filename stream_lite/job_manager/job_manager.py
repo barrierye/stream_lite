@@ -426,7 +426,7 @@ class JobManagerServicer(job_manager_pb2_grpc.JobManagerServiceServicer):
             src_partition_idx: int,
             src_currency: int,
             target_task_manager_locate: str) -> None:
-        # step 1: checkpoint for migrate
+        _LOGGER.info("step 1: checkpoint for migrate")
         checkpoint_id = EventIdGenerator().next()
         self.job_coordinator.trigger_checkpoint_for_migrate(
                 jobid=jobid, 
@@ -456,7 +456,7 @@ class JobManagerServicer(job_manager_pb2_grpc.JobManagerServiceServicer):
             checkpoint_id: int,
             with_file_state: bool,
             migrate_id: int = -1) -> None:
-        # step 2: deploy and start new subtask in target_task_manager_locate
+        _LOGGER.info("step 2: deploy and start new subtask in target_task_manager_locate")
         # step 2.1: find subtask file, resources
         #  _LOGGER.info("[Migrate] step 2.1: find subtask file, resources.")
         task_path = self.exetasks_dir.format(
@@ -513,8 +513,8 @@ class JobManagerServicer(job_manager_pb2_grpc.JobManagerServiceServicer):
                 execute_task=exe_task)
         _LOGGER.info("Success start the new task.")
  
-        # step 3: broadcast migrate event to notify upstream subtask
-        #         start send data to the new subtask.
+        _LOGGER.info("step 3: broadcast migrate event to notify upstream subtask" +\
+                     "start send data to the new subtask.")
         if migrate_id == -1:
             migrate_id = EventIdGenerator().next()
         self.job_coordinator.trigger_migrate(
@@ -527,11 +527,11 @@ class JobManagerServicer(job_manager_pb2_grpc.JobManagerServiceServicer):
                 jobid=jobid,
                 migrate_id=migrate_id)
  
-        # step 4: block util migrate sync
+        _LOGGER.info("step 4: block util migrate sync")
         self.job_coordinator.register_pending_migrate_sync(jobid, migrate_id)
         self.job_coordinator.block_util_migrate_sync(jobid, migrate_id)
 
-        # step 5: terminate old subtask
+        _LOGGER.info("step 5: terminate old subtask")
         terminate_id = migrate_id
         self.job_coordinator.terminate_subtask(
                 jobid=jobid,
