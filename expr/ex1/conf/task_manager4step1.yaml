@@ -1,0 +1,7 @@
+resource_manager_enpoint: "192.168.105.38:8975"
+name: TM_38
+coord:
+  x: 116.405419
+  y: 39.913828
+resource:
+  slot_number: 8
