@@ -27,16 +27,19 @@ class MigrateFilterWindow(object):
 
         if data_id < self.duplicate_window_base_id:
             _LOGGER.warning(
-                    "data_id({}) on the left of duplicate_window.".format(data_id))
+                    "data_id({}) on the left of duplicate_window({}).".format(
+                        data_id, self.duplicate_window_base_id))
         elif data_id < self.duplicate_window_base_id + self.window_size:
             if self.duplicate_window[data_id - self.duplicate_window_base_id] is True:
                 _LOGGER.warning(
-                        "data_id({}) is already in duplicate_window.".format(data_id))
+                        "data_id({}) is already in duplicate_window({}).".format(
+                            data_id, self.duplicate_window_base_id))
             else:
                 self.duplicate_window[data_id - self.duplicate_window_base_id] = True
         else:
             _LOGGER.warning(
-                    "data_id({}) on the right of duplicate_window.".format(data_id))
+                    "data_id({}) on the right of duplicate_window({}).".format(
+                        data_id, self.duplicate_window_base_id))
             while self.duplicate_window_base_id + self.window_size != data_id + 1:
                 self.duplicate_window_base_id += 1
                 self.duplicate_window.pop(0)
@@ -88,7 +91,8 @@ class MigrateFilterWindow(object):
         [  window  ]
         """
         _LOGGER.warning(
-                "data_id({}) on the right of window.".format(data_id))
+                "data_id({}) on the right of window({}).".format(
+                    data_id, self.window_base_id))
         while self.window_base_id + self.window_size != data_id + 1:
             self.window_base_id += 1
             self.window.pop(0)
