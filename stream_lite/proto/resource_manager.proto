@@ -17,7 +17,7 @@ message HeartBeatRequest {
   required string endpoint = 1;
   required string name = 2;
   required common.Coordinate coord = 3;
-  required int32 max_nearby_num = 4 [default = 3];
+  required int32 max_nearby_num = 4 [default = 10];
   required int64 timestamp = 5;
   repeated NearbyPeer peers = 6;
 
