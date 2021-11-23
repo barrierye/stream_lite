@@ -40,7 +40,7 @@ if __name__ == '__main__':
                 src_cls_name="SumOp",
                 src_partition_idx=0,
                 src_currency=2,
-                target_task_manager_locate="TM_2")
+                target_task_manager_locate="TM_39")
     else:
         _LOGGER.fatal("stepN cannot be: {}".format(step))
         exit(-1)
