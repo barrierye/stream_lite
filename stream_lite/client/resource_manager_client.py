@@ -71,7 +71,7 @@ class ResourceManagerClient(ClientBase):
             coord_x: float,
             coord_y: float,
             peers: Dict[str, int],
-            max_nearby_num: int = 3,
+            max_nearby_num: int = 10,
             timestamp: Union[None, int] = None) \
                     -> Dict[str, str]:
         if timestamp is None:
