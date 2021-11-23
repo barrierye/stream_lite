@@ -18,9 +18,13 @@ class MigrateFilterWindow(object):
         self.window_base_id = 0
 
         self.duplicate_window = [False] * window_size
-        self.duplicate_window_base_id = 0
+        self.duplicate_window_base_id = -1
 
     def _add_data_to_duplicate_window(self, data_id: int):
+        if self.duplicate_window_base_id == -1:
+            self.duplicate_window_base_id = data_id + 1
+            return
+
         if data_id < self.duplicate_window_base_id:
             _LOGGER.warning(
                     "data_id({}) on the left of duplicate_window.".format(data_id))
