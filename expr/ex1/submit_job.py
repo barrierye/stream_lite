@@ -34,7 +34,7 @@ if __name__ == '__main__':
                 yaml_path=conf_path, 
                 periodicity_checkpoint_interval_s=1,
                 auto_migrate=False)
-        time.sleep(0.1)
+        time.sleep(1)
         client.triggerMigrate(
                 jobid=jobid, 
                 src_cls_name="SumOp",
