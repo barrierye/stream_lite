@@ -90,8 +90,8 @@ class ExecuteTaskTable(object):
                         partition_idx=partition_idx,
                         task_manager_name=task_manager_name))
 
-        for name, info in self.exec_task_infos.items():
-            print("[{}]: {}".format(name, info))
+        #for name, info in self.exec_task_infos.items():
+        #    print("[{}]: {}".format(name, info))
 
     def _add_exec_task_info(self, subtask_name: str,
             info: ExecuteTaskInfo) -> None:
