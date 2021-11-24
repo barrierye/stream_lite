@@ -413,7 +413,7 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
                         timestamp=timestamp,
                         partition_key=partition_key))
 
-        print("[{}] succ run".format(subtask_name))
+        #  print("[{}] succ run".format(subtask_name))
         while True:
             partition_key = -1
             output_data = None
@@ -442,6 +442,7 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
                         is_key_op=is_key_op, 
                         input_data=input_data)
             elif data_type == common_pb2.Record.DataType.CHECKPOINT:
+                _LOGGER.info("[{}] recv checkpoint event".format(subtask_name))
                 checkpoint_event_process(
                         task_instance=task_instance, 
                         is_sink_op=is_sink_op,
@@ -454,6 +455,7 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
                 else:
                     continue
             elif data_type == common_pb2.Record.DataType.CHECKPOINT_PREPARE_FOR_MIGRATE:
+                _LOGGER.info("[{}] recv checkpoint_prepare_for_migrate event".format(subtask_name))
                 checkpoint_prepare_for_migrate_event_process(
                         task_instance=task_instance, 
                         is_sink_op=is_sink_op,
@@ -461,6 +463,7 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
                 _LOGGER.debug("[{}] success save snapshot state for migrate".format(subtask_name))
                 continue
             elif data_type == common_pb2.Record.DataType.MIGRATE:
+                _LOGGER.info("[{}] recv migrate event".format(subtask_name))
                 assert migrate_id == -1
                 migrate_id = input_data.id
 
@@ -477,6 +480,7 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
                 _LOGGER.info("[{}] finished successfully!".format(subtask_name))
                 break
             elif data_type == common_pb2.Record.DataType.TERMINATE_SUBTASK:
+                _LOGGER.info("[{}] recv terminate event".format(subtask_name))
                 terminate_event_process(
                         task_instance=task_instance,
                         is_sink_op=is_sink_op,
@@ -792,7 +796,6 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
         """
         只有 SourceOp 才会被调用该函数
         """
-        _LOGGER.info("recv terminate!")
         terminate = request.terminate_subtask
         seri_data = serializator.SerializableRecord(
                 data_id="terminate_data_id",
