@@ -71,7 +71,7 @@ class GreedyStrategy(StrategyBase):
             src_info = exec_task_infos[source_subtask_name]
             src_node_name = src_info.task_manager_name
             path, shortest_latency = GreedyStrategy._dijkstra(src_node_name, dst_node_name, latency_table)
-            print(">>> path: {}".format(path))
+            # print(">>> path: {}".format(path))
             if total_latency > shortest_latency:
                 _LOGGER.info(
                     "current latency({}) > shortest latency({}), try to gen migrate info...".format(
