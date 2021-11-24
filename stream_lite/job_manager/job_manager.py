@@ -527,6 +527,8 @@ class JobManagerServicer(job_manager_pb2_grpc.JobManagerServiceServicer):
                 jobid=jobid,
                 migrate_id=migrate_id)
  
+        # TODO: 在创建pending_migrate_sync前就已sync，会引发bug. 
+        # 暂时调整输入速率来缓解bug
         _LOGGER.info("step 4: block util migrate sync")
         self.job_coordinator.register_pending_migrate_sync(jobid, migrate_id)
         self.job_coordinator.block_util_migrate_sync(jobid, migrate_id)
