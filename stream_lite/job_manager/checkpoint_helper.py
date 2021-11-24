@@ -98,7 +98,7 @@ class CheckpointHelper(PeriodicExecutorBase):
                     jobid=jobid, cancel_job=False)
             
             # 获取自动迁移信息
-            migrate_infos = resource_manager_client.getAutoMigrateSubtasks(jobid)
+            migrate_infos = resource_manager_client.getAutoMigrateSubtasks(jobid, False)
 
             # 逐subtask预备份
             for migrate_info in migrate_infos:
@@ -146,7 +146,7 @@ class MigrateHelper(PeriodicExecutorBase):
             time.sleep(interval)
 
             # 获取自动迁移信息
-            migrate_infos = resource_manager_client.getAutoMigrateSubtasks(jobid)
+            migrate_infos = resource_manager_client.getAutoMigrateSubtasks(jobid, True)
 
             # 逐subtask迁移
             for migrate_info in migrate_infos:

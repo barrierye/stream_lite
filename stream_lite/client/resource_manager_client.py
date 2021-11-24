@@ -125,9 +125,11 @@ class ResourceManagerClient(ClientBase):
 
         return map_df, latency_df
 
-    def getAutoMigrateSubtasks(self, jobid: str) -> List[common_pb2.MigrateInfo]:
+    def getAutoMigrateSubtasks(self, jobid: str, migrate: bool) \
+            -> List[common_pb2.MigrateInfo]:
         resp = self.stub.getAutoMigrateSubtasks(
-                resource_manager_pb2.GetAutoMigrateSubtasksRequest(jobid=jobid))
+                resource_manager_pb2.GetAutoMigrateSubtasksRequest(
+                    jobid=jobid, migrate=migrate))
         if resp.status.err_code != 0:
             raise Exception(resp.status.message)
         return list(resp.infos)
