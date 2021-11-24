@@ -304,7 +304,7 @@ class SpecificJobInfo(object):
             new_partition_idx: int,
             new_endpoint: str,
             register: bool = True) -> None:
-        if self.ack_table.has_event(migrate_id):
+        if register and self.ack_table.has_event(migrate_id):
             raise KeyError(
                     "Failed: migrate(id={}) already exists".format(migrate_id))
         for task_manager_name, tasks in self.source_ops.items():
