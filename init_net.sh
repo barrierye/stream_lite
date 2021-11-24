@@ -35,9 +35,9 @@ elif [ "$hostname" == "84" ]; then
     echo "give 192.168.105.39 (30+t)ms latency"
     set_latency 39 192.168.105.39 30
     echo "give 192.168.105.40 (30+|t-10|)ms latency"
-    set_latency 40 192.168.105.40 30
-    echo "give 192.168.105.83 (30+|t-20|)ms latency"
-    set_latency 83 192.168.105.83 30
+    set_latency 40 192.168.105.40 40
+    echo "give 192.168.105.83 5000ms latency"
+    set_latency 83 192.168.105.83 5000
 elif [ "$hostname" == "39" ]; then
     init_env
     echo "give 192.168.105.40 5000ms latency"
