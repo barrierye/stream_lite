@@ -132,7 +132,7 @@ class ResourceManagerServicer(resource_manager_pb2_grpc.ResourceManagerServiceSe
 
         if is_migrate:
             # update execute_task_table
-            for migrate_info in migrate_infos:
+            for migrate_info in migrate_info_list:
                 subtask_name = scheduler.Scheduler._get_subtask_name(
                         migrate_info.src_cls_name, 0, migrate_info.src_currency) # TODO: index=0
                 info = self.execute_task_table.get_info(subtask_name)
