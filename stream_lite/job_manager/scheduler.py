@@ -106,6 +106,10 @@ class UserDefinedScheduler(Scheduler):
                     execute_map[task_manager_name].append(execute_task)
                     name_to_executetask[subtask_name] = execute_task
     
+        total_logical_tasks = []
+        for logical_tasks in logical_map.values():
+            total_logical_tasks.extend(logical_tasks)
+
         for logical_tasks in logical_map.values():
             for logical_task in logical_tasks:
                 cls_name = logical_task.cls_name
@@ -114,7 +118,7 @@ class UserDefinedScheduler(Scheduler):
                 for input_task_name in logical_task.input_tasks:
                     # 找前继节点: 获取并发数
                     predecessor = None
-                    for task_i in logical_tasks:
+                    for task_i in total_logical_tasks:
                         if task_i.cls_name == input_task_name:
                             predecessor = task_i
                             break
