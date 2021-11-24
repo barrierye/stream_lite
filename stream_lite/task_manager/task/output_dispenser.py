@@ -125,7 +125,8 @@ class OutputDispenser(object):
                     terminate_partition_idx = terminate.partition_idx
                     terminate_subtask_name = terminate.subtask_name
                     if terminate_cls_name == downstream_cls_names[0]:
-                        _LOGGER.info("[{}] going to terminate...".format(self.subtask_name))
+                        _LOGGER.info("[{}] going to close downstream({}) connect...".format(
+                            self.subtask_name, terminate_cls_name))
                         assert len(partitions[terminate_partition_idx]) == 2
                         dispenser = partitions[migrate_partition_idx].pop(0)
                         dispenser.close()

@@ -545,6 +545,7 @@ class JobManagerServicer(job_manager_pb2_grpc.JobManagerServiceServicer):
         self.job_coordinator.block_util_terminate_completed(
                 jobid=jobid,
                 terminate_id=terminate_id)
+        _LOGGER.info("FINISH terminate!")
 
     # --------------------------- acknowledge migrate ----------------------------
     def acknowledgeMigrate(self, request, context):
