@@ -1,7 +1,7 @@
 1. ?
 
 2. 获取做迁移的计算结果
-  a. 在worker88启动JM和TM:
+  a. 在worker83启动JM:
        python start_job_manager.py
      在worker38启动TM:
        python start_task_manager.py conf/task_manager38.yaml

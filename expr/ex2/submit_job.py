@@ -22,7 +22,7 @@ if __name__ == '__main__':
     step = sys.argv[2]
 
     client = UserClient()
-    client.connect('192.168.105.38:8970')
+    client.connect('192.168.105.83:8970')
     
     if step == "step1":
         exit(1)

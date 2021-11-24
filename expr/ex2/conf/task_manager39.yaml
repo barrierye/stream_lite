@@ -1,4 +1,4 @@
-resource_manager_enpoint: "192.168.105.38:8975"
+resource_manager_enpoint: "192.168.105.83:8975"
 name: TM_39
 coord:
   x: 116.405419
