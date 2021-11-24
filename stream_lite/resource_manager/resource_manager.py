@@ -19,6 +19,7 @@ from stream_lite import client
 from stream_lite.network.util import gen_nil_response
 from stream_lite.network import serializator
 from stream_lite.utils import JobIdGenerator, EventIdGenerator
+from stream_lite.job_manager import scheduler
 
 from .peer_latency_table import PeerLatencyTable
 from .execute_task_table import ExecuteTaskTable
