@@ -34,14 +34,6 @@ if __name__ == '__main__':
                 yaml_path=conf_path, 
                 periodicity_checkpoint_interval_s=5,
                 auto_migrate=True)
-        exit(0)
-        time.sleep(1)
-        client.triggerMigrate(
-                jobid=jobid, 
-                src_cls_name="SumOp",
-                src_partition_idx=0,
-                src_currency=1,
-                target_task_manager_locate="TM_39")
     else:
         _LOGGER.fatal("stepN cannot be: {}".format(step))
         exit(-1)
