@@ -300,7 +300,8 @@ class SpecificJobInfo(object):
             resource_manager_client: ResourceManagerClient,
             new_cls_name: str,
             new_partition_idx: int,
-            new_endpoint: str) -> None:
+            new_endpoint: str,
+            register: bool = True) -> None:
         if self.ack_table.has_event(migrate_id):
             raise KeyError(
                     "Failed: migrate(id={}) already exists".format(migrate_id))
@@ -316,7 +317,8 @@ class SpecificJobInfo(object):
                         new_cls_name,
                         new_partition_idx,
                         new_endpoint)
-        self.ack_table.register_pending_event(migrate_id)
+        if register:
+            self.ack_table.register_pending_event(migrate_id)
 
     def _inner_trigger_migrate(self,
             subtask_ip: str,

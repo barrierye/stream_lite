@@ -517,20 +517,24 @@ class JobManagerServicer(job_manager_pb2_grpc.JobManagerServiceServicer):
                      "start send data to the new subtask.")
         if migrate_id == -1:
             migrate_id = EventIdGenerator().next()
+
+        # 在创建pending_migrate_sync前就已sync，会引发bug. 
+        self.job_coordinator.register_pending_migrate_sync(jobid, migrate_id)
+
         self.job_coordinator.trigger_migrate(
                 jobid=jobid, 
                 new_cls_name=src_cls_name, 
                 new_partition_idx=src_partition_idx,
                 new_endpoint=exe_task_endpoint,
-                migrate_id=migrate_id)
-        self.job_coordinator.block_util_migrate_completed(
-                jobid=jobid,
-                migrate_id=migrate_id)
- 
-        # TODO: 在创建pending_migrate_sync前就已sync，会引发bug. 
-        # 暂时调整输入速率来缓解bug
-        _LOGGER.info("step 4: block util migrate sync")
-        self.job_coordinator.register_pending_migrate_sync(jobid, migrate_id)
+                migrate_id=migrate_id,
+                register=False)
+
+        # 在创建pending_migrate_sync前就已sync，会引发bug. 
+        # self.job_coordinator.block_util_migrate_completed(
+        #       jobid=jobid,
+        #       migrate_id=migrate_id)
+        
+        _LOGGER.info("step 4: block util migrate sync (and wait for migrate_completed)")
         self.job_coordinator.block_util_migrate_sync(jobid, migrate_id)
 
         _LOGGER.info("step 5: terminate old subtask")
