@@ -400,8 +400,8 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
                 partition_key: int) -> None:
             if is_sink_op:
                 now_timestamp = util.get_timestamp()
-                _LOGGER.info("P[{}] latency: {}ms".format(
-                    data_id, now_timestamp - timestamp))
+                #_LOGGER.info("P[{}] latency: {}ms".format(
+                #    data_id, now_timestamp - timestamp))
                 return
             output = serializator.SerializableData.from_object(
                     output_data, data_type=data_type)
@@ -792,6 +792,7 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
         """
         只有 SourceOp 才会被调用该函数
         """
+        _LOGGER.info("recv terminate!")
         terminate = request.terminate_subtask
         seri_data = serializator.SerializableRecord(
                 data_id="terminate_data_id",
