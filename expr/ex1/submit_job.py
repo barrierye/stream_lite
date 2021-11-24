@@ -33,7 +33,8 @@ if __name__ == '__main__':
         jobid = client.submitJob(
                 yaml_path=conf_path, 
                 periodicity_checkpoint_interval_s=1,
-                auto_migrate=False)
+                auto_migrate=True)
+        exit(0)
         time.sleep(1)
         client.triggerMigrate(
                 jobid=jobid, 
