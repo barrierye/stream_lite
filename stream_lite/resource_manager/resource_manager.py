@@ -137,7 +137,7 @@ class ResourceManagerServicer(resource_manager_pb2_grpc.ResourceManagerServiceSe
                 subtask_name = scheduler.Scheduler._get_subtask_name(
                         migrate_info.src_cls_name, 0, migrate_info.src_currency) # TODO: index=0
                 info = self.execute_task_table.get_info(subtask_name)
-                info.task_manager_name = migrate_info.task_manager_name
+                info.task_manager_name = migrate_info.target_task_manager_locate
                 self.execute_task_table.update_exec_task_info(subtask_name, info)
 
         '''
