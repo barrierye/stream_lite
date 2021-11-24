@@ -70,7 +70,8 @@ class JobCoordinator(object):
             new_cls_name: str,
             new_partition_idx: int,
             new_endpoint: str,
-            migrate_id: int) -> None:
+            migrate_id: int,
+            register: bool = True) -> None:
         with self.rw_lock_pair.gen_wlock():
             if jobid not in self.table:
                 raise KeyError(
@@ -80,7 +81,8 @@ class JobCoordinator(object):
                     self.resource_manager_client,
                     new_cls_name,
                     new_partition_idx,
-                    new_endpoint)
+                    new_endpoint,
+                    register)
 
     def register_pending_migrate_sync(self,
             jobid: str,
