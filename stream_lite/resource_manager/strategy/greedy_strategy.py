@@ -62,7 +62,7 @@ class GreedyStrategy(StrategyBase):
                         maxL = max(maxL, latency)
                 if len(newQue) == 0:
                     break
-                if maxL <= 0:
+                if maxL <= 0 and len(chain_graph) >= 1:
                     # 在同一台机器上
                     last = chain_graph.pop(-1)
                     last_set, last_maxL = last
