@@ -50,6 +50,7 @@ message GetAllTaskManagerDescResponse {
 
 message GetAutoMigrateSubtasksRequest {
   required string jobid = 1;
+  required bool migrate = 2;
 }
 
 message GetAutoMigrateSubtasksResponse {

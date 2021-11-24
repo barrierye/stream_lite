@@ -116,10 +116,10 @@ class ResourceManagerServicer(resource_manager_pb2_grpc.ResourceManagerServiceSe
     # --------------------------- getAutoMigrateSubtasks ----------------------------
     def getAutoMigrateSubtasks(self, request, context):
         jobid = request.jobid
+        is_migrate = request.migrate
         
-        # TODO
         # 自动迁移逻辑
-        print(">>> run auto")
+        _LOGGER.info("analyzing execute path...")
         try:
             migrate_info_list = GreedyStrategy.get_migrate_infos(
                     jobid,
@@ -127,9 +127,17 @@ class ResourceManagerServicer(resource_manager_pb2_grpc.ResourceManagerServiceSe
                     self.latency_table)
         except Exception as e:
             _LOGGER.error(e, exc_info=True)
-        print(">>> finish auto")
 
         print(migrate_info_list)
+
+        if is_migrate:
+            # update execute_task_table
+            for migrate_info in migrate_infos:
+                subtask_name = scheduler.Scheduler._get_subtask_name(
+                        migrate_info.src_cls_name, 0, migrate_info.src_currency) # TODO: index=0
+                info = self.execute_task_table.get_info(subtask_name)
+                info.task_manager_name = migrate_info.task_manager_name
+                self.execute_task_table.update_exec_task_info(subtask_name, info)
 
         '''
         # mock
