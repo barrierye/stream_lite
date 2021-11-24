@@ -1,0 +1,18 @@
+tasks:
+  - name: SimpleSource
+    currency: 1
+    resources: [resources/document-words.txt]
+    locate: TM_84
+  - name: KeyByInputOp
+    currency: 1
+    input_tasks: [SimpleSource]
+    locate: TM_39
+  - name: SumOp
+    currency: 1
+    input_tasks: [KeyByInputOp]
+    locate: TM_39
+  - name: SimpleSink
+    currency: 1
+    input_tasks: [SumOp]
+    locate: TM_38
+task_files_dir: resources/task_source_files
