@@ -124,6 +124,9 @@ class OutputDispenser(object):
                     terminate_cls_name = terminate.cls_name
                     terminate_partition_idx = terminate.partition_idx
                     terminate_subtask_name = terminate.subtask_name
+                    _LOGGER.info(
+                            "[{}] get terminate ({})...".format(
+                                self.subtask_name, terminate_cls_name))
                     if terminate_cls_name == downstream_cls_names[0]:
                         _LOGGER.info("[{}] going to close downstream({}) connect...".format(
                             self.subtask_name, terminate_cls_name))
