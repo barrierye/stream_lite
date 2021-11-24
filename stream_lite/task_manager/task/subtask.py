@@ -399,6 +399,9 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
                 timestamp: int,
                 partition_key: int) -> None:
             if is_sink_op:
+                now_timestamp = util.get_timestamp()
+                _LOGGER.info("P[{}] latency: {}ms".format(
+                    data_id, now_timestamp - timestamp))
                 return
             output = serializator.SerializableData.from_object(
                     output_data, data_type=data_type)
