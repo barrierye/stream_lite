@@ -60,10 +60,16 @@ class GreedyStrategy(StrategyBase):
                         latency = latency_table.get_latency(
                                 curr_task_manager_name, next_task_manager_name)
                         maxL = max(maxL, latency)
-                total_latency += maxL
-                chain_graph.append((curr_set, maxL))
                 if len(newQue) == 0:
                     break
+                if maxL <= 0:
+                    # 在同一台机器上
+                    last = chain_graph.pop(-1)
+                    last_set, last_maxL = last
+                    chain_graph.append((last_set | curr_set, last_maxL))
+                else:
+                    total_latency += maxL
+                    chain_graph.append((curr_set, maxL))
                 que = newQue
 
             # 2. 最短路
