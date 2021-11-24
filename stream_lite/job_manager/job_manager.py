@@ -564,11 +564,12 @@ class JobManagerServicer(job_manager_pb2_grpc.JobManagerServiceServicer):
         if request.subtask_name.endswith("@MIGRATE"):
             return gen_nil_response()
 
-        succ = self.job_coordinator.acknowledgeMigrate(request)
-        if succ:
-            _LOGGER.info(
-                    "Success to complete migrate(id={}) of job(id={})"
-                    .format(request.migrate_id, request.jobid))
+        # TODO
+        #succ = self.job_coordinator.acknowledgeMigrate(request)
+        #if succ:
+        #    _LOGGER.info(
+        #            "Success to complete migrate(id={}) of job(id={})"
+        #            .format(request.migrate_id, request.jobid))
         return gen_nil_response()
 
     # --------------------------- notify migrate synchron ----------------------------
