@@ -8,8 +8,6 @@
        python start_task_manager.py conf/task_manager39.yaml
      在worker40启动TM:
        python start_task_manager.py conf/task_manager40.yaml
-     在worker83启动TM:
-       python start_task_manager.py conf/task_manager83.yaml
      在worker84启动TM:
        python start_task_manager.py conf/task_manager84.yaml
   b. 提交word-count程序, 该程序自动触发迁移操作:
