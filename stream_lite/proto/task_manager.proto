@@ -40,7 +40,7 @@ message TestLatencyResponse {
 }
 
 message PreCopyStateRequest {
-  required common.File state_files = 1;
+  required common.File state_file = 1;
   required string jobid = 2;
   required int32 checkpoint_id = 3;
   required string cls_name = 4;
