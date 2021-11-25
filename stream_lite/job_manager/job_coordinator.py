@@ -232,7 +232,9 @@ class SpecificJobInfo(object):
     def trigger_checkpoint(self, 
             checkpoint_id: int,
             resource_manager_client: ResourceManagerClient,
-            cancel_job: bool) -> None:
+            cancel_job: bool,
+            migrate_cls_name: str,
+            migrate_partition_idx: int) -> None:
         if self.ack_table.has_event(checkpoint_id):
             raise KeyError(
                     "Failed: checkpoint(id={}) already exists".format(checkpoint_id))
@@ -245,7 +247,10 @@ class SpecificJobInfo(object):
                         subtask_port=task.port, 
                         subtask_name=task.subtask_name,
                         checkpoint_id=checkpoint_id,
-                        cancel_job=cancel_job)
+                        cancel_job=cancel_job,
+                        migrate_cls_name=migrate_cls_name,
+                        migrate_partition_idx=migrate_partition_idx,
+                        trigger_checkpoint_for_migrate=False)
         self.ack_table.register_pending_event(checkpoint_id)
 
     def trigger_checkpoint_for_migrate(self,
@@ -269,7 +274,8 @@ class SpecificJobInfo(object):
                         subtask_name=task.subtask_name,
                         checkpoint_id=checkpoint_id,
                         migrate_cls_name=migrate_cls_name,
-                        migrate_partition_idx=migrate_partition_idx)
+                        migrate_partition_idx=migrate_partition_idx,
+                        trigger_checkpoint_for_migrate=True)
         self.ack_table.register_pending_event(checkpoint_id)
 
     def _inner_trigger_checkpoint(self, 
@@ -278,17 +284,19 @@ class SpecificJobInfo(object):
             subtask_name: str,
             checkpoint_id: int,
             cancel_job: bool = False,
+            trigger_checkpoint_for_migrate: bool,
             migrate_cls_name: Union[None, List[str]] = None,
             migrate_partition_idx: Union[None, List[List[int]]] = None) -> None:
         subtask_endpoint = "{}:{}".format(subtask_ip, subtask_port)
         client = SubTaskClient()
         client.connect(subtask_endpoint)
-        if migrate_cls_name is None and migrate_partition_idx is None:
+        if not trigger_checkpoint_for_migrate:
             # checkpoint
             _LOGGER.info(
                     "Try to trigger checkpoint(id={}) for subtask [{}] (endpoint={})"
                     .format(checkpoint_id, subtask_name, subtask_endpoint))
-            client.triggerCheckpoint(checkpoint_id, cancel_job)
+            client.triggerCheckpoint(checkpoint_id, cancel_job,
+                    migrate_cls_name, migrate_partition_idx)
         else:
             # checkpoint prepare for migrate
             _LOGGER.info(

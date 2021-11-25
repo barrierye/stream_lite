@@ -309,7 +309,9 @@ class JobManagerServicer(job_manager_pb2_grpc.JobManagerServiceServicer):
             self.job_coordinator.trigger_checkpoint(
                     jobid=jobid, 
                     checkpoint_id=checkpoint_id, 
-                    cancel_job=request.cancel_job)
+                    cancel_job=request.cancel_job,
+                    migrate_cls_name=request.migrate_cls_name,
+                    migrate_partition_idx=request.migrate_partition_idx)
             self.job_coordinator.block_util_checkpoint_completed(
                     jobid=jobid,
                     checkpoint_id=checkpoint_id)
