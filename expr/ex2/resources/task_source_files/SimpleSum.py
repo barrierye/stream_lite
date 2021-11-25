@@ -11,7 +11,7 @@ from stream_lite import OperatorBase
 class SimpleSum(OperatorBase):
 
     def __init__(self):
-        super(SumOp, self).__init__()
+        super(SimpleSum, self).__init__()
         self.counter = {}
         self.register_var("counter")
 
