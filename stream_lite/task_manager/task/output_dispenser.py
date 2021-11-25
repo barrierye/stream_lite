@@ -8,6 +8,7 @@ import threading
 import multiprocessing
 import time
 import grpc
+import Queue
 from typing import List, Dict, Union
 
 from stream_lite.proto import common_pb2
@@ -76,6 +77,7 @@ class OutputDispenser(object):
         for idx, endpoint in enumerate(output_endpoints):
             output_partition_dispenser = OutputPartitionDispenser(
                     endpoint, subtask_name, partition_idx)
+            output_partition_dispenser.run_on_standalone_thread()
             partitions[idx] = [output_partition_dispenser]
 
         partition_num = len(partitions)
@@ -117,6 +119,7 @@ class OutputDispenser(object):
                     new_endpoint = migrate.new_endpoint
                     if new_cls_name == downstream_cls_names[0]:
                         partitions[new_partition_idx][1].connect(new_endpoint)
+                        partitions[new_partition_idx][1].run_on_standalone_thread()
                 elif seri_record.data_type == common_pb2.Record.DataType.TERMINATE_SUBTASK:
                     # terminate event: 上游关闭与旧 subtask 的连接，旧 subtask 停止
                     terminate = seri_record.data.data
@@ -177,8 +180,10 @@ class OutputPartitionDispenser(object):
         self.client = SubTaskClient()
 
         self.is_connect_completed = False # 完成下游节点连接
-        self.data_buffer = []
+        self.data_buffer = Queue.Queue()
         self.connect(endpoint)
+
+        self._standalone_thread = None
 
     def connect(self, endpoint: Union[None, str]) -> bool:
         if endpoint:
@@ -190,23 +195,30 @@ class OutputPartitionDispenser(object):
             
     def push_data(self, record: serializator.SerializableRecord) -> None:
         # 这里可能会把 event 放入 buffer，但没有啥影响
-        self.data_buffer.append(record)
-        if self.is_connect_completed:
-            while True:
-                try:
-                    for data in self.data_buffer:
-                        self.client.pushRecord(
-                                    from_subtask=self.subtask_name,
-                                    partition_idx=self.partition_idx,
-                                    record=data.instance_to_proto())
-                    self.data_buffer = []
-                    break
-                except grpc._channel._InactiveRpcError as e:
-                    _LOGGER.warning(
-                            "Failed to push data: Maybe downstream not prepared"
-                            " yet, wait for 10ms...")
-                    time.sleep(0.01)
+        self.data_buffer.put(record)
+
+    def run_on_standalone_thread(self) -> None:
+        if self._standalone_thread:
+            raise RuntimeError("")
+        self._standalone_thread = threading.Thread(
+                target=self._inner_push_data,
+                args=(self.data_buffer, ))
+        self._standalone_thread.start()
+
+    def _inner_push_data(self, data_buffer: Queue.Queue) -> None:
+        while True:
+            data = data_buffer.get()
+            try:
+                self.client.pushRecord(
+                            from_subtask=self.subtask_name,
+                            partition_idx=self.partition_idx,
+                            record=data.instance_to_proto())
+            except grpc._channel._InactiveRpcError as e:
+                _LOGGER.warning(
+                        "Failed to push data: Maybe downstream not prepared"
+                        " yet, wait for 10ms...")
+                time.sleep(0.01)
 
     def close(self) -> None:
-        #TODO: close OutputPartitionDispenser
+        #TODO: close OutputPartitionDispenser, 线程阻塞
         pass
