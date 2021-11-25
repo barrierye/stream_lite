@@ -42,7 +42,7 @@ class PeriodicExecutorBase(object):
             self._inner_run(**kwargs)
         except Exception as e:
             _LOGGER.critical(
-                    "Failed to run heartbeat helper ({})".format(e), exc_info=True)
+                    "Failed to run helper ({})".format(e), exc_info=True)
             os._exit(-1)
 
     def run_on_standalone_process(self, is_process: bool) -> None:

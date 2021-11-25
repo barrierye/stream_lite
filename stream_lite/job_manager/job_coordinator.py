@@ -283,8 +283,8 @@ class SpecificJobInfo(object):
             subtask_port: int, 
             subtask_name: str,
             checkpoint_id: int,
-            cancel_job: bool = False,
             trigger_checkpoint_for_migrate: bool,
+            cancel_job: bool = False,
             migrate_cls_name: Union[None, List[str]] = None,
             migrate_partition_idx: Union[None, List[List[int]]] = None) -> None:
         subtask_endpoint = "{}:{}".format(subtask_ip, subtask_port)
