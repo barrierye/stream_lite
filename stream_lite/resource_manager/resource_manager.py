@@ -128,6 +128,7 @@ class ResourceManagerServicer(resource_manager_pb2_grpc.ResourceManagerServiceSe
                     self.latency_table)
         except Exception as e:
             _LOGGER.error(e, exc_info=True)
+            migrate_info_list = []
 
         print(migrate_info_list)
 
