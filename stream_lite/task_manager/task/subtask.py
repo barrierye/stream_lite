@@ -695,6 +695,8 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
         """
         每个 subtask 执行 migrate 操作
         """
+        return
+        #TODO: skipping
         # (这部分操作在 output_dispenser 处理): 
         #   1. new_subtask_name 上游的 task 与之建立连接
         SubTaskServicer._acknowledge_migrate(
