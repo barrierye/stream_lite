@@ -38,8 +38,8 @@ class ServerBase(object):
     def _inner_run(self):
         server = grpc.server(
                 futures.ThreadPoolExecutor(max_workers=self.worker_num),
-                options=[('grpc.max_send_message_length', 256 * 1024 * 1024),
-                    ('grpc.max_receive_message_length', 256 * 1024 * 1024)])
+                options=[('grpc.max_send_message_length', 512 * 1024 * 1024),
+                    ('grpc.max_receive_message_length', 512 * 1024 * 1024)])
         self.init_service(server)
 
         # 一些 Server 在初始化时候需要更新端口
