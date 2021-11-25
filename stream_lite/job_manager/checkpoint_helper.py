@@ -199,7 +199,7 @@ class PrecopyAndMigrateHelper(PeriodicExecutorBase):
             migrate_infos = resource_manager_client.getAutoMigrateSubtasks(jobid, True)
 
             # TODO
-            assert len(migrate_infos) == 1
+            assert len(migrate_infos) <= 1
 
             # checkpoint
             checkpoint_id = job_manager_client.triggerCheckpoint(
