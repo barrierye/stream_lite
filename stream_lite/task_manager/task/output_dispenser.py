@@ -8,7 +8,7 @@ import threading
 import multiprocessing
 import time
 import grpc
-import Queue
+import queue
 from typing import List, Dict, Union
 
 from stream_lite.proto import common_pb2
@@ -180,7 +180,7 @@ class OutputPartitionDispenser(object):
         self.client = SubTaskClient()
 
         self.is_connect_completed = False # 完成下游节点连接
-        self.data_buffer = Queue.Queue()
+        self.data_buffer = queue.Queue()
         self.connect(endpoint)
 
         self._standalone_thread = None
@@ -205,7 +205,7 @@ class OutputPartitionDispenser(object):
                 args=(self.data_buffer, ))
         self._standalone_thread.start()
 
-    def _inner_push_data(self, data_buffer: Queue.Queue) -> None:
+    def _inner_push_data(self, data_buffer: queue.Queue) -> None:
         while True:
             data = data_buffer.get()
             try:
