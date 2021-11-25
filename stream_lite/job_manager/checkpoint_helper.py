@@ -11,6 +11,7 @@ import os
 from stream_lite.utils import util
 from stream_lite.client import JobManagerClient
 from stream_lite.client import ResourceManagerClient
+from stream_lite.network import serializator
 
 _LOGGER = logging.getLogger(__name__)
 

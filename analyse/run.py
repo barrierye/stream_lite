@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 pattern = r".*P\[(\d+)\] latency: (\d+)ms"
 latencies = []
 
-with open("./log.txt.1") as f:
+with open("./log.txt") as f:
     for line in f:
         matchObj = re.match(pattern, line)
         if matchObj:

@@ -10,3 +10,4 @@ stream_lite.egg-info/
 test.py
 *.log
 sink.txt*
+analyse/
