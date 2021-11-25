@@ -45,6 +45,7 @@ class GreedyStrategy(StrategyBase):
             chain_graph = []
             que = [source_subtask_name]
             total_latency = 0
+            pre_combine = False
             while True:
                 maxL = -1.0
                 newQue = []
@@ -60,16 +61,22 @@ class GreedyStrategy(StrategyBase):
                         latency = latency_table.get_latency(
                                 curr_task_manager_name, next_task_manager_name)
                         maxL = max(maxL, latency)
-                if len(newQue) == 0:
-                    break
-                if maxL <= 0 and len(chain_graph) >= 1:
-                    # 在同一台机器上
+                if pre_combine:
                     last = chain_graph.pop(-1)
                     last_set, last_maxL = last
                     chain_graph.append((last_set | curr_set, last_maxL))
+                    pre_combine = False
+                else:
+                    chain_graph.append((curr_set, maxL))
+                
+                if maxL <= 0:
+                    # newQue在同一台机器上
+                    pre_combine = True
                 else:
                     total_latency += maxL
-                    chain_graph.append((curr_set, maxL))
+
+                if len(newQue) == 0:
+                    break
                 que = newQue
 
             # 2. 最短路
