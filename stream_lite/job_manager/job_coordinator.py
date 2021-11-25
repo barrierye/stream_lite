@@ -40,7 +40,9 @@ class JobCoordinator(object):
     def trigger_checkpoint(self, 
             jobid: str,
             checkpoint_id: int,
-            cancel_job: bool) -> None:
+            cancel_job: bool,
+            migrate_cls_name: str = "",
+            migrate_partition_idx: int = -1) -> None:
         with self.rw_lock_pair.gen_wlock():
             if jobid not in self.table:
                 raise KeyError(
@@ -48,7 +50,9 @@ class JobCoordinator(object):
             self.table[jobid].trigger_checkpoint(
                     checkpoint_id, 
                     self.resource_manager_client,
-                    cancel_job)
+                    cancel_job,
+                    migrate_cls_name,
+                    migrate_partition_idx)
 
     def trigger_checkpoint_for_migrate(self, 
             jobid: str,
