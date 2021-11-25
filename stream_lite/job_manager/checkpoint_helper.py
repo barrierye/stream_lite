@@ -209,6 +209,9 @@ class PrecopyAndMigrateHelper(PeriodicExecutorBase):
                     migrate_cls_name=migrate_cls_name,
                     migrate_partition_idx=migrate_partition_idx)
 
+            if migrate_infos:
+                _LOGGER.info("Doing preCopy...")
+
             # 逐subtask预备份
             for migrate_info in migrate_infos:
                 cls_name = migrate_info.src_cls_name
@@ -232,6 +235,9 @@ class PrecopyAndMigrateHelper(PeriodicExecutorBase):
                         state_file=state_file,
                         cls_name=cls_name,
                         partition_idx=partition_idx)
+            
+            if migrate_infos:
+                _LOGGER.info("Doing migrate...")
 
             # 逐subtask迁移
             for migrate_info in migrate_infos:
