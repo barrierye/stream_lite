@@ -26,15 +26,17 @@ if __name__ == '__main__':
     
     if step == "step1":
         exit(1)
-        jobid = client.submitJob(
-                yaml_path=conf_path, 
-                periodicity_checkpoint_interval_s=5,
-                auto_migrate=False)
     elif step == "step2":
         jobid = client.submitJob(
                 yaml_path=conf_path, 
                 periodicity_checkpoint_interval_s=5,
                 auto_migrate=True)
+    elif step == "step2":
+        jobid = client.submitJob(
+                yaml_path=conf_path, 
+                periodicity_checkpoint_interval_s=5,
+                auto_migrate=False,
+                enable_precopy=True)
     else:
         _LOGGER.fatal("stepN cannot be: {}".format(step))
         exit(-1)
