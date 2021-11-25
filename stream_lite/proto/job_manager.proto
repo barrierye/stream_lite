@@ -52,6 +52,7 @@ message MigrateRequest {
   required string target_task_manager_locate = 3;
   required string jobid = 4;
   required int32 src_currency = 5;
+  required int32 with_checkpoint_id = 6 [default = -1];
 }
 
 message AcknowledgeMigrateRequest {

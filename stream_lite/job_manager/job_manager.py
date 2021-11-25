@@ -413,7 +413,8 @@ class JobManagerServicer(job_manager_pb2_grpc.JobManagerServiceServicer):
                 src_cls_name=request.src_cls_name,
                 src_partition_idx=request.src_partition_idx,
                 src_currency=request.src_currency,
-                target_task_manager_locate=request.target_task_manager_locate)
+                target_task_manager_locate=request.target_task_manager_locate,
+                with_checkpoint_id=request.with_checkpoint_id)
         except Exception as e:
             _LOGGER.error(e, exc_info=True)
             return gen_nil_response(
@@ -425,17 +426,25 @@ class JobManagerServicer(job_manager_pb2_grpc.JobManagerServiceServicer):
             src_cls_name: str,
             src_partition_idx: int,
             src_currency: int,
-            target_task_manager_locate: str) -> None:
-        _LOGGER.info("step 1: checkpoint for migrate")
-        checkpoint_id = EventIdGenerator().next()
-        self.job_coordinator.trigger_checkpoint_for_migrate(
-                jobid=jobid, 
-                checkpoint_id=checkpoint_id, 
-                migrate_cls_name=src_cls_name,
-                migrate_partition_idx=src_partition_idx)
-        self.job_coordinator.block_util_checkpoint_completed(
-                jobid=jobid,
-                checkpoint_id=checkpoint_id)
+            target_task_manager_locate: str,
+            with_checkpoint_id: int) -> None:
+        if with_checkpoint_id == -1:
+            _LOGGER.info("step 1: checkpoint for migrate")
+            checkpoint_id = EventIdGenerator().next()
+            self.job_coordinator.trigger_checkpoint_for_migrate(
+                    jobid=jobid, 
+                    checkpoint_id=checkpoint_id, 
+                    migrate_cls_name=src_cls_name,
+                    migrate_partition_idx=src_partition_idx)
+            self.job_coordinator.block_util_checkpoint_completed(
+                    jobid=jobid,
+                    checkpoint_id=checkpoint_id)
+            migrate_id = checkpoint_id
+            with_file_state = True
+        else:
+            checkpoint_id = with_checkpoint_id
+            migrate_id = EventIdGenerator().next()
+            with_file_state = False
 
         self._inner_trigger_migrate_without_checkpoint(
                 jobid=jobid,
@@ -444,8 +453,8 @@ class JobManagerServicer(job_manager_pb2_grpc.JobManagerServiceServicer):
                 src_currency=src_currency,
                 target_task_manager_locate=target_task_manager_locate,
                 checkpoint_id=checkpoint_id,
-                with_file_state=True,
-                migrate_id=checkpoint_id)
+                with_file_state=with_file_state,
+                migrate_id=migrate_id)
 
     def _inner_trigger_migrate_without_checkpoint(self,
             jobid: str,
