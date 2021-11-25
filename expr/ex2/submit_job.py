@@ -10,6 +10,8 @@ import sys
 
 from stream_lite import UserClient
 
+_LOGGER = logging.getLogger(__name__)
+
 if __name__ == '__main__':
     logging.basicConfig(
             format='%(asctime)s %(levelname)-8s [%(filename)s:%(lineno)d] %(message)s',
@@ -31,7 +33,7 @@ if __name__ == '__main__':
                 yaml_path=conf_path, 
                 periodicity_checkpoint_interval_s=5,
                 auto_migrate=True)
-    elif step == "step2":
+    elif step == "step3":
         jobid = client.submitJob(
                 yaml_path=conf_path, 
                 periodicity_checkpoint_interval_s=5,
