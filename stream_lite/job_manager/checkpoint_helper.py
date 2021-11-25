@@ -226,6 +226,11 @@ class PrecopyAndMigrateHelper(PeriodicExecutorBase):
                 # snapshot_dir = "./_tmp/jm/jobid_{}/snapshot/{}/partition_{}"
                 file_name = "chk_{}".format(checkpoint_id)
                 state_path = snapshot_dir.format(jobid, cls_name, partition_idx)
+                while True:
+                    if os.path.exists(
+                            os.path.join(state_path, file_name)):
+                        break
+                    time.sleep(0.1)
                 state_file = serializator.SerializableFile.to_proto(
                         path=os.path.join(state_path, file_name), name=file_name)
 
