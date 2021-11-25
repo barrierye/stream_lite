@@ -253,6 +253,7 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
         task_instance = cls()
         task_instance.set_name(subtask_name)
         task_instance.init(resource_path_dict)
+        _LOGGER.info("snapshot_dir: {}".format(snapshot_dir))
 
         # restore from checkpoint (load state)
         if state_pb is not None:
