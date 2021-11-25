@@ -200,12 +200,14 @@ class PrecopyAndMigrateHelper(PeriodicExecutorBase):
 
             # TODO
             assert len(migrate_infos) <= 1
+            migrate_cls_name = migrate_infos[0].src_cls_name if len(migrate_infos) == 1 else ""
+            migrate_partition_idx = migrate_infos[0].src_partition_idx if len(migrate_infos) == 1 else -1
 
             # checkpoint
             checkpoint_id = job_manager_client.triggerCheckpoint(
                     jobid=jobid, cancel_job=False,
-                    migrate_cls_name=migrate_infos[0].src_cls_name,
-                    migrate_partition_idx=migrate_infos[0].src_partition_idx)
+                    migrate_cls_name=migrate_cls_name,
+                    migrate_partition_idx=migrate_partition_idx)
 
             # 逐subtask预备份
             for migrate_info in migrate_infos:
