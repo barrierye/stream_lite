@@ -17,7 +17,7 @@ class SimpleSource(SourceOperatorBase):
         self.register_var("counter")
 
     def compute(self, inputs):
-        time.sleep(0.2)
+        time.sleep(0.08)
         if self.counter < len(self.lines):
             word = self.lines[self.counter].strip()
             self.counter += 1
