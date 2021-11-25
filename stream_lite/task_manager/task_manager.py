@@ -49,7 +49,8 @@ class TaskManagerServicer(task_manager_pb2_grpc.TaskManagerServiceServicer):
         _LOGGER.info("[{}] Start HeartbeatHelper".format(self.name))
         self.heart_beat_helper.run_on_standalone_process(stream_lite.config.IS_PROCESS)
         # jobid, cls_name, partition_idx
-        self.snapshot_dir = "_tmp/tm/{}".format(self.name) + "/jobid_{}/{}/partition_{}/snapshot"
+        self.snapshot_dir = "_tmp/tm/{}".format(self.name) 
+        self.snapshot_dir += "/jobid_{}/{}/partition_{}/snapshot"
 
     def _init_by_yaml(self, conf_yaml_path: str) -> dict:
         with open(conf_yaml_path) as f:
