@@ -39,6 +39,13 @@ if __name__ == '__main__':
                 periodicity_checkpoint_interval_s=5,
                 auto_migrate=False,
                 enable_precopy=True)
+        time.sleep(10)
+        client.triggerMigrate(
+                jobid=jobid,
+                src_cls_name="SimpleSum",
+                src_partition_idx=0,
+                src_currency=1,
+                target_task_manager_locate="TM_40")
     else:
         _LOGGER.fatal("stepN cannot be: {}".format(step))
         exit(-1)
