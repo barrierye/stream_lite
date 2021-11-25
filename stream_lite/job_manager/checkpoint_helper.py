@@ -195,12 +195,17 @@ class PrecopyAndMigrateHelper(PeriodicExecutorBase):
         while True:
             time.sleep(interval)
             
-            # checkpoint
-            checkpoint_id = job_manager_client.triggerCheckpoint(
-                    jobid=jobid, cancel_job=False)
-            
             # 获取自动迁移信息
             migrate_infos = resource_manager_client.getAutoMigrateSubtasks(jobid, True)
+
+            # TODO
+            assert len(migrate_infos) == 1
+
+            # checkpoint
+            checkpoint_id = job_manager_client.triggerCheckpoint(
+                    jobid=jobid, cancel_job=False,
+                    migrate_cls_name=migrate_infos[0].src_cls_name,
+                    migrate_partition_idx=migrate_infos[0].src_partition_idx)
 
             # 逐subtask预备份
             for migrate_info in migrate_infos:

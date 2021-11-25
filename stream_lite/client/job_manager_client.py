@@ -27,11 +27,15 @@ class JobManagerClient(ClientBase):
 
     def triggerCheckpoint(self, 
             jobid: str, 
-            cancel_job: bool = False) -> int:
+            cancel_job: bool = False,
+            migrate_cls_name: str = "",
+            migrate_partition_idx: int = -1) -> int:
         resp = self.stub.triggerCheckpoint(
                 job_manager_pb2.TriggerCheckpointRequest(
                     jobid=jobid,
-                    cancel_job=cancel_job))
+                    cancel_job=cancel_job,
+                    migrate_cls_name=migrate_cls_name,
+                    migrate_partition_idx=migrate_partition_idx))
         if resp.status.err_code != 0:
             raise Exception(resp.status.message)
         '''
