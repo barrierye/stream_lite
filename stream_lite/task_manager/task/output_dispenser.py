@@ -110,7 +110,20 @@ class OutputDispenser(object):
                                     subtask_name=subtask_name,
                                     partition_idx=partition_idx))
                 elif seri_record.data_type == common_pb2.Record.DataType.CHECKPOINT:
-                    pass
+                    # 与checkpoint_prepare_for_migrate类似，为下游 task 创建新的 dispenser
+                    # 与之不同的是，新的checkpoint会替换掉旧的dispenser
+                    checkpoint_prepare_for_migrate = seri_record.data.data
+                    migrate_cls_name = checkpoint_prepare_for_migrate.migrate_cls_name
+                    migrate_partition_idx = checkpoint_prepare_for_migrate.migrate_partition_idx
+                    if migrate_cls_name == downstream_cls_names[0]:
+                        assert len(partitions[migrate_partition_idx]) <= 2
+                        if len(partitions[migrate_partition_idx]) == 2:
+                            partitions[migrate_partition_idx].pop(-1)
+                        partitions[migrate_partition_idx].append(
+                                OutputPartitionDispenser(
+                                    endpoint=None,
+                                    subtask_name=subtask_name,
+                                    partition_idx=partition_idx))
                 elif seri_record.data_type == common_pb2.Record.DataType.MIGRATE:
                     # migrate event: 启动之前创建的 dispenser 
                     migrate = seri_record.data.data

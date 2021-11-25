@@ -24,7 +24,7 @@ import stream_lite.utils.util
 from stream_lite.server.resource_manager_server import ResourceManager
 
 from . import scheduler
-from .checkpoint_helper import CheckpointHelper, MigrateHelper
+from .checkpoint_helper import CheckpointHelper, MigrateHelper, PrecopyAndMigrateHelper
 from .job_coordinator import JobCoordinator, PendingForNotify
 
 _LOGGER = logging.getLogger(__name__)
@@ -142,8 +142,9 @@ class JobManagerServicer(job_manager_pb2_grpc.JobManagerServiceServicer):
                         is_process=stream_lite.config.IS_PROCESS)
             else:
                 if self.enable_precopy:
-                    # 周期性地 checkpoint & 预迁移状态
-                    self.periodic_executor_helper = CheckpointHelper(
+                    # 周期性地 checkpoint & 预迁移状态, 然后migrate
+                    #  self.periodic_executor_helper = CheckpointHelper(
+                    self.periodic_executor_helper = PrecopyAndMigrateHelper(
                             jobid=jobid,
                             job_manager_endpoint=self.addr,
                             resource_manager_enpoint=self.resource_manager_enpoint,
