@@ -175,7 +175,7 @@ class PrecopyAndMigrateHelper(PeriodicExecutorBase):
             resource_manager_enpoint: str,
             snapshot_dir: str,
             interval: int = 5):
-        super(CheckpointHelper, self).__init__(
+        super(PrecopyAndMigrateHelper, self).__init__(
                 jobid, job_manager_endpoint, resource_manager_enpoint, interval)
         self._params_dict["snapshot_dir"] = snapshot_dir
 
