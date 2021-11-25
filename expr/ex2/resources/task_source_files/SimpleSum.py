@@ -20,6 +20,7 @@ class SimpleSum(OperatorBase):
         self.register_var("useless_state")
 
     def compute(self, data: str) -> Tuple[str, int]:
+        time.sleep(0.02)
         if data not in self.counter:
             self.counter[data] = 0
         self.counter[data] += 1

@@ -15,7 +15,7 @@ function set_latency() {
     to_ip=$2
     latency=$3
     
-    tc class add dev eth0 parent 1:0 classid 1:${label} htb rate 150kbit
+    tc class add dev eth0 parent 1:0 classid 1:${label} htb rate 100kbit
     tc qdisc add dev eth0 parent 1:${label} netem delay ${latency}ms
     tc filter add dev eth0 protocol ip parent 1:0 prio 5 u32 match ip dst ${to_ip} flowid 1:${label}
 }
