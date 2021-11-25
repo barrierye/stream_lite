@@ -507,6 +507,7 @@ class PendingEvent(object):
                 self.pending_subtasks.remove(subtask_name)
                 if self.is_event_completed():
                     self.cv.notify_all()
+                    _LOGGER.info("finish to ack!")
                     return True
                 self.cv.notify_all()
         return False
