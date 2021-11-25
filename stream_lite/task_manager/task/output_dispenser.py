@@ -96,7 +96,6 @@ class OutputDispenser(object):
                     for dispenser in output_partition_dispensers:
                         dispenser.push_data(seri_record)
                 
-                # TODO
                 if seri_record.data_type == common_pb2.Record.DataType.CHECKPOINT_PREPARE_FOR_MIGRATE:
                     # checkpoint_prepare_for_migrate: 为下游 task 创建新的 dispenser
                     checkpoint_prepare_for_migrate = seri_record.data.data
@@ -186,11 +185,8 @@ class OutputPartitionDispenser(object):
             _LOGGER.debug(
                     "[{}] Try to connect to endpoint: {}".format(
                         self.subtask_name, endpoint))
-            st = time.time()
             self.client.connect(endpoint)
             self.is_connect_completed = True
-            rt = time.time()
-            print(">>>>>>>>> {}".format(rt - st))
             
     def push_data(self, record: serializator.SerializableRecord) -> None:
         # 这里可能会把 event 放入 buffer，但没有啥影响
@@ -208,8 +204,8 @@ class OutputPartitionDispenser(object):
                 except grpc._channel._InactiveRpcError as e:
                     _LOGGER.warning(
                             "Failed to push data: Maybe downstream not prepared"
-                            " yet, wait for 0.1s...")
-                    time.sleep(0.1)
+                            " yet, wait for 10ms...")
+                    time.sleep(0.01)
 
     def close(self) -> None:
         #TODO: close OutputPartitionDispenser
