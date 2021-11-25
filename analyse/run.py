@@ -3,12 +3,13 @@
 # Python release: 3.7.0
 # Create time: 2021-11-25
 import re
+import sys
 import matplotlib.pyplot as plt
 
 pattern = r".*P\[(\d+)\] latency: (\d+)ms"
 latencies = []
 
-with open("./log.txt") as f:
+with open(sys.argv[1]) as f:
     for line in f:
         matchObj = re.match(pattern, line)
         if matchObj:
