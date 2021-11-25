@@ -149,6 +149,7 @@ class TaskManagerServicer(task_manager_pb2_grpc.TaskManagerServiceServicer):
     def preCopyState(self, request, context):
         try:
             jobid = request.jobid
+            _LOGGER.info("pre copy state for jobid: {}".format(jobid))
             checkpoint_id = request.checkpoint_id
             cls_name = request.cls_name
             partition_idx = request.partition_idx
