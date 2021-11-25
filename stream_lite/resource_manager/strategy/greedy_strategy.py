@@ -117,9 +117,6 @@ class GreedyStrategy(StrategyBase):
                 e[from_e] = []
             for to_e, latency in latency_list.items():
                 e[from_e].append((to_e, latency))
-                if to_e not in e:
-                    e[to_e] = []
-                e[to_e].append((from_e, latency))
         
         # init dis & vis & pre
         node_n = len(stable_latency_table)
@@ -137,11 +134,11 @@ class GreedyStrategy(StrategyBase):
                     u = cur_name
                     mind = dis[cur_name]
             vis[u] = True
-            for nxt in e[cur_name]:
+            for nxt in e[u]:
                 nxt_name, latency = nxt
-                if dis[nxt_name] > dis[cur_name] + latency:
-                    dis[nxt_name] = dis[cur_name] + latency
-                    pre[nxt_name] = cur_name
+                if dis[nxt_name] > mind + latency:
+                    dis[nxt_name] = mind + latency
+                    pre[nxt_name] = u
         
         # get path
         path = []
