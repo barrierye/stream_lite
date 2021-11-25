@@ -186,8 +186,11 @@ class OutputPartitionDispenser(object):
             _LOGGER.debug(
                     "[{}] Try to connect to endpoint: {}".format(
                         self.subtask_name, endpoint))
+            st = time.time()
             self.client.connect(endpoint)
             self.is_connect_completed = True
+            rt = time.time()
+            print(">>>>>>>>> {}".format(rt - st))
             
     def push_data(self, record: serializator.SerializableRecord) -> None:
         # 这里可能会把 event 放入 buffer，但没有啥影响
