@@ -4,6 +4,7 @@
 # Create time: 2021-07-24
 import os
 import time
+from typing import List, Dict, Optional, Tuple
 
 from stream_lite import OperatorBase
 
