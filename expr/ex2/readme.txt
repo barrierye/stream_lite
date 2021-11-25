@@ -1,6 +1,6 @@
 1. ?
 
-2. 获取做迁移的计算结果
+2. 本毕设不做优化
   a. word-count
     1) 在worker83启动JM:
          python start_job_manager.py
@@ -25,5 +25,4 @@
        tar -xzvf ocr_rec.tar.gz
        tar -xzvf ocr_det.tar.gz
 
-
-3. 比较1和2得到的两个sink.txt有无差异
+3. 本毕设做优化（自动预迁移状态+手动迁移）
