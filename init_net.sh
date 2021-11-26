@@ -22,18 +22,18 @@ function set_latency() {
 
 if [ "$hostname" == "38" ]; then
     init_env
-    echo "give 192.168.105.39 20ms latency"
-    set_latency 39 192.168.105.39 20
-    echo "give 192.168.105.40 40ms latency"
-    set_latency 40 192.168.105.40 40
+    echo "give 192.168.105.39 40ms latency"
+    set_latency 39 192.168.105.39 40
+    echo "give 192.168.105.40 80ms latency"
+    set_latency 40 192.168.105.40 80
     # echo "give 192.168.105.83 10ms latency"
     # set_latency 83 192.168.105.83 10
     echo "give 192.168.105.84 5000ms latency"
     set_latency 84 192.168.105.84 5000
 elif [ "$hostname" == "84" ]; then
     init_env
-    echo "give 192.168.105.39 40ms latency"
-    set_latency 39 192.168.105.39 40
+    echo "give 192.168.105.39 80ms latency"
+    set_latency 39 192.168.105.39 80
     echo "give 192.168.105.40 10ms latency"
     set_latency 40 192.168.105.40 10
     # echo "give 192.168.105.83 5000ms latency"

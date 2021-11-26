@@ -240,7 +240,7 @@ class PrecopyAndMigrateHelper(PeriodicExecutorBase):
                         state_file=state_file,
                         cls_name=cls_name,
                         partition_idx=partition_idx)
-            
+
             if migrate_infos:
                 _LOGGER.info("Doing migrate...")
 
