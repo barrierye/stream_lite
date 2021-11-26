@@ -320,7 +320,7 @@ class JobManagerServicer(job_manager_pb2_grpc.JobManagerServiceServicer):
                 self.job_coordinator = JobCoordinator(self.resource_manager_client)
                 names = self.resource_manager_client.getAllTaskManagerNames()
                 for name in names:
-                    client = self.resource_manager_client.get_client(task_manager_name)
+                    client = self.resource_manager_client.get_client(name)
                     client.resetSlotTable()
         except Exception as e:
             _LOGGER.error(e, exc_info=True)
