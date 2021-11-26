@@ -31,8 +31,12 @@ with open("./resources/document-words.txt") as f:
         line = line.strip()
         st = time()
         while True:
+            try:
             a = requests.get(
                     "http://192.168.105.84:8081/api/put/{}/{}".format(idx, line))
+            except Exception:
+                sleep(0.01)
+                continue
             if a.status_code == 200:
                 break
             sleep(0.01)
