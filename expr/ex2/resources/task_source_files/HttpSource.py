@@ -34,10 +34,11 @@ class HttpSource(SourceOperatorBase):
         self._thread.start()
 
     def compute(self, inputs):
-        line, data = self.input_que.get()
-        if self.counter > line:
-            continue
-        else:
-            self.counter += 1
-            word = data.strip()
-            return word
+        while True:
+            line, data = self.input_que.get()
+            if self.counter > line:
+                continue
+            else:
+                self.counter += 1
+                word = data.strip()
+                return word
