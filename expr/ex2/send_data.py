@@ -7,6 +7,9 @@ from time import time, sleep
 from flask import Flask
 import threading
 import queue 
+import logging
+log = logging.getLogger('werkzeug')
+log.setLevel(logging.ERROR)
 
 def run(que, port):
     app = Flask(__name__)
@@ -33,6 +36,6 @@ with open("./resources/document-words.txt") as f:
                 break
             sleep(0.01)
         out = que.get()
-        print(out)
+        #  print(out)
         et = time()
         print("P[{}] latency: {}ms".format(idx, int((et - st) * 1000)))
