@@ -3,6 +3,7 @@
 # Python release: 3.7.0
 # Create time: 2021-07-19
 from concurrent import futures
+import time
 import os
 import grpc
 import logging
@@ -319,10 +320,14 @@ class JobManagerServicer(job_manager_pb2_grpc.JobManagerServiceServicer):
                 _LOGGER.info("prepare for restart job...")
                 #TODO
                 import requests
-                while True:
-                    a = requests.get("http://192.168.105.84:8081/api/shutdown")
-                    if a.status_code != 200:
-                        break
+                try:
+                    while True:
+                        a = requests.get("http://192.168.105.84:8081/api/shutdown")
+                        if a.status_code != 200:
+                            break
+                        time.sleep(0.01)
+                except Exception:
+                    pass
 
                 self.job_coordinator = JobCoordinator(self.resource_manager_client)
                 names = self.resource_manager_client.getAllTaskManagerNames()
