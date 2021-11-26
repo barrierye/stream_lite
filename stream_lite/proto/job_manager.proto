@@ -32,7 +32,7 @@ message TriggerCheckpointResponse {
 message RestoreFromCheckpointRequest {
   required string jobid = 1;
   required int32 checkpoint_id = 2;
-  required SubmitJobRequest submitJob = 3
+  required SubmitJobRequest submitJob = 3;
 }
 
 message RestoreFromCheckpointResponse {
