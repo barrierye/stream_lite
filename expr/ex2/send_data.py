@@ -13,7 +13,7 @@ def run(que, port):
 
     @app.route("/api/recv")
     def run():
-        que.put(time())
+        que.put(1)
         return "ok"
 
     app.run(host="0.0.0.0", debug=True, port=port, use_reloader=False)
@@ -32,5 +32,6 @@ with open("./resources/document-words.txt") as f:
             if a.status_code == 200:
                 break
             sleep(0.01)
-        et = que.get()
-        print("P[{}] latency: {}ms".format(idx, int((et - st) * 1000))
+        _ = que.get()
+        et = time()
+        print("P[{}] latency: {}ms".format(idx, int((et - st) * 1000)))
