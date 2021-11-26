@@ -15,7 +15,7 @@ class HttpSink(SinkOperatorBase):
         #self.fout.flush()
         while True:
             a = requests.get(
-                    "http://192.168.105.38:8998/api/recv")
+                    "http://192.168.105.83:8998/api/recv")
             if a.status_code == 200:
                 break
             sleep(0.01)
