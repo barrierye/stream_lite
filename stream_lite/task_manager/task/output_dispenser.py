@@ -221,16 +221,17 @@ class OutputPartitionDispenser(object):
     def _inner_push_data(self, data_buffer: queue.Queue) -> None:
         while True:
             data = data_buffer.get()
-            try:
-                self.client.pushRecord(
-                            from_subtask=self.subtask_name,
-                            partition_idx=self.partition_idx,
-                            record=data.instance_to_proto())
-            except grpc._channel._InactiveRpcError as e:
-                _LOGGER.warning(
-                        "Failed to push data: Maybe downstream not prepared"
-                        " yet, wait for 10ms...")
-                time.sleep(0.01)
+            while True:
+                try:
+                    self.client.pushRecord(
+                                from_subtask=self.subtask_name,
+                                partition_idx=self.partition_idx,
+                                record=data.instance_to_proto())
+                except grpc._channel._InactiveRpcError as e:
+                    _LOGGER.warning(
+                            "Failed to push data: Maybe downstream not prepared"
+                            " yet, wait for 10ms...")
+                    time.sleep(0.01)
 
     def close(self) -> None:
         #TODO: close OutputPartitionDispenser, 线程阻塞
