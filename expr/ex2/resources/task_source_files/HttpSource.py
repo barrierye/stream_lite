@@ -26,7 +26,7 @@ class HttpSource(SourceOperatorBase):
                 que.put((line, data))
                 return "ok\n"
 
-            app.run(debug=True, port=port)
+            app.run(debug=True, port=port, use_reloader=False)
 
         self._thread = threading.Thread(
                 target=run,
