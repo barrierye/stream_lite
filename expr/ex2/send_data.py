@@ -7,6 +7,6 @@ import requests
 with open("./resources/document-words.txt") as f:
     for line in f:
         line = line.strip()
-        a = resources.get("192.168.105.84:18080/api/data/1/line")
+        a = requests.get("192.168.105.84:18080/api/data/1/line")
         print(a)
         break
