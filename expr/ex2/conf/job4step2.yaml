@@ -1,18 +1,17 @@
 tasks:
-  - name: SimpleSource
+  - name: HttpSource
     currency: 1
-    resources: [resources/document-words.txt]
     locate: TM_84
   - name: KeyByInputOp
     currency: 1
-    input_tasks: [SimpleSource]
+    input_tasks: [HttpSource]
     locate: TM_84
   - name: SimpleSum #SumOp
     currency: 1
     input_tasks: [KeyByInputOp]
     locate: TM_39
-  - name: SimpleSink
+  - name: HttpSink
     currency: 1
-    input_tasks: [SumOp]
+    input_tasks: [SimpleSum]
     locate: TM_38
 task_files_dir: resources/task_source_files

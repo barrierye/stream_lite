@@ -315,6 +315,9 @@ class JobManagerServicer(job_manager_pb2_grpc.JobManagerServiceServicer):
             self.job_coordinator.block_util_checkpoint_completed(
                     jobid=jobid,
                     checkpoint_id=checkpoint_id)
+            if request.cancel_job:
+                _LOGGER.info("prepare for restart job...")
+                self.job_coordinator = JobCoordinator(self.resource_manager_client)
         except Exception as e:
             _LOGGER.error(e, exc_info=True)
             return job_manager_pb2.TriggerCheckpointResponse(
@@ -355,6 +358,8 @@ class JobManagerServicer(job_manager_pb2_grpc.JobManagerServiceServicer):
     def restoreFromCheckpoint(self, request, context):
         jobid = request.jobid
         checkpoint_id = request.checkpoint_id
+        req = request.submitJob
+        '''
         jobinfo_path = os.path.join(
                 self.jobinfo_dir.format(jobid), "jobinfo.prototxt")
         if not os.path.exists(jobinfo_path):
@@ -366,7 +371,7 @@ class JobManagerServicer(job_manager_pb2_grpc.JobManagerServiceServicer):
         with open(jobinfo_path, "rb") as f:
             req = job_manager_pb2.SubmitJobRequest()
             req.ParseFromString(f.read())
-
+        '''
         new_jobid = JobIdGenerator().next()
         
         seri_tasks = []

@@ -50,13 +50,42 @@ class UserClient(ClientBase):
         _LOGGER.info("Success to submit job (jobid={})".format(resp.jobid))
         return resp.jobid
    
+    def triggerSavepoint(self, jobid: str) -> int:
+        resp = self.stub.triggerCheckpoint(
+                job_manager_pb2.TriggerCheckpointRequest(
+                    jobid=jobid,
+                    cancel_job=True,
+                    migrate_cls_name="",
+                    migrate_partition_idx=-1))
+        if resp.status.err_code != 0:
+            raise Exception(resp.status.message)
+        return resp.checkpoint_id
+
     def restoreFromCheckpoint(self, 
             jobid: str, 
-            checkpoint_id: int) -> str:
+            checkpoint_id: int,
+            yaml_path: str, 
+            periodicity_checkpoint_interval_s: float,
+            auto_migrate: bool = False,
+            enable_precopy: bool = False) -> str:
+        with open(yaml_path) as f:
+            conf = yaml.load(f.read(), Loader=yaml.FullLoader)
+
+        seri_tasks = []
+        for task_dict in conf["tasks"]:
+            seri_tasks.append(
+                    serializator.SerializableTask.to_proto(
+                        task_dict, conf["task_files_dir"]))
+
         resp = self.stub.restoreFromCheckpoint(
                 job_manager_pb2.RestoreFromCheckpointRequest(
                     checkpoint_id=checkpoint_id,
-                    jobid=jobid))
+                    jobid=jobid,
+                    submitJob=job_manager_pb2.SubmitJobRequest(
+                        tasks=seri_tasks,
+                        periodicity_checkpoint_interval_s=periodicity_checkpoint_interval_s,
+                        auto_migrate=auto_migrate,
+                        enable_precopy=enable_precopy)))
         if resp.status.err_code != 0:
             raise Exception(resp.status.message)
         _LOGGER.info(

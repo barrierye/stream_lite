@@ -28,7 +28,14 @@ if __name__ == '__main__':
     
     if step == "step1":
         jobid = client.submitJob(
-                yaml_path=conf_path, 
+                yaml_path="conf/job4step2.yaml", 
+                periodicity_checkpoint_interval_s=5,
+                auto_migrate=False)
+        time.sleep(10)
+        chk_id = client.triggerSavepoint(jobid) 
+        client.restoreFromCheckpoint(
+                jobid, chk_id,
+                yaml_path="conf/job4step2_migrate.yaml", 
                 periodicity_checkpoint_interval_s=5,
                 auto_migrate=False)
     elif step == "step2":

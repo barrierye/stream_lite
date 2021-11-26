@@ -9,7 +9,7 @@ tasks:
   - name: SimpleSum #SumOp
     currency: 1
     input_tasks: [KeyByInputOp]
-    locate: TM_39
+    locate: TM_40
   - name: HttpSink
     currency: 1
     input_tasks: [SimpleSum]
