@@ -27,7 +27,10 @@ if __name__ == '__main__':
     client.connect('192.168.105.83:8970')
     
     if step == "step1":
-        exit(1)
+        jobid = client.submitJob(
+                yaml_path=conf_path, 
+                periodicity_checkpoint_interval_s=5,
+                auto_migrate=False)
     elif step == "step2":
         jobid = client.submitJob(
                 yaml_path=conf_path, 
