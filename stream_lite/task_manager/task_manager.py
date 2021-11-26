@@ -38,14 +38,14 @@ class TaskManagerServicer(task_manager_pb2_grpc.TaskManagerServiceServicer):
         self.conf = self._init_by_yaml(conf_yaml_path)
         self.job_manager_enpoint, self.resource_manager_enpoint = self._register(self.conf)
         self.slot_table = SlotTable(
-                self.name, job_manager_enpoint,
+                self.name, self.job_manager_enpoint,
                 self.resource.slot_number)
         
         self.heart_beat_helper = HeartBeatHelper(
                 self.name,
                 self.endpoint,
                 self.coord,
-                resource_manager_enpoint)
+                self.resource_manager_enpoint)
         _LOGGER.info("[{}] Start HeartbeatHelper".format(self.name))
         self.heart_beat_helper.run_on_standalone_process(stream_lite.config.IS_PROCESS)
         # jobid, cls_name, partition_idx
