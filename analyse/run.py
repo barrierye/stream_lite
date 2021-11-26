@@ -5,17 +5,21 @@
 import re
 import sys
 import matplotlib.pyplot as plt
+import datetime
 
-pattern = r".*P\[(\d+)\] latency: (\d+)ms"
+pattern = r".*P\[(.+)\] latency: (\d+)ms"
+dates = []
 latencies = []
 
 with open(sys.argv[1]) as f:
     for line in f:
         matchObj = re.match(pattern, line)
         if matchObj:
-            data_id = matchObj.group(1)
+            date = datetime.datetime.fromtimestamp(
+                    float(matchObj.group(1)))
             latency = matchObj.group(2)
+            dates.append(date)
             latencies.append(float(latency))
 
-plt.plot(latencies)
+plt.plot(dates, latencies, ".")
 plt.show()

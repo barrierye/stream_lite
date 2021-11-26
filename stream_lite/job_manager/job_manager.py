@@ -9,6 +9,7 @@ import grpc
 import logging
 import pickle
 import inspect
+from datetime import datetime
 import threading
 from typing import List, Dict, Tuple, Set
 
@@ -317,7 +318,8 @@ class JobManagerServicer(job_manager_pb2_grpc.JobManagerServiceServicer):
                     jobid=jobid,
                     checkpoint_id=checkpoint_id)
             if request.cancel_job:
-                _LOGGER.info("prepare for restart job...")
+                _LOGGER.info("[{}] prepare for restart job...".format(
+                    datetime.timestamp(datetime.now())))
                 #TODO
                 import requests
                 try:
@@ -457,7 +459,7 @@ class JobManagerServicer(job_manager_pb2_grpc.JobManagerServiceServicer):
             target_task_manager_locate: str,
             with_checkpoint_id: int) -> None:
         if with_checkpoint_id == -1:
-            _LOGGER.info("step 1: checkpoint for migrate")
+            _LOGGER.info("[{}] step 1: checkpoint for migrate".format(datetime.timestamp(datetime.now())))
             checkpoint_id = EventIdGenerator().next()
             self.job_coordinator.trigger_checkpoint_for_migrate(
                     jobid=jobid, 
@@ -493,7 +495,8 @@ class JobManagerServicer(job_manager_pb2_grpc.JobManagerServiceServicer):
             checkpoint_id: int,
             with_file_state: bool,
             migrate_id: int = -1) -> None:
-        _LOGGER.info("step 2: deploy and start new subtask in target_task_manager_locate")
+        _LOGGER.info("[{}] step 2: deploy and start new subtask in target_task_manager_locate".format(
+            datetime.timestamp(datetime.now())))
         # step 2.1: find subtask file, resources
         #  _LOGGER.info("[Migrate] step 2.1: find subtask file, resources.")
         task_path = self.exetasks_dir.format(
@@ -550,7 +553,8 @@ class JobManagerServicer(job_manager_pb2_grpc.JobManagerServiceServicer):
                 execute_task=exe_task)
         _LOGGER.info("Success start the new task.")
  
-        _LOGGER.info("step 3: broadcast migrate event to notify upstream subtask" +\
+        _LOGGER.info("[{}] step 3: broadcast migrate event to notify upstream subtask".format(
+            datetime.timestamp(datetime.now())) +\
                      "start send data to the new subtask.")
         if migrate_id == -1:
             migrate_id = EventIdGenerator().next()
@@ -571,10 +575,11 @@ class JobManagerServicer(job_manager_pb2_grpc.JobManagerServiceServicer):
         #       jobid=jobid,
         #       migrate_id=migrate_id)
         
-        _LOGGER.info("step 4: block util migrate sync (and wait for migrate_completed)")
+        _LOGGER.info("[{}] step 4: block util migrate sync (and wait for migrate_completed)".format(
+            datetime.timestamp(datetime.now())))
         self.job_coordinator.block_util_migrate_sync(jobid, migrate_id)
 
-        _LOGGER.info("step 5: terminate old subtask")
+        _LOGGER.info("[{}] step 5: terminate old subtask".format(datetime.timestamp(datetime.now())))
         terminate_id = migrate_id
         self.job_coordinator.terminate_subtask(
                 jobid=jobid,
@@ -588,7 +593,7 @@ class JobManagerServicer(job_manager_pb2_grpc.JobManagerServiceServicer):
         self.job_coordinator.block_util_terminate_completed(
                 jobid=jobid,
                 terminate_id=terminate_id)
-        _LOGGER.info("FINISH terminate!")
+        _LOGGER.info("[{}] FINISH terminate!".format(datetime.timestamp(datetime.now())))
 
     # --------------------------- acknowledge migrate ----------------------------
     def acknowledgeMigrate(self, request, context):

@@ -5,6 +5,7 @@
 import copy
 from typing import List, Dict, Tuple
 import logging
+from datetime import datetime
 
 import stream_lite.proto.common_pb2 as common_pb2
 from stream_lite.resource_manager.subtask_table import SubTaskTable, SubTaskDesc
@@ -87,8 +88,8 @@ class GreedyStrategy(StrategyBase):
             print(">>> path: {}".format(path))
             if total_latency > shortest_latency:
                 _LOGGER.info(
-                    "current latency({}) > shortest latency({}), try to gen migrate info...".format(
-                        total_latency, shortest_latency))
+                    "P[{}] current latency({}) > shortest latency({}), try to gen migrate info...".format(
+                        datetime.timestamp(datetime.now()), total_latency, shortest_latency))
             # 匹配一下
             if len(chain_graph) < len(path):
                 return []

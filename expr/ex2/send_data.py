@@ -3,7 +3,7 @@
 # Python release: 3.7.0
 # Create time: 2021-11-26
 import requests
-import datetime
+from datetime import datetime
 from time import time, sleep
 from flask import Flask
 import threading
