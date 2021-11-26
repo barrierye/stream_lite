@@ -30,7 +30,7 @@ class HttpSource(SourceOperatorBase):
 
         self._thread = threading.Thread(
                 target=run,
-                args=(self.input_que, 18080))
+                args=(self.input_que, 8081))
         self._thread.start()
 
     def compute(self, inputs):
