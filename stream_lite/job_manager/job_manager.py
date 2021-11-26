@@ -319,7 +319,7 @@ class JobManagerServicer(job_manager_pb2_grpc.JobManagerServiceServicer):
                 _LOGGER.info("prepare for restart job...")
                 #TODO
                 import requests
-                requests.get("http://192.168.105.83:8998/api/shutdown")
+                requests.get("http://192.168.105.84:8081/api/shutdown")
 
                 self.job_coordinator = JobCoordinator(self.resource_manager_client)
                 names = self.resource_manager_client.getAllTaskManagerNames()
