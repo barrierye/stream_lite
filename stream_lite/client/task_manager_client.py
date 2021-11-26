@@ -106,3 +106,8 @@ class TaskManagerClient(ClientBase):
                     partition_idx=partition_idx))
         if resp.status.err_code != 0:
             raise Exception(resp.status.message)
+
+    def resetSlotTable(self):
+        resp = self.stub.resetSlotTable(common_pb2.NilRequest())
+        if resp.status.err_code != 0:
+            raise Exception(resp.status.message)

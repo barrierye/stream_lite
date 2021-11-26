@@ -53,6 +53,7 @@ service TaskManagerService {
   rpc deployTask(DeployTaskRequest) returns (common.NilResponse) {}
   rpc startTask(StartTaskRequest) returns (common.NilResponse) {}
   rpc preCopyState(PreCopyStateRequest) returns (common.NilResponse) {}
+  rpc resetSlotTable(common.NilRequest) returns (common.NilResponse) {}
 
   // from task manager
   rpc testLatency(TestLatencyRequest) returns (TestLatencyResponse) {} 

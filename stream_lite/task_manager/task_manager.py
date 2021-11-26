@@ -166,3 +166,10 @@ class TaskManagerServicer(task_manager_pb2_grpc.TaskManagerServiceServicer):
             return gen_nil_response(
                     err_code=1, message=str(e))
         return gen_nil_response()
+
+    # -------------------------- reset slot table ------------------
+    def resetSlotTable(self, request, context):
+        self.slot_table = SlotTable(
+                self.name, job_manager_enpoint,
+                self.resource.slot_number)
+        return gen_nil_response()

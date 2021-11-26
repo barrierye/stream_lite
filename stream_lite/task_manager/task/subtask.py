@@ -212,11 +212,6 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
                 _LOGGER.info(
                         "[{}] finished successfully!".format(subtask_name))
                 SubTaskServicer._push_finish_event_to_output_channel(output_channel)
-            else:
-                _LOGGER.critical(
-                        "Failed: run {} task failed (reason: {})".format(
-                            subtask_name, e), exc_info=True)
-                os._exit(-1)
         except Exception as e:
             _LOGGER.critical(
                     "Failed: run {} task failed (reason: {})".format(

@@ -64,7 +64,6 @@ message RegisterJobExecuteInfoRequest {
   repeated common.ExecuteTask exec_tasks = 3;
 }
 
-
 service ResourceManagerService {
   // from task manager
   rpc registerTaskManager(RegisterTaskManagerRequest) 

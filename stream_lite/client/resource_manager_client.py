@@ -95,6 +95,11 @@ class ResourceManagerClient(ClientBase):
             nearby_task_managers[name] = resp.endpoints[idx]
         return nearby_task_managers
 
+    def getAllTaskManagerNames(self) -> List[str]:
+        resp = self.stub.getAllTaskManagerDesc(common_pb2.NilRequest())
+        names = [desc.name for desc in resp.task_manager_descs]
+        return names
+
     def getAllTaskManagerDesc(self) -> pd.DataFrame:
         resp = self.stub.getAllTaskManagerDesc(common_pb2.NilRequest())
 
