@@ -15,4 +15,4 @@ with open("./resources/document-words.txt") as f:
             if a.status_code == 200:
                 break
         et = time()
-        print("P[{}] latency: {}ms".format(et - st))
+        print("P[{}] latency: {}ms".format(idx, et - st))
