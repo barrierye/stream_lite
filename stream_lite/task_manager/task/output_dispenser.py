@@ -232,6 +232,8 @@ class OutputPartitionDispenser(object):
                             "Failed to push data: Maybe downstream not prepared"
                             " yet, wait for 10ms...")
                     time.sleep(0.01)
+                    continue
+                break
 
     def close(self) -> None:
         #TODO: close OutputPartitionDispenser, 线程阻塞
