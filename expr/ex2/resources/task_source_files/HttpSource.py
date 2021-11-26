@@ -19,7 +19,7 @@ class HttpSource(SourceOperatorBase):
         self.input_que = queue.Queue()
         
         def run(que, port):
-            self.app = Flask(__name__)
+            app = Flask(__name__)
 
             @app.route("/api/put/<int:line>/<str:data>")
             def recv_data(line, data):
