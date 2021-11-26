@@ -11,9 +11,9 @@ import queue
 def run(que, port):
     app = Flask(__name__)
 
-    @app.route("/api/recv")
-    def run():
-        que.put(1)
+    @app.route("/api/recv/<string:out>")
+    def run(out):
+        que.put(out)
         return "ok"
 
     app.run(host="0.0.0.0", debug=True, port=port, use_reloader=False)
@@ -32,6 +32,7 @@ with open("./resources/document-words.txt") as f:
             if a.status_code == 200:
                 break
             sleep(0.01)
-        _ = que.get()
+        out = que.get()
+        print(out)
         et = time()
         print("P[{}] latency: {}ms".format(idx, int((et - st) * 1000)))
