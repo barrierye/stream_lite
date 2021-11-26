@@ -7,6 +7,7 @@ import re
 from flask import Flask
 import queue
 import threading
+import multiprocessing
 
 from stream_lite import SourceOperatorBase
 from stream_lite.utils import FinishJobError
@@ -28,7 +29,8 @@ class HttpSource(SourceOperatorBase):
 
             app.run(host="0.0.0.0", debug=True, port=port, use_reloader=False)
 
-        self._thread = threading.Thread(
+        #  self._thread = threading.Thread(
+        self._thread = multiprocessing.Process(
                 target=run,
                 args=(self.input_que, 8081))
         self._thread.start()
