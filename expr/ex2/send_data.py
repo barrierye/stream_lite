@@ -3,6 +3,7 @@
 # Python release: 3.7.0
 # Create time: 2021-11-26
 import requests
+import datetime
 from time import time, sleep
 from flask import Flask
 import threading
@@ -43,4 +44,5 @@ with open("./resources/document-words.txt") as f:
         out = que.get()
         #  print(out)
         et = time()
-        print("P[{}] latency: {}ms".format(idx, int((et - st) * 1000)))
+        print("P[{}] latency: {}ms".format(
+            datetime.timestamp(datetime.now()), int((et - st) * 1000)))
