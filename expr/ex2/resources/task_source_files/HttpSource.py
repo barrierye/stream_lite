@@ -24,6 +24,7 @@ class HttpSource(SourceOperatorBase):
 
             @app.route("/api/put/<int:line>/<string:data>")
             def recv_data(line, data):
+                que.put(data)
                 return "ok\n"
 
             @app.route('/api/shutdown')
