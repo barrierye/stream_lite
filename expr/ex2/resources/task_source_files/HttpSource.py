@@ -4,7 +4,7 @@
 # Create time: 2021-07-24
 import time
 import re
-from flask import Flask
+from flask import Flask, request
 import queue
 import threading
 import multiprocessing
@@ -26,6 +26,14 @@ class HttpSource(SourceOperatorBase):
             def recv_data(line, data):
                 que.put((line, data))
                 return "ok\n"
+
+            @app.route('/api/shutdown')
+            def shutdown():
+                func = request.environ.get('werkzeug.server.shutdown')
+                if func is None:
+                    raise RuntimeError('Not running with the Werkzeug Server')
+                func()
+                return "done"
 
             app.run(host="0.0.0.0", debug=True, port=port, use_reloader=False)
 
