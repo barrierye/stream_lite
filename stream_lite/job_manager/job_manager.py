@@ -328,6 +328,7 @@ class JobManagerServicer(job_manager_pb2_grpc.JobManagerServiceServicer):
                         time.sleep(0.01)
                 except Exception:
                     pass
+                requests.get("http://192.168.105.83:8998/api/recv/shutdown")
 
                 self.job_coordinator = JobCoordinator(self.resource_manager_client)
                 names = self.resource_manager_client.getAllTaskManagerNames()
