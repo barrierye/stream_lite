@@ -42,3 +42,7 @@ class HttpSource(SourceOperatorBase):
                 self.counter += 1
                 word = data.strip()
                 return word
+
+    def close(self):
+        self._thread.terminate()
+        self._thread.join()

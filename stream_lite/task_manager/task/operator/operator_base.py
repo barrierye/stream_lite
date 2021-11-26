@@ -40,3 +40,6 @@ class OperatorBase(object):
             if key not in self.registered_vars:
                 raise KeyError("Failed: variable not registered")
             setattr(self, key, value)
+
+    def close(self):
+        return

@@ -474,6 +474,7 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
                         is_sink_op=is_sink_op,
                         input_data=input_data)
                 _LOGGER.info("[{}] finished successfully!".format(subtask_name))
+                self.close()
                 break
             elif data_type == common_pb2.Record.DataType.TERMINATE_SUBTASK:
                 _LOGGER.info("[{}] recv terminate event".format(subtask_name))
