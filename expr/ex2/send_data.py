@@ -12,7 +12,8 @@ import queue
 def run(que, port):
     app = Flask(__name__)
 
-    @app.route("/api/put/recv"):
+    @app.route("/api/put/recv")
+    def run():
         que.put(time())
         return "ok"
 
