@@ -17,7 +17,7 @@ class HttpSource(SourceOperatorBase):
     def init(self, resource_path_dict):
         self.counter = 0
         self.register_var("counter")
-        self.input_que = queue.Queue()
+        self.input_que = multiprocessing.Queue()
         
         def run(que, port):
             app = Flask(__name__)
