@@ -36,7 +36,7 @@ class TaskManagerServicer(task_manager_pb2_grpc.TaskManagerServiceServicer):
         self.endpoint = "{}:{}".format(
                 stream_lite.utils.util.get_ip(), rpc_port)
         self.conf = self._init_by_yaml(conf_yaml_path)
-        job_manager_enpoint, resource_manager_enpoint = self._register(self.conf)
+        self.job_manager_enpoint, self.resource_manager_enpoint = self._register(self.conf)
         self.slot_table = SlotTable(
                 self.name, job_manager_enpoint,
                 self.resource.slot_number)
@@ -170,6 +170,6 @@ class TaskManagerServicer(task_manager_pb2_grpc.TaskManagerServiceServicer):
     # -------------------------- reset slot table ------------------
     def resetSlotTable(self, request, context):
         self.slot_table = SlotTable(
-                self.name, job_manager_enpoint,
+                self.name, self.job_manager_enpoint,
                 self.resource.slot_number)
         return gen_nil_response()
