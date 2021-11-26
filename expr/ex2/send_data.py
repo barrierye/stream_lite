@@ -33,4 +33,4 @@ with open("./resources/document-words.txt") as f:
                 break
             sleep(0.01)
         et = que.get()
-        print("P[{}] latency: {}ms".format(idx, et - st))
+        print("P[{}] latency: {}ms".format(idx, int((et - st) * 1000))
