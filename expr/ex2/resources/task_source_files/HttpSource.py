@@ -21,7 +21,7 @@ class HttpSource(SourceOperatorBase):
         def run(que, port):
             app = Flask(__name__)
 
-            @app.route("/api/put/<int:line>/<str:data>")
+            @app.route("/api/put/<int:line>/<string:data>")
             def recv_data(line, data):
                 que.put((line, data))
                 return "ok\n"
