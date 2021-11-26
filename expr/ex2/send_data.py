@@ -3,8 +3,7 @@
 # Python release: 3.7.0
 # Create time: 2021-11-26
 import requests
-from time import time
-import time
+from time import time, sleep
 from flask import Flask
 import threading
 import queue 
@@ -32,6 +31,6 @@ with open("./resources/document-words.txt") as f:
                     "http://192.168.105.84:8081/api/put/{}/{}".format(idx, line))
             if a.status_code == 200:
                 break
-            time.sleep(0.01)
+            sleep(0.01)
         et = que.get()
         print("P[{}] latency: {}ms".format(idx, et - st))

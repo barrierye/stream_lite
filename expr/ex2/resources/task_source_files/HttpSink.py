@@ -4,6 +4,7 @@
 # Create time: 2021-07-24
 import os
 import requests
+from time import time, sleep
 
 from stream_lite import SinkOperatorBase
 
@@ -17,4 +18,4 @@ class HttpSink(SinkOperatorBase):
                     "http://192.168.105.38:8998/api/recv")
             if a.status_code == 200:
                 break
-            time.sleep(0.01)
+            sleep(0.01)
