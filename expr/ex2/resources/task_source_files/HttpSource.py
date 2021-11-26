@@ -41,6 +41,7 @@ class HttpSource(SourceOperatorBase):
         self._thread = multiprocessing.Process(
                 target=run,
                 args=(self.input_que, 8081))
+        self._thread.daemon = True
         self._thread.start()
 
     def compute(self, inputs):
