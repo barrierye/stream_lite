@@ -222,13 +222,12 @@ class PrecopyAndMigrateHelper(PeriodicExecutorBase):
                 jobid = migrate_info.jobid
                 currency = migrate_info.src_currency
                 partition_idx = migrate_info.src_partition_idx
-                client = resource_manager_client.get_client(
-                        target_task_manager_locate)
 
                 # jobid, cls_name, part
                 # snapshot_dir = "./_tmp/jm/jobid_{}/snapshot/{}/partition_{}"
                 file_name = "chk_{}".format(checkpoint_id)
                 state_path = snapshot_dir.format(jobid, cls_name, partition_idx)
+                '''
                 while True:
                     if os.path.exists(
                             os.path.join(state_path, file_name)):
@@ -237,12 +236,26 @@ class PrecopyAndMigrateHelper(PeriodicExecutorBase):
                 state_file = serializator.SerializableFile.to_proto(
                         path=os.path.join(state_path, file_name), name=file_name)
 
+                client = resource_manager_client.get_client(
+                        target_task_manager_locate)
                 client.preCopyState(
                         jobid=jobid,
                         checkpoint_id=checkpoint_id,
                         state_file=state_file,
                         cls_name=cls_name,
                         partition_idx=partition_idx)
+                '''
+                local_full_fn = os.path.join(state_path, file_name)
+                remote_full_fn = os.path.join(
+                        "/root/stream_lite/expr/ex3/_tmp/tm/{}".format(
+                            target_task_manager_locate) +\
+                                "/jobid_{}/{}/partition_{}/snapshot".format(
+                                    jobid, cls_name, partition_idx), file_name)
+                endpoint = resource_manager_client.getTaskManagerEndpoint(
+                        target_task_manager_locate)
+                cmd = "scp {} root@{}:{}".format(full_fn, endpoint, remote_full_fn)
+                print("run {}".format(cmd))
+                os.system(cmd)
 
             if latency_diff > latency_threshold_ms:
                 # 获取自动迁移信息
