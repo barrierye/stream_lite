@@ -246,13 +246,16 @@ class PrecopyAndMigrateHelper(PeriodicExecutorBase):
                         partition_idx=partition_idx)
                 '''
                 local_full_fn = os.path.join(state_path, file_name)
-                remote_full_fn = os.path.join(
-                        "/root/stream_lite/expr/ex3/_tmp/tm/{}".format(
-                            target_task_manager_locate) +\
+                remote_path = "/root/stream_lite/expr/ex3/_tmp/tm/{}".format(
+                        target_task_manager_locate) +\
                                 "/jobid_{}/{}/partition_{}/snapshot".format(
-                                    jobid, cls_name, partition_idx), file_name)
+                                        jobid, cls_name, partition_idx)
+                remote_full_fn = os.path.join(remote_path, file_name)
                 endpoint = resource_manager_client.getTaskManagerEndpoint(
                         target_task_manager_locate).split(":")[0]
+                cmd = 'ssh root@{} "[ -d {} ] && echo ok || mkdir -p {}"'.format(
+                        endpoint, remote_path, remote_path)
+                os.system(cmd)
                 cmd = "scp {} root@{}:{}".format(local_full_fn, endpoint, remote_full_fn)
                 print("run {}".format(cmd))
                 os.system(cmd)
