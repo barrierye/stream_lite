@@ -129,6 +129,7 @@ class ResourceManagerServicer(resource_manager_pb2_grpc.ResourceManagerServiceSe
         except Exception as e:
             _LOGGER.error(e, exc_info=True)
             migrate_info_list = []
+            diff = -1
 
         print(migrate_info_list)
 
