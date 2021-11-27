@@ -107,7 +107,7 @@ class GreedyStrategy(StrategyBase):
                                         jobid=jobid,
                                         src_currency=m_src_info.currency,
                                         src_partition_idx=m_src_info.partition_idx))
-        return migrate_info_list
+        return migrate_info_list, total_latency - shortest_latency
 
     @staticmethod
     def _dijkstra(src: str, dst: str, latency_table: PeerLatencyTable) \

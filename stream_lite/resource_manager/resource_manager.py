@@ -122,7 +122,7 @@ class ResourceManagerServicer(resource_manager_pb2_grpc.ResourceManagerServiceSe
         # 自动迁移逻辑
         _LOGGER.info("analyzing execute path...")
         try:
-            migrate_info_list = GreedyStrategy.get_migrate_infos(
+            migrate_info_list, diff = GreedyStrategy.get_migrate_infos(
                     jobid,
                     self.execute_task_table.get_infos(),
                     self.latency_table)
@@ -154,4 +154,5 @@ class ResourceManagerServicer(resource_manager_pb2_grpc.ResourceManagerServiceSe
         '''
         return resource_manager_pb2.GetAutoMigrateSubtasksResponse(
                 status=common_pb2.Status(),
-                infos=migrate_info_list)
+                infos=migrate_info_list,
+                latency_diff=diff)

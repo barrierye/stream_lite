@@ -99,7 +99,7 @@ class CheckpointHelper(PeriodicExecutorBase):
                     jobid=jobid, cancel_job=False)
             
             # 获取自动迁移信息
-            migrate_infos = resource_manager_client.getAutoMigrateSubtasks(jobid, False)
+            migrate_infos, _ = resource_manager_client.getAutoMigrateSubtasks(jobid, False)
 
             # 逐subtask预备份
             for migrate_info in migrate_infos:
@@ -147,7 +147,7 @@ class MigrateHelper(PeriodicExecutorBase):
             time.sleep(interval)
 
             # 获取自动迁移信息
-            migrate_infos = resource_manager_client.getAutoMigrateSubtasks(jobid, True)
+            migrate_infos, _ = resource_manager_client.getAutoMigrateSubtasks(jobid, True)
 
             # 逐subtask迁移
             for migrate_info in migrate_infos:
@@ -174,16 +174,19 @@ class PrecopyAndMigrateHelper(PeriodicExecutorBase):
             job_manager_endpoint: str,
             resource_manager_enpoint: str,
             snapshot_dir: str,
-            interval: int = 5):
+            interval: int = 5,
+            latency_threshold_ms: int = 20):
         super(PrecopyAndMigrateHelper, self).__init__(
                 jobid, job_manager_endpoint, resource_manager_enpoint, interval)
         self._params_dict["snapshot_dir"] = snapshot_dir
+        self._params_dict["latency_threshold_ms"] = latency_threshold_ms
 
     def _inner_run(self, 
             jobid: str,
             job_manager_endpoint: str,
             resource_manager_enpoint: str,
             snapshot_dir: str,
+            latency_threshold_ms: int,
             interval: int) -> None:
         # init job manager client
         job_manager_client = JobManagerClient()
@@ -196,7 +199,7 @@ class PrecopyAndMigrateHelper(PeriodicExecutorBase):
             time.sleep(interval)
             
             # 获取自动迁移信息
-            migrate_infos = resource_manager_client.getAutoMigrateSubtasks(jobid, True)
+            migrate_infos, latency_diff = resource_manager_client.getAutoMigrateSubtasks(jobid, False)
 
             # TODO
             assert len(migrate_infos) <= 1
@@ -241,21 +244,25 @@ class PrecopyAndMigrateHelper(PeriodicExecutorBase):
                         cls_name=cls_name,
                         partition_idx=partition_idx)
 
-            if migrate_infos:
+            if latency_diff > latency_threshold_ms:
+                # 获取自动迁移信息
+                migrate_infos, latency_diff = \
+                        resource_manager_client.getAutoMigrateSubtasks(jobid, True)
+
                 _LOGGER.info("Doing migrate...")
 
-            # 逐subtask迁移
-            for migrate_info in migrate_infos:
-                cls_name = migrate_info.src_cls_name
-                target_task_manager_locate = migrate_info.target_task_manager_locate
-                jobid = migrate_info.jobid
-                currency = migrate_info.src_currency
-                partition_idx = migrate_info.src_partition_idx
+                # 逐subtask迁移
+                for migrate_info in migrate_infos:
+                    cls_name = migrate_info.src_cls_name
+                    target_task_manager_locate = migrate_info.target_task_manager_locate
+                    jobid = migrate_info.jobid
+                    currency = migrate_info.src_currency
+                    partition_idx = migrate_info.src_partition_idx
 
-                job_manager_client.triggerMigrate(
-                        jobid=jobid,
-                        src_cls_name=cls_name,
-                        src_partition_idx=partition_idx,
-                        src_currency=currency,
-                        target_task_manager_locate=target_task_manager_locate,
-                        with_checkpoint_id=checkpoint_id)
+                    job_manager_client.triggerMigrate(
+                            jobid=jobid,
+                            src_cls_name=cls_name,
+                            src_partition_idx=partition_idx,
+                            src_currency=currency,
+                            target_task_manager_locate=target_task_manager_locate,
+                            with_checkpoint_id=checkpoint_id)

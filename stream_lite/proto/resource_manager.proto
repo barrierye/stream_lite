@@ -56,6 +56,7 @@ message GetAutoMigrateSubtasksRequest {
 message GetAutoMigrateSubtasksResponse {
   required common.Status status = 1;
   repeated common.MigrateInfo infos = 2;
+  required int32 latency_diff = 3;
 }
 
 message RegisterJobExecuteInfoRequest {

@@ -137,7 +137,7 @@ class ResourceManagerClient(ClientBase):
                     jobid=jobid, migrate=migrate))
         if resp.status.err_code != 0:
             raise Exception(resp.status.message)
-        return list(resp.infos)
+        return list(resp.infos), resp.latency_diff
 
     def registerJobExecuteInfo(self, jobid: str, 
             execute_map: Dict[str, List[serializator.SerializableExectueTask]]):
