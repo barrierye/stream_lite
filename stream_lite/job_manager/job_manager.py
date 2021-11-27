@@ -134,16 +134,16 @@ class JobManagerServicer(job_manager_pb2_grpc.JobManagerServiceServicer):
             self.resource_manager_client.registerJobExecuteInfo(jobid, execute_map)
 
             if self.auto_migrate:
-                # 周期性地 migrate
-                self.periodic_executor_helper = MigrateHelper(
-                        jobid=jobid,
-                        job_manager_endpoint=self.addr,
-                        resource_manager_enpoint=self.resource_manager_enpoint,
-                        interval=periodicity_checkpoint_interval_s)
-                self.periodic_executor_helper.run_on_standalone_process(
-                        is_process=stream_lite.config.IS_PROCESS)
-            else:
-                if self.enable_precopy:
+                if not self.enable_precopy:
+                    # 周期性地 migrate
+                    self.periodic_executor_helper = MigrateHelper(
+                            jobid=jobid,
+                            job_manager_endpoint=self.addr,
+                            resource_manager_enpoint=self.resource_manager_enpoint,
+                            interval=periodicity_checkpoint_interval_s)
+                    self.periodic_executor_helper.run_on_standalone_process(
+                            is_process=stream_lite.config.IS_PROCESS)
+                else:
                     # 周期性地 checkpoint & 预迁移状态, 然后migrate
                     #  self.periodic_executor_helper = CheckpointHelper(
                     self.periodic_executor_helper = PrecopyAndMigrateHelper(
