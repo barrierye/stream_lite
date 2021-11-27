@@ -253,7 +253,7 @@ class PrecopyAndMigrateHelper(PeriodicExecutorBase):
                                     jobid, cls_name, partition_idx), file_name)
                 endpoint = resource_manager_client.getTaskManagerEndpoint(
                         target_task_manager_locate)
-                cmd = "scp {} root@{}:{}".format(full_fn, endpoint, remote_full_fn)
+                cmd = "scp {} root@{}:{}".format(local_full_fn, endpoint, remote_full_fn)
                 print("run {}".format(cmd))
                 os.system(cmd)
 
