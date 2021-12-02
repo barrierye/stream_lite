@@ -42,11 +42,14 @@ def find_key(filename, pattern):
 # flink
 plt.subplot(1, 2, 1)
 dates, latencies = get_data("./log.txt.flink")
+dates = [x - dates[50] for x in dates]
+dates = [y.total_seconds() for y in dates]
+print(dates)
 plt.xlim(dates[50], dates[100])
 plt.ylim(1.6, 3.75)
-plt.xlabel("date")
+plt.xlabel("time(s)")
 plt.ylabel("log10(latency)")
-plt.title(u"Flink-like")
+plt.title("Flink-like")
 plt.gcf().autofmt_xdate()
 #  plt.scatter(dates, latencies)
 plt.plot(dates, latencies, ".")
@@ -55,10 +58,12 @@ plt.plot(dates, latencies, ".")
 my_file = "./log.txt.my2"
 plt.subplot(1, 2, 2)
 dates, latencies = get_data(my_file)
+dates = [x - dates[30] for x in dates]
+dates = [y.total_seconds() for y in dates]
 plt.xlim(dates[30], dates[100])
 plt.ylim(1.6, 3.75)
-plt.xlabel("date")
-plt.title(u"The mechanism mentioned in this paper")
+plt.xlabel("time(s)")
+plt.title(u"本文提出的新机制")
 plt.ylabel("log10(latency)")
 plt.gcf().autofmt_xdate()
 #  plt.scatter(dates, latencies)
@@ -79,5 +84,14 @@ s5_date = find_key(my_file, pattern)
 pattern = r".*\[(.+)\] FINISH terminate!"
 end_date = find_key(my_file, pattern)
 #  plt.vlines(s2_date, 0, 100, colors = "c", linestyles = "dashed", linewidth=4)
-
+'''
+print("total: " + str(end_date - s1_date))
+count = 0
+latency_all = 0
+for i, d in enumerate(dates):
+    if s1_date <= d and d <= end_date:
+        latency_all += 10**latencies[i]
+        count += 1
+print(latency_all/count)
+'''
 plt.show()
