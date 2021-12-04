@@ -272,6 +272,7 @@ class PrecopyAndMigrateHelper(PeriodicExecutorBase):
                             src_partition_idx=partition_idx,
                             src_currency=currency,
                             target_task_manager_locate=target_task_manager_locate,
+                            new_streaming_name=next_streaming_name,
                             with_checkpoint_id=checkpoint_id)
 
                 # 确认迁移完成
