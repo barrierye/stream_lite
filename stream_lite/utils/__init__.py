@@ -6,5 +6,6 @@ from .generator import (
         AvailablePortGenerator, 
         JobIdGenerator, 
         EventIdGenerator,
-        DataIdGenerator)
+        DataIdGenerator,
+        StreamingNameGenerator)
 from .util import FinishJobError
