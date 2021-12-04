@@ -85,6 +85,7 @@ message Record {
   required DataType data_type = 3;
   required int64 timestamp = 4;
   optional int64 partition_key = 5 [default = -1]; // for partitioning
+  required string streaming_name = 6; // for filter
 
   enum DataType {
     PICKLE = 1;

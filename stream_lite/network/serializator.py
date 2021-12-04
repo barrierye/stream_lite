@@ -293,7 +293,7 @@ class SerializableRecord(SerializableObject):
     def __init__(self, **kwargs):
         super(SerializableRecord, self).__init__(**kwargs)
         required_attrs = ["data_id", "data", "timestamp", 
-                "data_type", "partition_key"]
+                "data_type", "partition_key", "streaming_name"]
         self.check_attrs(required_attrs)
 
     def instance_to_proto(self) -> common_pb2.Record:
@@ -302,6 +302,7 @@ class SerializableRecord(SerializableObject):
                 data=self.data.instance_to_bytes(),
                 data_type=self.data_type,
                 timestamp=self.timestamp,
+                streaming_name=self.streaming_name,
                 partition_key=self.partition_key)
 
     @staticmethod
@@ -311,6 +312,7 @@ class SerializableRecord(SerializableObject):
                 data=SerializableData.from_bytes(proto.data, proto.data_type),
                 data_type=proto.data_type,
                 timestamp=proto.timestamp,
+                streaming_name=proto.streaming_name,
                 partition_key=proto.partition_key)
 
 

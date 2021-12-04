@@ -284,7 +284,8 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
                         record.data_type, # type
                         record.data.data, # input_data (SerializableData.data)
                         record.data_id,   # data_id
-                        record.timestamp] # timestamp
+                        record.timestamp, # timestamp
+                        record.streaming_name] # streaming_name
             else:
                 try:
                     record = input_channel.get_nowait()
@@ -292,7 +293,8 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
                             record.data_type, # type
                             record.data.data, # input_data
                             -1,               # data_id
-                            -1]               # timestamp
+                            -1,               # timestamp
+                            ""]               # streaming_name
                 except queue.Empty as e:
                     # SourceOp 没有 event，继续处理
                     data_id = str(DataIdGenerator().next())
@@ -302,7 +304,8 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
                             data_type, # data_type
                             None,      # input_data
                             data_id,   # data_id
-                            timestamp] # timestamp 
+                            timestamp, # timestamp 
+                            streaming_name] # streaming_name
 
         # --------------------- process data ----------------------
         def pickle_data_process(
@@ -398,7 +401,8 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
                 data_type: int,
                 data_id: str,
                 timestamp: int,
-                partition_key: int) -> None:
+                partition_key: int,
+                streaming_name: str) -> None:
             if is_sink_op:
                 now_timestamp = util.get_timestamp()
                 _LOGGER.info("P[{}] latency: {}ms".format(
@@ -412,19 +416,20 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
                         data_type=output.data_type,
                         data=output,
                         timestamp=timestamp,
-                        partition_key=partition_key))
+                        partition_key=partition_key,
+                        streaming_name=streaming_name))
 
         #  print("[{}] succ run".format(subtask_name))
         while True:
             partition_key = -1
             output_data = None
 
-            data_type, input_data, data_id, timestamp = \
+            data_type, input_data, data_id, timestamp, upstream_streaming_name = \
                     get_input_data(task_instance, is_source_op)
             
             if data_type == common_pb2.Record.DataType.PICKLE:
                 is_duplicate, stream_sync = \
-                        migrate_window.duplicate_or_update(int(data_id), streaming_name)
+                        migrate_window.duplicate_or_update(int(data_id), upstream_streaming_name)
                 if is_duplicate:
                     if migrate_id != -1 and stream_sync:
                         # 过滤重复 data_id: 新旧数据流已经同步，可以终止旧数据流
@@ -503,7 +508,8 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
                 data_type=data_type,
                 data_id=data_id,
                 timestamp=timestamp,
-                partition_key=partition_key)
+                partition_key=partition_key,
+                streaming_name=streaming_name)
 
     @staticmethod
     def _import_cls_from_file(cls_name: str, filepath: str):
