@@ -537,7 +537,8 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
                     data_type=data_type,
                     data=data,
                     timestamp=util.get_timestamp(),
-                    partition_key=-1))
+                    partition_key=-1,
+                    streaming_name=""))
 
     @staticmethod
     def _push_finish_event_to_output_channel(
