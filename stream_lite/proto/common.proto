@@ -54,6 +54,7 @@ message TaskManagerDescription {
   required MachineResource resource = 4;
   optional string host = 5;
   repeated NearbyPeer peers = 6;
+  required string home_path = 7;
 
   message NearbyPeer {
     required string name = 1;

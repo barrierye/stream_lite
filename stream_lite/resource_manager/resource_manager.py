@@ -37,6 +37,7 @@ class ResourceManagerServicer(resource_manager_pb2_grpc.ResourceManagerServiceSe
         self.execute_task_table = ExecuteTaskTable() # 记录每个task在哪个节点 TODO: 仅单个jobid
         self.registered_task_manager_table = RegisteredTaskManagerTable(self.latency_table)
         self.job_manager_endpoint = job_manager_endpoint
+        self.last_migrate_info_list = [] # 迁移后通知RM修改信息
 
     # --------------------------- register task manager ----------------------------
     def registerTaskManager(self, request, context):
@@ -117,7 +118,6 @@ class ResourceManagerServicer(resource_manager_pb2_grpc.ResourceManagerServiceSe
     # --------------------------- getAutoMigrateSubtasks ----------------------------
     def getAutoMigrateSubtasks(self, request, context):
         jobid = request.jobid
-        is_migrate = request.migrate
         
         # 自动迁移逻辑
         _LOGGER.info("analyzing execute path...")
@@ -132,16 +132,7 @@ class ResourceManagerServicer(resource_manager_pb2_grpc.ResourceManagerServiceSe
             diff = -1
 
         print(migrate_info_list)
-
-        if is_migrate:
-            # update execute_task_table
-            for migrate_info in migrate_info_list:
-                subtask_name = scheduler.Scheduler._get_subtask_name(
-                        migrate_info.src_cls_name, 0, migrate_info.src_currency) # TODO: index=0
-                info = self.execute_task_table.get_info(subtask_name)
-                info.task_manager_name = migrate_info.target_task_manager_locate
-                self.execute_task_table.update_exec_task_info(subtask_name, info)
-
+        self.last_migrate_info_list = migrate_info_list
         '''
         # mock
         return resource_manager_pb2.GetAutoMigrateSubtasksResponse(
@@ -157,3 +148,17 @@ class ResourceManagerServicer(resource_manager_pb2_grpc.ResourceManagerServiceSe
                 status=common_pb2.Status(),
                 infos=migrate_info_list,
                 latency_diff=diff)
+
+    # --------------------------- doMigrateLastTime ----------------------------
+    def doMigrateLastTime(self, request, context):
+        migrate_info_list = self.last_migrate_info_list
+
+        # update execute_task_table
+        for migrate_info in migrate_info_list:
+            subtask_name = scheduler.Scheduler._get_subtask_name(
+                    migrate_info.src_cls_name, 0, migrate_info.src_currency) # TODO: index=0
+            info = self.execute_task_table.get_info(subtask_name)
+            info.task_manager_name = migrate_info.target_task_manager_locate
+            self.execute_task_table.update_exec_task_info(subtask_name, info)
+        
+        self.last_migrate_info_list = []

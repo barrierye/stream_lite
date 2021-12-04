@@ -99,7 +99,7 @@ class CheckpointHelper(PeriodicExecutorBase):
                     jobid=jobid, cancel_job=False)
             
             # 获取自动迁移信息
-            migrate_infos, _ = resource_manager_client.getAutoMigrateSubtasks(jobid, False)
+            migrate_infos, _ = resource_manager_client.getAutoMigrateSubtasks(jobid)
 
             # 逐subtask预备份
             for migrate_info in migrate_infos:
@@ -147,7 +147,7 @@ class MigrateHelper(PeriodicExecutorBase):
             time.sleep(interval)
 
             # 获取自动迁移信息
-            migrate_infos, _ = resource_manager_client.getAutoMigrateSubtasks(jobid, True)
+            migrate_infos, _ = resource_manager_client.getAutoMigrateSubtasks(jobid)
 
             # 逐subtask迁移
             for migrate_info in migrate_infos:
@@ -163,6 +163,9 @@ class MigrateHelper(PeriodicExecutorBase):
                         src_partition_idx=partition_idx,
                         src_currency=currency,
                         target_task_manager_locate=target_task_manager_locate)
+
+            # 确认迁移完成
+            resource_manager_client.doMigrateLastTime()
 
 class PrecopyAndMigrateHelper(PeriodicExecutorBase):
     """
@@ -199,7 +202,7 @@ class PrecopyAndMigrateHelper(PeriodicExecutorBase):
             time.sleep(interval)
             
             # 获取自动迁移信息
-            migrate_infos, latency_diff = resource_manager_client.getAutoMigrateSubtasks(jobid, False)
+            migrate_infos, latency_diff = resource_manager_client.getAutoMigrateSubtasks(jobid)
 
             # TODO
             assert len(migrate_infos) <= 1
@@ -246,13 +249,14 @@ class PrecopyAndMigrateHelper(PeriodicExecutorBase):
                         partition_idx=partition_idx)
                 '''
                 local_full_fn = os.path.join(state_path, file_name)
-                remote_path = "/root/stream_lite/expr/ex3/_tmp/tm/{}".format(
-                        target_task_manager_locate) +\
-                                "/jobid_{}/{}/partition_{}/snapshot".format(
-                                        jobid, cls_name, partition_idx)
-                remote_full_fn = os.path.join(remote_path, file_name)
                 endpoint = resource_manager_client.getTaskManagerEndpoint(
                         target_task_manager_locate).split(":")[0]
+                remote_home_path = resource_manager_client.getHomePath(target_task_manager_locate)
+                remote_path = os.path.join(remote_home_path, 
+                        "_tmp/tm/{}".format(target_task_manager_locate) +\
+                                "/jobid_{}/{}/partition_{}/snapshot".format(
+                                        jobid, cls_name, partition_idx))
+                remote_full_fn = os.path.join(remote_path, file_name)
                 cmd = 'ssh root@{} "[ -d {} ] && echo ok || mkdir -p {}"'.format(
                         endpoint, remote_path, remote_path)
                 os.system(cmd)
@@ -261,10 +265,6 @@ class PrecopyAndMigrateHelper(PeriodicExecutorBase):
                 os.system(cmd)
 
             if latency_diff > latency_threshold_ms:
-                # 获取自动迁移信息
-                migrate_infos, latency_diff = \
-                        resource_manager_client.getAutoMigrateSubtasks(jobid, True)
-
                 _LOGGER.info("Doing migrate...")
 
                 # 逐subtask迁移
@@ -282,3 +282,6 @@ class PrecopyAndMigrateHelper(PeriodicExecutorBase):
                             src_currency=currency,
                             target_task_manager_locate=target_task_manager_locate,
                             with_checkpoint_id=checkpoint_id)
+
+                # 确认迁移完成
+                resource_manager_client.doMigrateLastTime()

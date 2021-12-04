@@ -57,6 +57,7 @@ class ResourceManagerClient(ClientBase):
                         name=conf["name"],
                         coord_x=conf["coord"]["x"],
                         coord_y=conf["coord"]["y"],
+                        home_path=conf["home_path"],
                         resource=conf["resource"])))
         if resp.status.err_code != 0:
             raise Exception(resp.status.message)
@@ -95,6 +96,13 @@ class ResourceManagerClient(ClientBase):
             nearby_task_managers[name] = resp.endpoints[idx]
         return nearby_task_managers
 
+    def getHomePath(self, task_manager_name: str) -> str:
+        resp = self.stub.getAllTaskManagerDesc(common_pb2.NilRequest())
+        for desc in resp.task_manager_descs:
+            if desc.name == task_manager_name:
+                return desc.home_path
+        return None
+
     def getAllTaskManagerNames(self) -> List[str]:
         resp = self.stub.getAllTaskManagerDesc(common_pb2.NilRequest())
         names = [desc.name for desc in resp.task_manager_descs]
@@ -130,14 +138,19 @@ class ResourceManagerClient(ClientBase):
 
         return map_df, latency_df
 
-    def getAutoMigrateSubtasks(self, jobid: str, migrate: bool) \
+    def getAutoMigrateSubtasks(self, jobid: str) \
             -> List[common_pb2.MigrateInfo]:
         resp = self.stub.getAutoMigrateSubtasks(
-                resource_manager_pb2.GetAutoMigrateSubtasksRequest(
-                    jobid=jobid, migrate=migrate))
+                resource_manager_pb2.GetAutoMigrateSubtasksRequest(jobid=jobid))
         if resp.status.err_code != 0:
             raise Exception(resp.status.message)
         return list(resp.infos), resp.latency_diff
+
+    def doMigrateLastTime(self) -> None:
+        resp = self.stub.doMigrateLastTime(common_pb2.NilRequest())
+        if resp.status.err_code != 0:
+            raise Exception(resp.status.message)
+        return None
 
     def registerJobExecuteInfo(self, jobid: str, 
             execute_map: Dict[str, List[serializator.SerializableExectueTask]]):

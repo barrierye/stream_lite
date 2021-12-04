@@ -119,7 +119,7 @@ class SerializableTaskManagerDesc(SerializableObject):
 
     def __init__(self, **kwargs):
         super(SerializableTaskManagerDesc, self).__init__(**kwargs)
-        required_attrs = ["host", "endpoint", "name", "coord", "resource"]
+        required_attrs = ["host", "endpoint", "name", "coord", "resource", "home_path"]
         self.check_attrs(required_attrs)
 
     def instance_to_proto(self) -> common_pb2.TaskManagerDescription:
@@ -129,6 +129,7 @@ class SerializableTaskManagerDesc(SerializableObject):
                 name=self.name,
                 coord_x=self.coord.x,
                 coord_y=self.coord.y,
+                home_path=self.home_path,
                 resource=self.resource.instance_to_dict())
 
     @staticmethod
@@ -138,11 +139,13 @@ class SerializableTaskManagerDesc(SerializableObject):
             name: str,
             coord_x: float,
             coord_y: float,
+            home_path: str,
             resource: dict) -> common_pb2.TaskManagerDescription:
         return common_pb2.TaskManagerDescription(
                 host=host,
                 endpoint=endpoint,
                 name=name,
+                home_path=home_path,
                 coord=SerializableCoordinate.to_proto(
                     x=coord_x, y=coord_y),
                 resource=SerializableMachineResource.to_proto(
@@ -154,6 +157,7 @@ class SerializableTaskManagerDesc(SerializableObject):
                 host=proto.host,
                 endpoint=proto.endpoint,
                 name=proto.name,
+                home_path=proto.home_path,
                 coord=SerializableCoordinate.from_proto(
                     proto.coord),
                 resource=SerializableMachineResource.from_proto(
