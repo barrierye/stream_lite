@@ -162,3 +162,4 @@ class ResourceManagerServicer(resource_manager_pb2_grpc.ResourceManagerServiceSe
             self.execute_task_table.update_exec_task_info(subtask_name, info)
         
         self.last_migrate_info_list = []
+        return gen_nil_response()
