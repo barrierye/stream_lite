@@ -16,19 +16,19 @@ class MigrateFilterWindow(object):
 
     def duplicate_or_update(self, data_id: int, stream_name: str):
         if self.new_streaming_name == "":
-            print("[{}] id: {}, duplicate: {}, reached: {}".format(
-                stream_name, data_id, False, False))
+            #  print("[{}] id: {}, duplicate: {}, reached: {}".format(
+                #  stream_name, data_id, False, False))
             # 不需要同步判断
             return [False, False]
 
         if self.is_reached:
             if data_id in self.old_stream_output:
-                print("[{}] id: {}, duplicate: {}, reached: {}".format(
-                    stream_name, data_id, True, True))
+                #  print("[{}] id: {}, duplicate: {}, reached: {}".format(
+                    #  stream_name, data_id, True, True))
                 return [True, True]
             else:
-                print("[{}] id: {}, duplicate: {}, reached: {}".format(
-                    stream_name, data_id, False, True))
+                #  print("[{}] id: {}, duplicate: {}, reached: {}".format(
+                    #  stream_name, data_id, False, True))
                 self.old_stream_output.add(data_id)
                 return [False, True]
 

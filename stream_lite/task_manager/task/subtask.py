@@ -444,7 +444,8 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
                         input_data=input_data)
             elif data_type == common_pb2.Record.DataType.CHECKPOINT:
                 _LOGGER.info("[{}] recv checkpoint event".format(subtask_name))
-                migrate_window = MigrateFilterWindow(input_data.new_streaming_name)
+                if upstream_cls_names[0] == data_type.migrate_cls_name:
+                    migrate_window = MigrateFilterWindow(input_data.new_streaming_name)
                 checkpoint_event_process(
                         task_instance=task_instance, 
                         is_sink_op=is_sink_op,
@@ -458,7 +459,8 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
                     continue
             elif data_type == common_pb2.Record.DataType.CHECKPOINT_PREPARE_FOR_MIGRATE:
                 _LOGGER.info("[{}] recv checkpoint_prepare_for_migrate event".format(subtask_name))
-                migrate_window = MigrateFilterWindow(input_data.new_streaming_name)
+                if upstream_cls_names[0] == data_type.migrate_cls_name:
+                    migrate_window = MigrateFilterWindow(input_data.new_streaming_name)
                 checkpoint_prepare_for_migrate_event_process(
                         task_instance=task_instance, 
                         is_sink_op=is_sink_op,
