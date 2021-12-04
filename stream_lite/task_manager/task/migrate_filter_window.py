@@ -10,7 +10,7 @@ _LOGGER = logging.getLogger(__name__)
 class MigrateFilterWindow(object):
 
     def __init__(self, new_streaming_name: str):
-        self.old_stream_output = Set()
+        self.old_stream_output = set()
         self.new_streaming_name = new_streaming_name
         self.is_reached = False
 
