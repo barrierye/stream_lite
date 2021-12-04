@@ -15,7 +15,7 @@ class MigrateFilterWindow(object):
         self.is_reached = False
 
     def duplicate_or_update(self, data_id: int, stream_name: str):
-        if self.new_streaming_name == "":
+        if not self.new_streaming_name:
             #  print("[{}] id: {}, duplicate: {}, reached: {}".format(
                 #  stream_name, data_id, False, False))
             # 不需要同步判断
