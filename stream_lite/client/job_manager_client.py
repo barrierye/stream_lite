@@ -29,11 +29,13 @@ class JobManagerClient(ClientBase):
             jobid: str, 
             cancel_job: bool = False,
             migrate_cls_name: str = "",
+            new_streaming_name: str = "",
             migrate_partition_idx: int = -1) -> int:
         resp = self.stub.triggerCheckpoint(
                 job_manager_pb2.TriggerCheckpointRequest(
                     jobid=jobid,
                     cancel_job=cancel_job,
+                    new_streaming_name=new_streaming_name,
                     migrate_cls_name=migrate_cls_name,
                     migrate_partition_idx=migrate_partition_idx))
         if resp.status.err_code != 0:
