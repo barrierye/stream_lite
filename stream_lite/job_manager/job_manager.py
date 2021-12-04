@@ -518,7 +518,7 @@ class JobManagerServicer(job_manager_pb2_grpc.JobManagerServiceServicer):
         with open(prototxt_path, "rb") as f:
             execute_task_pb = common_pb2.ExecuteTask()
             execute_task_pb.ParseFromString(f.read())
-            execute_task_pb.new_streaming_name = new_streaming_name
+            execute_task_pb.streaming_name = new_streaming_name
 
         # step 2.2: ask for slot resource
         #  _LOGGER.info("[Migrate] step 2.2: ask for slot resource.")
