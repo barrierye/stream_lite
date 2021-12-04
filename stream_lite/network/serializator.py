@@ -285,7 +285,7 @@ class SerializableExectueTask(SerializableObject):
                 port=proto.port,
                 upstream_cls_names=list(proto.upstream_cls_names),
                 downstream_cls_names=list(proto.downstream_cls_names),
-                streaming_name=proto.streaming)
+                streaming_name=proto.streaming_name)
 
 
 class SerializableRecord(SerializableObject):
