@@ -785,7 +785,8 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
                     data_type=common_pb2.Record.DataType.CHECKPOINT_PREPARE_FOR_MIGRATE,
                     data=checkpoint),
                 timestamp=util.get_timestamp(),
-                partition_key=-1)
+                partition_key=-1,
+                streaming_name="")
         self.input_channel.put(seri_data)
         return gen_nil_response()
 
@@ -802,7 +803,8 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
                     data_type=common_pb2.Record.DataType.MIGRATE,
                     data=migrate),
                 timestamp=util.get_timestamp(),
-                partition_key=-1)
+                partition_key=-1,
+                streaming_name="")
         self.input_channel.put(seri_data)
         return gen_nil_response()
 
