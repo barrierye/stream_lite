@@ -21,7 +21,7 @@ import stream_lite
 from stream_lite import client
 from stream_lite.network.util import gen_nil_response
 from stream_lite.network import serializator
-from stream_lite.utils import JobIdGenerator, EventIdGenerator
+from stream_lite.utils import JobIdGenerator, EventIdGenerator, StreamingNameGenerator
 import stream_lite.utils.util
 from stream_lite.server.resource_manager_server import ResourceManager
 
@@ -316,7 +316,8 @@ class JobManagerServicer(job_manager_pb2_grpc.JobManagerServiceServicer):
                     checkpoint_id=checkpoint_id, 
                     cancel_job=request.cancel_job,
                     migrate_cls_name=request.migrate_cls_name,
-                    migrate_partition_idx=request.migrate_partition_idx)
+                    migrate_partition_idx=request.migrate_partition_idx,
+                    new_streaming_name=request.new_streaming_name)
             self.job_coordinator.block_util_checkpoint_completed(
                     jobid=jobid,
                     checkpoint_id=checkpoint_id)
@@ -447,7 +448,8 @@ class JobManagerServicer(job_manager_pb2_grpc.JobManagerServiceServicer):
                 src_partition_idx=request.src_partition_idx,
                 src_currency=request.src_currency,
                 target_task_manager_locate=request.target_task_manager_locate,
-                with_checkpoint_id=request.with_checkpoint_id)
+                with_checkpoint_id=request.with_checkpoint_id,
+                new_streaming_name=request.new_streaming_name)
         except Exception as e:
             _LOGGER.error(e, exc_info=True)
             return gen_nil_response(
@@ -460,7 +462,8 @@ class JobManagerServicer(job_manager_pb2_grpc.JobManagerServiceServicer):
             src_partition_idx: int,
             src_currency: int,
             target_task_manager_locate: str,
-            with_checkpoint_id: int) -> None:
+            with_checkpoint_id: int,
+            new_streaming_name: str) -> None:
         if with_checkpoint_id == -1:
             _LOGGER.info("[{}] step 1: checkpoint for migrate".format(datetime.timestamp(datetime.now())))
             checkpoint_id = EventIdGenerator().next()
@@ -468,7 +471,8 @@ class JobManagerServicer(job_manager_pb2_grpc.JobManagerServiceServicer):
                     jobid=jobid, 
                     checkpoint_id=checkpoint_id, 
                     migrate_cls_name=src_cls_name,
-                    migrate_partition_idx=src_partition_idx)
+                    migrate_partition_idx=src_partition_idx,
+                    new_streaming_name=new_streaming_name)
             self.job_coordinator.block_util_checkpoint_completed(
                     jobid=jobid,
                     checkpoint_id=checkpoint_id)
@@ -487,7 +491,8 @@ class JobManagerServicer(job_manager_pb2_grpc.JobManagerServiceServicer):
                 target_task_manager_locate=target_task_manager_locate,
                 checkpoint_id=checkpoint_id,
                 with_file_state=with_file_state,
-                migrate_id=migrate_id)
+                migrate_id=migrate_id,
+                new_streaming_name=new_streaming_name)
 
     def _inner_trigger_migrate_without_checkpoint(self,
             jobid: str,
@@ -497,6 +502,7 @@ class JobManagerServicer(job_manager_pb2_grpc.JobManagerServiceServicer):
             target_task_manager_locate: str,
             checkpoint_id: int,
             with_file_state: bool,
+            new_streaming_name: str,
             migrate_id: int = -1) -> None:
         _LOGGER.info("[{}] step 2: deploy and start new subtask in target_task_manager_locate".format(
             datetime.timestamp(datetime.now())))
@@ -512,6 +518,7 @@ class JobManagerServicer(job_manager_pb2_grpc.JobManagerServiceServicer):
         with open(prototxt_path, "rb") as f:
             execute_task_pb = common_pb2.ExecuteTask()
             execute_task_pb.ParseFromString(f.read())
+            execute_task_pb.new_streaming_name = new_streaming_name
 
         # step 2.2: ask for slot resource
         #  _LOGGER.info("[Migrate] step 2.2: ask for slot resource.")

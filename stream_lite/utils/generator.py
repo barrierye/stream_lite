@@ -89,3 +89,13 @@ class DataIdGenerator(IncIdGenerator):
 
     def __init__(self):
         super(DataIdGenerator, self).__init__()
+
+
+class StreamingNameGenerator(IncIdGenerator):
+
+    def __init__(self):
+        super(StreamingNameGenerator, self).__init__()
+        
+    def next(self):
+        count = super(StreamingNameGenerator, self).next()
+        return "streaming_{}".format(count)

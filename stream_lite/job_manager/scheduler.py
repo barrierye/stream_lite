@@ -102,7 +102,8 @@ class UserDefinedScheduler(Scheduler):
                                 subtask_name=subtask_name,
                                 partition_idx=i,
                                 upstream_cls_names=logical_task.input_tasks,
-                                downstream_cls_names=[])
+                                downstream_cls_names=[],
+                                streaming_name="")
                     execute_map[task_manager_name].append(execute_task)
                     name_to_executetask[subtask_name] = execute_task
     

@@ -12,6 +12,7 @@ from stream_lite.utils import util
 from stream_lite.client import JobManagerClient
 from stream_lite.client import ResourceManagerClient
 from stream_lite.network import serializator
+from stream_lite.utils import StreamingNameGenerator
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -198,11 +199,17 @@ class PrecopyAndMigrateHelper(PeriodicExecutorBase):
         # init resource manager client
         resource_manager_client = ResourceManagerClient()
         resource_manager_client.connect(resource_manager_enpoint)
+
+        streaming_name_generator = StreamingNameGenerator()
+        next_streaming_name = None
+
         while True:
             time.sleep(interval)
             
             # 获取自动迁移信息
             migrate_infos, latency_diff = resource_manager_client.getAutoMigrateSubtasks(jobid)
+            if next_streaming_name is None:
+                next_streaming_name = streaming_name_generator.next()
 
             # TODO
             assert len(migrate_infos) <= 1
@@ -213,7 +220,8 @@ class PrecopyAndMigrateHelper(PeriodicExecutorBase):
             checkpoint_id = job_manager_client.triggerCheckpoint(
                     jobid=jobid, cancel_job=False,
                     migrate_cls_name=migrate_cls_name,
-                    migrate_partition_idx=migrate_partition_idx)
+                    migrate_partition_idx=migrate_partition_idx,
+                    new_streaming_name=next_streaming_name)
 
             if migrate_infos:
                 _LOGGER.info("Doing preCopy...")
@@ -230,24 +238,7 @@ class PrecopyAndMigrateHelper(PeriodicExecutorBase):
                 # snapshot_dir = "./_tmp/jm/jobid_{}/snapshot/{}/partition_{}"
                 file_name = "chk_{}".format(checkpoint_id)
                 state_path = snapshot_dir.format(jobid, cls_name, partition_idx)
-                '''
-                while True:
-                    if os.path.exists(
-                            os.path.join(state_path, file_name)):
-                        break
-                    time.sleep(0.1)
-                state_file = serializator.SerializableFile.to_proto(
-                        path=os.path.join(state_path, file_name), name=file_name)
 
-                client = resource_manager_client.get_client(
-                        target_task_manager_locate)
-                client.preCopyState(
-                        jobid=jobid,
-                        checkpoint_id=checkpoint_id,
-                        state_file=state_file,
-                        cls_name=cls_name,
-                        partition_idx=partition_idx)
-                '''
                 local_full_fn = os.path.join(state_path, file_name)
                 endpoint = resource_manager_client.getTaskManagerEndpoint(
                         target_task_manager_locate).split(":")[0]
@@ -285,3 +276,4 @@ class PrecopyAndMigrateHelper(PeriodicExecutorBase):
 
                 # 确认迁移完成
                 resource_manager_client.doMigrateLastTime()
+                next_streaming_name = None

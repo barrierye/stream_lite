@@ -62,6 +62,7 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
         self.subtask_name = execute_task.subtask_name
         self.partition_idx = execute_task.partition_idx
         self.port = execute_task.port
+        self.streaming_name = execute_task.streaming_name
         self.state = state
         self.resource_dir = "_tmp/tm/{}/jobid_{}/{}/partition_{}/resource".format(
                 self.tm_name, self.jobid, self.cls_name, self.partition_idx)
@@ -163,7 +164,8 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
                         self.downstream_cls_names,
                         self.snapshot_dir,
                         self.job_manager_enpoint,
-                        self.state),
+                        self.state,
+                        self.streaming_name),
                     daemon=True)
         else:
             self._core_process = threading.Thread(
@@ -179,7 +181,8 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
                         self.downstream_cls_names,
                         self.snapshot_dir,
                         self.job_manager_enpoint,
-                        self.state))
+                        self.state,
+                        self.streaming_name))
         self._core_process.start()
 
     # --------------------------- compute core ----------------------------
@@ -196,13 +199,14 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
             downstream_cls_names: List[str],
             snapshot_dir: str,
             job_manager_enpoint: str,
-            state: Union[None, task_manager_pb2.DeployTaskRequest.State]):
+            state: Union[None, task_manager_pb2.DeployTaskRequest.State],
+            streaming_name: str):
         try:
             SubTaskServicer._inner_compute_core(
                     jobid, full_task_filename, cls_name, subtask_name,
                     resource_path_dict, input_channel, output_channel,
                     upstream_cls_names, downstream_cls_names,
-                    snapshot_dir, job_manager_enpoint, state)
+                    snapshot_dir, job_manager_enpoint, state, streaming_name)
         except FinishJobError as e:
             # SourceOp 中通过 FinishJobError 异常来表示
             # 处理完成。向下游 Operator 发送 Finish Record
@@ -231,7 +235,8 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
             downstream_cls_names: List[str],
             snapshot_dir: str,
             job_manager_enpoint: str,
-            state_pb: Union[None, task_manager_pb2.DeployTaskRequest.State]):
+            state_pb: Union[None, task_manager_pb2.DeployTaskRequest.State],
+            streaming_name: str = ""):
         """
         具体执行逻辑
         """
@@ -243,7 +248,7 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
         is_source_op = issubclass(cls, operator.SourceOperatorBase)
         is_sink_op = issubclass(cls, operator.SinkOperatorBase)
         is_key_op = issubclass(cls, operator.KeyOperatorBase)
-        migrate_window = MigrateFilterWindow() # 为了过滤 migrate 产生的重复数据
+        migrate_window = MigrateFilterWindow(None) # 为了过滤 migrate 产生的重复数据
         migrate_id = -1 # 标记是否正处于 migrate
         task_instance = cls()
         task_instance.set_name(subtask_name)
@@ -419,7 +424,7 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
             
             if data_type == common_pb2.Record.DataType.PICKLE:
                 is_duplicate, stream_sync = \
-                        migrate_window.duplicate_or_update(int(data_id))
+                        migrate_window.duplicate_or_update(int(data_id), streaming_name)
                 if is_duplicate:
                     if migrate_id != -1 and stream_sync:
                         # 过滤重复 data_id: 新旧数据流已经同步，可以终止旧数据流
@@ -439,6 +444,7 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
                         input_data=input_data)
             elif data_type == common_pb2.Record.DataType.CHECKPOINT:
                 _LOGGER.info("[{}] recv checkpoint event".format(subtask_name))
+                migrate_window = MigrateFilterWindow(input_data.new_streaming_name)
                 checkpoint_event_process(
                         task_instance=task_instance, 
                         is_sink_op=is_sink_op,
@@ -452,6 +458,7 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
                     continue
             elif data_type == common_pb2.Record.DataType.CHECKPOINT_PREPARE_FOR_MIGRATE:
                 _LOGGER.info("[{}] recv checkpoint_prepare_for_migrate event".format(subtask_name))
+                migrate_window = MigrateFilterWindow(input_data.new_streaming_name)
                 checkpoint_prepare_for_migrate_event_process(
                         task_instance=task_instance, 
                         is_sink_op=is_sink_op,

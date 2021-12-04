@@ -226,7 +226,8 @@ class SerializableExectueTask(SerializableObject):
         required_attrs = ["cls_name", "input_endpoints", 
                 "output_endpoints", "resources", "task_file",
                 "subtask_name", "partition_idx", "port",
-                "upstream_cls_names", "downstream_cls_names"]
+                "upstream_cls_names", "downstream_cls_names",
+                "streaming_name"]
         self.check_attrs(required_attrs)
 
     def instance_to_proto(self) -> common_pb2.ExecuteTask:
@@ -240,7 +241,8 @@ class SerializableExectueTask(SerializableObject):
                 partition_idx=self.partition_idx,
                 port=self.port,
                 upstream_cls_names=self.upstream_cls_names,
-                downstream_cls_names=self.downstream_cls_names)
+                downstream_cls_names=self.downstream_cls_names,
+                streaming_name=self.streaming_name)
 
     @staticmethod
     def to_proto(
@@ -253,7 +255,8 @@ class SerializableExectueTask(SerializableObject):
             partition_idx: int,
             port: int,
             upstream_cls_names: List[str],
-            downstream_cls_names: List[str]) -> common_pb2.ExecuteTask:
+            downstream_cls_names: List[str],
+            streaming_name: str) -> common_pb2.ExecuteTask:
         proto = common_pb2.ExecuteTask(
                 cls_name=cls_name,
                 input_endpoints=input_endpoints,
@@ -263,7 +266,8 @@ class SerializableExectueTask(SerializableObject):
                 partition_idx=partition_idx,
                 port=port,
                 upstream_cls_names=upstream_cls_names,
-                downstream_cls_names=downstream_cls_names)
+                downstream_cls_names=downstream_cls_names,
+                streaming_name=streaming_name)
         if task_file is not None:
             proto.task_file.CopyFrom(task_file.instance_to_proto())
         return proto
@@ -280,7 +284,8 @@ class SerializableExectueTask(SerializableObject):
                 partition_idx=proto.partition_idx,
                 port=proto.port,
                 upstream_cls_names=list(proto.upstream_cls_names),
-                downstream_cls_names=list(proto.downstream_cls_names))
+                downstream_cls_names=list(proto.downstream_cls_names),
+                streaming_name=proto.streaming)
 
 
 class SerializableRecord(SerializableObject):

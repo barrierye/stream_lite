@@ -289,6 +289,7 @@ class SpecificJobInfo(object):
             checkpoint_id: int,
             trigger_checkpoint_for_migrate: bool,
             cancel_job: bool = False,
+            new_streaming_name: str = "",
             migrate_cls_name: Union[None, List[str]] = None,
             migrate_partition_idx: Union[None, List[List[int]]] = None) -> None:
         subtask_endpoint = "{}:{}".format(subtask_ip, subtask_port)
@@ -300,14 +301,14 @@ class SpecificJobInfo(object):
                     "Try to trigger checkpoint(id={}) for subtask [{}] (endpoint={})"
                     .format(checkpoint_id, subtask_name, subtask_endpoint))
             client.triggerCheckpoint(checkpoint_id, cancel_job,
-                    migrate_cls_name, migrate_partition_idx)
+                    migrate_cls_name, migrate_partition_idx, new_streaming_name)
         else:
             # checkpoint prepare for migrate
             _LOGGER.info(
                     "Try to trigger checkpoint for migrate (id={}) for subtask [{}] (endpoint={})"
                     .format(checkpoint_id, subtask_name, subtask_endpoint))
             client.triggerCheckpointPrepareForMigrate(
-                    checkpoint_id, migrate_cls_name, migrate_partition_idx)
+                    checkpoint_id, migrate_cls_name, migrate_partition_idx, new_streaming_name)
 
     def trigger_migrate(self, 
             migrate_id: int,

@@ -9,6 +9,37 @@ _LOGGER = logging.getLogger(__name__)
 
 class MigrateFilterWindow(object):
 
+    def __init__(self, new_streaming_name: str):
+        self.old_stream_output = Set()
+        self.new_streaming_name = new_streaming_name
+        self.is_reached = False
+
+    def duplicate_or_update(self, data_id: int, stream_name: str):
+        if self.new_streaming_name == "":
+            # 不需要同步判断
+            return [False, False]
+
+        if self.is_reached:
+            if data_id in self.old_stream_output:
+                return [True, True]
+            else:
+                self.old_stream_output.add(data_id)
+                return [False, True]
+
+        if stream_name != self.new_streaming_name:
+            self.old_stream_output.add(data_id)
+            return [False, False] # is_duplicate, if_reached
+        else:
+            if data_id in self.old_stream_output:
+                return [True, False] # is_duplicate, if_reached
+            else:
+                self.old_stream_output.add(data_id)
+                self.is_reached = True
+                return [False, True] # is_duplicate, if_reached
+
+'''
+class MigrateFilterWindow(object):
+
     def __init__(self, window_size: int = 1000):
         """
         window: [base_id, base_id + window_size)
@@ -128,3 +159,4 @@ class MigrateFilterWindow(object):
 
     def _judge_if_reached(self):
         return self.window_base_id == self.duplicate_window_base_id
+'''

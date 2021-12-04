@@ -14,6 +14,7 @@ message ExecuteTask {
   required int32 port = 8;
   repeated string upstream_cls_names = 9;
   repeated string downstream_cls_names = 10;
+  required string streaming_name = 11;
 }
 
 // logical task
@@ -99,12 +100,14 @@ message Record {
     optional bool cancel_job = 2 [default = false];
     optional string migrate_cls_name = 3 [default = ""]; // for migrate cache
     optional int32 migrate_partition_idx = 4 [default = -1]; // for migrate cache
+    optional string new_streaming_name = 5 [default = ""]; // for migrate cache
   }
 
   message CheckpointPrepareForMigrate {
     required int32 id = 1;
     required string migrate_cls_name = 2; // for migrate cache
     required int32 migrate_partition_idx = 3; // for migrate cache
+    required string new_streaming_name = 4; // for migrate cache
   }
 
   message Migrate {

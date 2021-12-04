@@ -112,6 +112,7 @@ class JobManagerClient(ClientBase):
             src_cls_name: str,
             src_partition_idx: int,
             src_currency: int,
+            new_streaming_name: str,
             target_task_manager_locate: str,
             with_checkpoint_id: int = -1) -> None:
         resp = self.stub.triggerMigrate(
@@ -120,6 +121,7 @@ class JobManagerClient(ClientBase):
                     src_cls_name=src_cls_name,
                     src_partition_idx=src_partition_idx,
                     src_currency=src_currency,
+                    new_streaming_name=new_streaming_name,
                     target_task_manager_locate=target_task_manager_locate,
                     with_checkpoint_id=with_checkpoint_id))
         if resp.status.err_code != 0:
