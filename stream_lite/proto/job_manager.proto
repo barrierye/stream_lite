@@ -22,6 +22,7 @@ message TriggerCheckpointRequest {
   optional bool cancel_job = 2 [default = false];
   optional string migrate_cls_name = 3 [default = ""]; // for migrate cache
   optional int32 migrate_partition_idx = 4 [default = -1]; // for migrate cache
+  optional string new_streaming_name = 5 [default = ""]; // for migrate
 }
 
 message TriggerCheckpointResponse {
