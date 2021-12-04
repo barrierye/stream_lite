@@ -51,7 +51,7 @@ class SubTaskClient(ClientBase):
                     checkpoint=common_pb2.Record.Checkpoint(
                         id=checkpoint_id,
                         cancel_job=cancel_job,
-                        new_cls_name=new_cls_name,
+                        new_streaming_name=new_streaming_name,
                         migrate_cls_name=migrate_cls_name,
                         migrate_partition_idx=migrate_partition_idx)))
         if resp.status.err_code != 0:
