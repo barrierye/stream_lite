@@ -41,6 +41,7 @@ class JobCoordinator(object):
             jobid: str,
             checkpoint_id: int,
             cancel_job: bool,
+            new_streaming_name: str,
             migrate_cls_name: str = "",
             migrate_partition_idx: int = -1) -> None:
         with self.rw_lock_pair.gen_wlock():
@@ -52,7 +53,8 @@ class JobCoordinator(object):
                     self.resource_manager_client,
                     cancel_job,
                     migrate_cls_name,
-                    migrate_partition_idx)
+                    migrate_partition_idx,
+                    new_streaming_name)
 
     def trigger_checkpoint_for_migrate(self, 
             jobid: str,
@@ -238,7 +240,8 @@ class SpecificJobInfo(object):
             resource_manager_client: ResourceManagerClient,
             cancel_job: bool,
             migrate_cls_name: str,
-            migrate_partition_idx: int) -> None:
+            migrate_partition_idx: int,
+            new_streaming_name: str) -> None:
         if self.ack_table.has_event(checkpoint_id):
             raise KeyError(
                     "Failed: checkpoint(id={}) already exists".format(checkpoint_id))
@@ -252,6 +255,7 @@ class SpecificJobInfo(object):
                         subtask_name=task.subtask_name,
                         checkpoint_id=checkpoint_id,
                         cancel_job=cancel_job,
+                        new_streaming_name=new_streaming_name,
                         migrate_cls_name=migrate_cls_name,
                         migrate_partition_idx=migrate_partition_idx,
                         trigger_checkpoint_for_migrate=False)
