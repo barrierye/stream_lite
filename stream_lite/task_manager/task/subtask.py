@@ -623,7 +623,7 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
             err_msg: str = "") -> None:
         client = JobManagerClient()
         client.connect(job_manager_enpoint)
-        print("{} RUN client".format(subtask_name))
+        #  print("{} RUN client".format(subtask_name))
         client.acknowledgeCheckpoint(
                 subtask_name=subtask_name,
                 jobid=jobid,
@@ -709,7 +709,7 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
                             subtask_name, e), exc_info=True)
                 os._exit(-1)
 
-        print("{} RUN process".format(subtask_name))
+        #  print("{} RUN process".format(subtask_name))
         # TODO: process hang!
         #  p = multiprocessing.Process(
         p = threading.Thread(
@@ -719,7 +719,7 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
                     job_manager_enpoint, subtask_name, jobid))
         p.daemon = True
         p.start()
-        print("{} succ RUN process".format(subtask_name))
+        #  print("{} succ RUN process".format(subtask_name))
 
     @staticmethod
     def _checkpoint(
@@ -733,19 +733,19 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
         """
         每个 subtask 执行 checkpoint 操作
         """
-        print("{} RUN task_instance.checkpoint".format(subtask_name))
+        #  print("{} RUN task_instance.checkpoint".format(subtask_name))
         snapshot_state = task_instance.checkpoint()
-        print("{} RUN SubTaskServicer._save_snapshot_state".format(subtask_name))
+        #  print("{} RUN SubTaskServicer._save_snapshot_state".format(subtask_name))
         seri_file = SubTaskServicer._save_snapshot_state(
                 snapshot_dir, snapshot_state, checkpoint_id)
-        print("{} RUN SubTaskServicer._acknowledge_checkpoint".format(subtask_name))
+        #  print("{} RUN SubTaskServicer._acknowledge_checkpoint".format(subtask_name))
         SubTaskServicer._acknowledge_checkpoint(
                 job_manager_enpoint=job_manager_enpoint, 
                 subtask_name=subtask_name, 
                 jobid=jobid,
                 checkpoint_id=checkpoint_id,
                 state=seri_file)
-        print("{} RUN end".format(subtask_name))
+        #  print("{} RUN end".format(subtask_name))
 
     @staticmethod
     def _migrate(
