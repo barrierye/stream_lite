@@ -83,10 +83,13 @@ message AcknowledgeTerminateRequest {
 service JobManagerService {
   // from user front client
   rpc submitJob(SubmitJobRequest) returns (SubmitJobResponse) {}
-  rpc triggerCheckpoint(TriggerCheckpointRequest) returns (TriggerCheckpointResponse) {}
+  rpc triggerCheckpoint(TriggerCheckpointRequest) 
+      returns (TriggerCheckpointResponse) {}
   rpc restoreFromCheckpoint(RestoreFromCheckpointRequest) 
       returns (RestoreFromCheckpointResponse) {}
   rpc triggerMigrate(MigrateRequest) returns (common.NilResponse) {}
+  // rpc triggerGlossLikeMigrate(TriggerGlossLikeMigrateRequest) 
+      // returns (TriggerGlossLikeMigrateResponse) {}
 
   // from subtask
   rpc acknowledgeCheckpoint(AcknowledgeCheckpointRequest) returns (common.NilResponse) {}
