@@ -292,7 +292,7 @@ class MigrateHelper(PeriodicExecutorBase):
             snapshot_dir: str,
             interval: int = 5,
             latency_threshold_ms: int = 20):
-        super(PrecopyAndMigrateHelper, self).__init__(
+        super(MigrateHelper, self).__init__(
                 jobid, job_manager_endpoint, resource_manager_enpoint, interval)
         self._params_dict["snapshot_dir"] = snapshot_dir
         self._params_dict["latency_threshold_ms"] = latency_threshold_ms
