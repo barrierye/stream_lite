@@ -322,7 +322,7 @@ class JobManagerServicer(job_manager_pb2_grpc.JobManagerServiceServicer):
                     jobid=jobid,
                     checkpoint_id=checkpoint_id)
             if request.cancel_job:
-                _LOGGER.info("[{}] prepare for restart job...".format(
+                _LOGGER.info("P[{}] prepare for restart job...".format(
                     datetime.timestamp(datetime.now())))
                 #TODO
                 import requests
