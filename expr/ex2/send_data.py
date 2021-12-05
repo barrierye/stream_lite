@@ -26,7 +26,7 @@ que = queue.Queue()
 th = threading.Thread(target=run, args=(que, 8998))
 th.start()
 
-out2file = []
+fout = open("results.txt", "w")
 
 with open("./resources/document-words.txt") as f:
     for idx, line in enumerate(f):
@@ -49,8 +49,5 @@ with open("./resources/document-words.txt") as f:
         output = "{},{},{}".format(
                 idx, datetime.timestamp(datetime.now()), int((et - st) * 1000))
         print(output)
-        out2file.append(output)
-
-with open("results.txt", "w") as f:
-    for line in out2file:
-        f.write(line + "\n")
+        fout.write(output + "\n")
+        fout.flush()
