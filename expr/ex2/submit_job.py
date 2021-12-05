@@ -31,7 +31,7 @@ if __name__ == '__main__':
                 yaml_path="conf/job4step2.yaml", 
                 periodicity_checkpoint_interval_s=5,
                 auto_migrate=False)
-        time.sleep(10)
+        time.sleep(15)
         chk_id = client.triggerSavepoint(jobid) 
         client.restoreFromCheckpoint(
                 jobid, chk_id,
