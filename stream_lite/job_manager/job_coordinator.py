@@ -59,6 +59,7 @@ class JobCoordinator(object):
     def trigger_checkpoint_for_migrate(self, 
             jobid: str,
             checkpoint_id: int,
+            new_streaming_name: str,
             migrate_cls_name: List[str],
             migrate_partition_idx: List[List[int]]) -> None:
         with self.rw_lock_pair.gen_wlock():
@@ -69,7 +70,8 @@ class JobCoordinator(object):
                     checkpoint_id, 
                     self.resource_manager_client,
                     migrate_cls_name,
-                    migrate_partition_idx)
+                    migrate_partition_idx,
+                    new_streaming_name)
 
     def trigger_migrate(self, 
             jobid: str,
@@ -265,7 +267,8 @@ class SpecificJobInfo(object):
             checkpoint_id: int,
             resource_manager_client: ResourceManagerClient,
             migrate_cls_name: List[str],
-            migrate_partition_idx: List[List[int]]) -> None:
+            migrate_partition_idx: List[List[int]],
+            new_streaming_name: str) -> None:
         """
         传入 resource_manager_client 是为了找到对应 task_manager 的 endpoint
         """
@@ -282,6 +285,7 @@ class SpecificJobInfo(object):
                         subtask_name=task.subtask_name,
                         checkpoint_id=checkpoint_id,
                         migrate_cls_name=migrate_cls_name,
+                        new_streaming_name=new_streaming_name,
                         migrate_partition_idx=migrate_partition_idx,
                         trigger_checkpoint_for_migrate=True)
         self.ack_table.register_pending_event(checkpoint_id)
