@@ -708,6 +708,7 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
                             subtask_name, e), exc_info=True)
                 os._exit(-1)
 
+        print("{} RUN process".format(subtask_name))
         p = multiprocessing.Process(
                 target=__func,
                 args=(task_instance, snapshot_dir,
@@ -715,6 +716,7 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
                     job_manager_enpoint, subtask_name, jobid))
         p.daemon = True
         p.start()
+        print("{} succ RUN process".format(subtask_name))
 
     @staticmethod
     def _checkpoint(
