@@ -30,7 +30,7 @@ fout = open("results.txt", "w")
 
 with open("./resources/document-words.txt") as f:
     for idx, line in enumerate(f):
-        sleep(0.08)
+        sleep(0.1)
         line = line.strip()
         st = time()
         while True:

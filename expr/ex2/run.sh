@@ -12,7 +12,7 @@ if [ "$step" == "step1" ]; then
     sleep 1
     python send_data.py
 elif [ "$step" == "step2" ]; then
-    python submit_job.py job4step2.yaml step2
+    python submit_job.py conf/job4step2.yaml step2
 else
     echo "error step: $step"
     exit 1

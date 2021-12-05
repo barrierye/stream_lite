@@ -38,6 +38,3 @@
   c. 提交word-count程序, 一段时间后停止并将状态转移到目标机器。然后重启:
        sh init_env.sh
        bash run.sh step2
-
-
-
