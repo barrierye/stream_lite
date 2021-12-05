@@ -7,7 +7,7 @@ from datetime import datetime
 from time import time, sleep
 from flask import Flask
 import threading
-import queue 
+import queue
 import logging
 log = logging.getLogger('werkzeug')
 log.setLevel(logging.ERROR)
@@ -32,7 +32,7 @@ diff = 1
 
 with open("./resources/document-words.txt") as f:
     for idx, line in enumerate(f):
-        sleep(0.1)
+        sleep(0.12)
         line = line.strip()
         st = time()
         while True:

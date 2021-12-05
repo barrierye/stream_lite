@@ -38,3 +38,4 @@
   c. 提交word-count程序, 一段时间后停止并将状态转移到目标机器。然后重启:
        sh init_env.sh
        bash run.sh step2
+  d. 响应延迟在作业提交机器的result.txt，迁移触发时间在JM日志中

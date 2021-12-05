@@ -168,6 +168,7 @@ class MigrateHelper(PeriodicExecutorBase):
             # 确认迁移完成
             resource_manager_client.doMigrateLastTime()
 
+
 class PrecopyAndMigrateHelper(PeriodicExecutorBase):
     """
     工具类（仅被 job_manager 使用）: 周期性地checkpoint并preCopy, 然后migrate
@@ -202,60 +203,68 @@ class PrecopyAndMigrateHelper(PeriodicExecutorBase):
 
         streaming_name_generator = StreamingNameGenerator()
         next_streaming_name = None
+        checkpoint_id = -1
 
         while True:
             time.sleep(interval)
             
             # 获取自动迁移信息
-            migrate_infos, latency_diff = resource_manager_client.getAutoMigrateSubtasks(jobid)
-            if next_streaming_name is None:
-                next_streaming_name = streaming_name_generator.next()
+            migrate_infos, latency_diff = \
+                    resource_manager_client.getAutoMigrateSubtasks(jobid)
 
-            # TODO
-            assert len(migrate_infos) <= 1
-            migrate_cls_name = migrate_infos[0].src_cls_name if len(migrate_infos) == 1 else ""
-            migrate_partition_idx = migrate_infos[0].src_partition_idx if len(migrate_infos) == 1 else -1
+            if latency_diff <= latency_threshold_ms:
+                if next_streaming_name is None:
+                    next_streaming_name = streaming_name_generator.next()
 
-            # checkpoint
-            checkpoint_id = job_manager_client.triggerCheckpoint(
-                    jobid=jobid, cancel_job=False,
-                    migrate_cls_name=migrate_cls_name,
-                    migrate_partition_idx=migrate_partition_idx,
-                    new_streaming_name=next_streaming_name)
+                # TODO
+                assert len(migrate_infos) <= 1
+                migrate_cls_name = \
+                        migrate_infos[0].src_cls_name if len(migrate_infos) == 1 else ""
+                migrate_partition_idx = \
+                        migrate_infos[0].src_partition_idx if len(migrate_infos) == 1 else -1
 
-            if migrate_infos:
-                _LOGGER.info("Doing preCopy...")
+                # checkpoint
+                checkpoint_id = job_manager_client.triggerCheckpoint(
+                        jobid=jobid, cancel_job=False,
+                        migrate_cls_name=migrate_cls_name,
+                        migrate_partition_idx=migrate_partition_idx,
+                        new_streaming_name=next_streaming_name)
 
-            # 逐subtask预备份
-            for migrate_info in migrate_infos:
-                cls_name = migrate_info.src_cls_name
-                target_task_manager_locate = migrate_info.target_task_manager_locate
-                jobid = migrate_info.jobid
-                currency = migrate_info.src_currency
-                partition_idx = migrate_info.src_partition_idx
+                if migrate_infos:
+                    _LOGGER.info("Doing preCopy...")
 
-                # jobid, cls_name, part
-                # snapshot_dir = "./_tmp/jm/jobid_{}/snapshot/{}/partition_{}"
-                file_name = "chk_{}".format(checkpoint_id)
-                state_path = snapshot_dir.format(jobid, cls_name, partition_idx)
+                # 逐subtask预备份
+                for migrate_info in migrate_infos:
+                    cls_name = migrate_info.src_cls_name
+                    target_task_manager_locate = migrate_info.target_task_manager_locate
+                    jobid = migrate_info.jobid
+                    currency = migrate_info.src_currency
+                    partition_idx = migrate_info.src_partition_idx
 
-                local_full_fn = os.path.join(state_path, file_name)
-                endpoint = resource_manager_client.getTaskManagerEndpoint(
-                        target_task_manager_locate).split(":")[0]
-                remote_home_path = resource_manager_client.getHomePath(target_task_manager_locate)
-                remote_path = os.path.join(remote_home_path, 
-                        "_tmp/tm/{}".format(target_task_manager_locate) +\
-                                "/jobid_{}/{}/partition_{}/snapshot".format(
-                                        jobid, cls_name, partition_idx))
-                remote_full_fn = os.path.join(remote_path, file_name)
-                cmd = 'ssh root@{} "[ -d {} ] && echo ok || mkdir -p {}"'.format(
-                        endpoint, remote_path, remote_path)
-                os.system(cmd)
-                cmd = "scp {} root@{}:{}".format(local_full_fn, endpoint, remote_full_fn)
-                print("run {}".format(cmd))
-                os.system(cmd)
+                    # jobid, cls_name, part
+                    # snapshot_dir = "./_tmp/jm/jobid_{}/snapshot/{}/partition_{}"
+                    file_name = "chk_{}".format(checkpoint_id)
+                    state_path = snapshot_dir.format(jobid, cls_name, partition_idx)
 
-            if latency_diff > latency_threshold_ms:
+                    local_full_fn = os.path.join(state_path, file_name)
+                    endpoint = resource_manager_client.getTaskManagerEndpoint(
+                            target_task_manager_locate).split(":")[0]
+                    remote_home_path = \
+                            resource_manager_client.getHomePath(target_task_manager_locate)
+                    remote_path = os.path.join(remote_home_path, 
+                            "_tmp/tm/{}".format(target_task_manager_locate) +\
+                                    "/jobid_{}/{}/partition_{}/snapshot".format(
+                                            jobid, cls_name, partition_idx))
+                    remote_full_fn = os.path.join(remote_path, file_name)
+                    cmd = 'ssh root@{} "[ -d {} ] && echo ok || mkdir -p {}"'.format(
+                            endpoint, remote_path, remote_path)
+                    os.system(cmd)
+                    cmd = "scp {} root@{}:{}".format(local_full_fn, endpoint, remote_full_fn)
+                    print("run {}".format(cmd))
+                    os.system(cmd)
+            else:
+                if next_streaming_name is None:
+                    continue
                 _LOGGER.info("Doing migrate...")
 
                 # 逐subtask迁移
