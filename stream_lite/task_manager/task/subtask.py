@@ -710,6 +710,7 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
                 os._exit(-1)
 
         print("{} RUN process".format(subtask_name))
+        # TODO: process hang!
         #  p = multiprocessing.Process(
         p = threading.Thread(
                 target=__func,

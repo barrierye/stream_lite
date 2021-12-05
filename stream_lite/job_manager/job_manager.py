@@ -407,8 +407,8 @@ class JobManagerServicer(job_manager_pb2_grpc.JobManagerServiceServicer):
                     seri_tasks, jobid, new_jobid, checkpoint_id)
         
             # TODO
-            import requests
-            requests.get("http://192.168.105.83:8998/api/recv/shutdown")
+            #  import requests
+            #  requests.get("http://192.168.105.83:8998/api/recv/shutdown")
             
             # 把所有 Op 信息注册到 CheckpointCoordinator 里
             self.job_coordinator.register_job(new_jobid, execute_map)

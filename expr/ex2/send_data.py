@@ -28,26 +28,36 @@ th.start()
 
 fout = open("results.txt", "w")
 
+diff = 1
+
 with open("./resources/document-words.txt") as f:
     for idx, line in enumerate(f):
         sleep(0.1)
         line = line.strip()
         st = time()
         while True:
+            # for restart
+            while True:
+                try:
+                    a = requests.get(
+                            "http://192.168.105.84:8081/api/put/{}/{}".format(idx, line))
+                    if a.status_code == 200:
+                        break
+                except Exception:
+                    sleep(0.01)
+                    continue
+                sleep(0.01)
             try:
-                a = requests.get(
-                        "http://192.168.105.84:8081/api/put/{}/{}".format(idx, line))
-                if a.status_code == 200:
-                    break
-            except Exception:
+                out = que.get(timeout=diff)
+            except Exception as e:
                 sleep(0.01)
                 continue
-            sleep(0.01)
-        out = que.get()
+            break
         #  print(out)
         et = time()
+        diff = et - st
         output = "{},{},{}".format(
-                idx, datetime.timestamp(datetime.now()), int((et - st) * 1000))
+                idx, datetime.timestamp(datetime.now()), int(diff * 1000))
         print(output)
         fout.write(output + "\n")
         fout.flush()
