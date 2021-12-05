@@ -361,7 +361,7 @@ class JobManagerServicer(job_manager_pb2_grpc.JobManagerServiceServicer):
         if request.subtask_name.endswith("@MIGRATE"):
             return gen_nil_response()
 
-        print("recv: {}".format(request)
+        print("recv: {}".format(request))
         succ = self.job_coordinator.acknowledgeCheckpoint(request)
         seri_file = serializator.SerializableFile.from_proto(request.state)
         cls_name = request.subtask_name.split("#")[0]
