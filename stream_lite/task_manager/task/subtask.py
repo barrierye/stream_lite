@@ -692,7 +692,7 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
                         checkpoint, checkpoint_id,
                         job_manager_enpoint, subtask_name, jobid))
             p.start()
-            p.join()
+            #  p.join()
         except Exception as e:
             _LOGGER.critical(
                     "Failed: {} checkpoint_with_copy_on_write failed (reason: {})".format(
