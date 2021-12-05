@@ -710,7 +710,8 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
                 os._exit(-1)
 
         print("{} RUN process".format(subtask_name))
-        p = multiprocessing.Process(
+        #  p = multiprocessing.Process(
+        p = threading.Thread(
                 target=__func,
                 args=(task_instance, snapshot_dir,
                     checkpoint, checkpoint_id,
