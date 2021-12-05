@@ -6,9 +6,13 @@ fi
 step=$1
 
 if [ "$step" == "step1" ]; then
-    python submit_job.py conf/job4step2.yaml step1
+    python submit_job.py conf/job4step2.yaml step1 &
+    sleep 1
+    python send_data.py
 elif [ "$step" == "step2" ]; then
-    python submit_job.py conf/job4step2.yaml step2
+    python submit_job.py conf/job4step2.yaml step2 &
+    sleep 1
+    python send_data.py
 else
     echo "error step: $step"
     exit 1
