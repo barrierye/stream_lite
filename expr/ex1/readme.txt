@@ -5,6 +5,7 @@
   b. 提交word-count程序:
        python submit_job.py conf/job4step1.yaml step1
   c. 输出文件保存在sink.txt中
+       mv sink.txt sink.txt.step1
 
 2. 获取做迁移的计算结果
   a. 在worker38启动JM和TM:
@@ -15,5 +16,7 @@
   b. 提交word-count程序(一部分计算在worker39), 该程序自动触发迁移操作(迁移回worker38):
        python submit_job.py conf/job4step2.yaml step2
   c. 输出文件保存在sink.txt中
+       mv sink.txt sink.txt.step2
 
 3. 比较1和2得到的两个sink.txt有无差异
+  diff sink.txt.step1 sink.txt.step2 
