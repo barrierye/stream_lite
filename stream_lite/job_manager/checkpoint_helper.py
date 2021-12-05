@@ -144,12 +144,16 @@ class MigrateHelper(PeriodicExecutorBase):
         # init resource manager client
         resource_manager_client = ResourceManagerClient()
         resource_manager_client.connect(resource_manager_enpoint)
+        
+        streaming_name_generator = StreamingNameGenerator()
         while True:
             time.sleep(interval)
 
             # 获取自动迁移信息
             migrate_infos, _ = resource_manager_client.getAutoMigrateSubtasks(jobid)
 
+            next_streaming_name = streaming_name_generator.next()
+            
             # 逐subtask迁移
             for migrate_info in migrate_infos:
                 cls_name = migrate_info.src_cls_name
@@ -163,7 +167,8 @@ class MigrateHelper(PeriodicExecutorBase):
                         src_cls_name=cls_name,
                         src_partition_idx=partition_idx,
                         src_currency=currency,
-                        target_task_manager_locate=target_task_manager_locate)
+                        target_task_manager_locate=target_task_manager_locate,
+                        new_streaming_name=next_streaming_name)
 
             # 确认迁移完成
             resource_manager_client.doMigrateLastTime()

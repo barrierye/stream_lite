@@ -8,6 +8,9 @@ from flask import Flask, request
 import queue
 import threading
 import multiprocessing
+import logging
+log = logging.getLogger('werkzeug')
+log.setLevel(logging.ERROR)
 
 from stream_lite import SourceOperatorBase
 from stream_lite.utils import FinishJobError
