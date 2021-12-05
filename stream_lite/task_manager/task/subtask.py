@@ -688,9 +688,20 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
         try:
             p = multiprocessing.Process(
                     target=SubTaskServicer._checkpoint,
+<<<<<<< HEAD
                     args=(task_instance, snapshot_dir,
                         checkpoint, checkpoint_id,
                         job_manager_enpoint, subtask_name, jobid))
+=======
+                    args=(
+                        task_instance=task_instance, 
+                        snapshot_dir=snapshot_dir,
+                        checkpoint=checkpoint,
+                        checkpoint_id=checkpoint_id,
+                        job_manager_enpoint=job_manager_enpoint,
+                        subtask_name=subtask_name,
+                        jobid=jobid))
+>>>>>>> 032b6270027371db2745f845f5e31cd5933eb9d5
             p.start()
             p.join()
         except Exception as e:
