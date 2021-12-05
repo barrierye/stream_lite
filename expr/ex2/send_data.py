@@ -26,7 +26,7 @@ que = queue.Queue()
 th = threading.Thread(target=run, args=(que, 8998))
 th.start()
 
-f = open("result.txt", "w")
+f_out = open("result.txt", "w")
 
 with open("./resources/document-words.txt") as f:
     for idx, line in enumerate(f):
@@ -46,9 +46,9 @@ with open("./resources/document-words.txt") as f:
         out = que.get()
         #  print(out)
         et = time()
-        f.write("{} P[{}] latency: {}ms".format(
+        f_out.write("{} P[{}] latency: {}ms".format(
             idx, datetime.timestamp(datetime.now()), int((et - st) * 1000)))
-        f.flush()
+        f_out.flush()
         if idx % 10 == 0:
             print("processed {} lines".format(idx))
-f.close()
+f_out.close()
