@@ -685,19 +685,35 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
             job_manager_enpoint: str,
             subtask_name: str,
             jobid: str) -> None:
-        try:
-            p = multiprocessing.Process(
-                    target=SubTaskServicer._checkpoint,
-                    args=(task_instance, snapshot_dir,
-                        checkpoint, checkpoint_id,
-                        job_manager_enpoint, subtask_name, jobid))
-            p.start()
-            #  p.join()
-        except Exception as e:
-            _LOGGER.critical(
-                    "Failed: {} checkpoint_with_copy_on_write failed (reason: {})".format(
-                        subtask_name, e), exc_info=True)
-            os._exit(-1)
+        def __func(
+                task_instance: operator.OperatorBase,
+                snapshot_dir: str,
+                checkpoint: Any,
+                checkpoint_id: int,
+                job_manager_enpoint: str,
+                subtask_name: str,
+                jobid: str) -> None:
+            try:
+                SubTaskServicer._checkpoint(
+                        task_instance,
+                        snapshot_dir,
+                        checkpoint,
+                        checkpoint_id,
+                        job_manager_enpoint,
+                        subtask_name,
+                        jobid)
+            except Exception as e:
+                _LOGGER.critical(
+                        "Failed: {} checkpoint_with_copy_on_write failed (reason: {})".format(
+                            subtask_name, e), exc_info=True)
+                os._exit(-1)
+
+        p = multiprocessing.Process(
+                target=__func,
+                args=(task_instance, snapshot_dir,
+                    checkpoint, checkpoint_id,
+                    job_manager_enpoint, subtask_name, jobid))
+        p.start()
 
     @staticmethod
     def _checkpoint(
@@ -734,7 +750,7 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
         """
         每个 subtask 执行 migrate 操作
         """
-        return
+        
         #TODO: skipping
         # (这部分操作在 output_dispenser 处理): 
         #   1. new_subtask_name 上游的 task 与之建立连接
