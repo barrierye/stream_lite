@@ -129,9 +129,7 @@ class CheckpointHelper(PeriodicExecutorBase):
 
 """
 class MigrateHelper(PeriodicExecutorBase):
-    """
-    工具类（仅被 job_manager 使用）: 周期性地migrate
-    """
+    # 工具类（仅被 job_manager 使用）: 周期性地migrate
 
     def _inner_run(self,
             jobid: str,
