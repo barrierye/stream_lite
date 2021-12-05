@@ -328,7 +328,8 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
             if not is_sink_op:
                 SubTaskServicer._push_checkpoint_event_to_output_channel(
                         input_data, output_channel)
-            SubTaskServicer._checkpoint(
+            #  SubTaskServicer._checkpoint(
+            SubTaskServicer._checkpoint_with_copy_on_write(
                     task_instance=task_instance,
                     snapshot_dir=snapshot_dir,
                     checkpoint=input_data,
@@ -344,7 +345,8 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
             if not is_sink_op:
                 SubTaskServicer._push_checkpoint_prepare_for_migrate_event_to_output_channel(
                         input_data, output_channel)
-            SubTaskServicer._checkpoint(
+            #  SubTaskServicer._checkpoint(
+            SubTaskServicer._checkpoint_with_copy_on_write(
                     task_instance=task_instance,
                     snapshot_dir=snapshot_dir,
                     checkpoint=input_data,
@@ -672,6 +674,35 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
         client.connect(job_manager_enpoint)
         client.notifyMigrateSynchron(
                 jobid=jobid, migrate_id=migrate_id)
+
+    # copy on write to checkpoint
+    @staticmethod
+    def _checkpoint_with_copy_on_write(
+            task_instance: operator.OperatorBase,
+            snapshot_dir: str,
+            checkpoint: Any,
+            checkpoint_id: int,
+            job_manager_enpoint: str,
+            subtask_name: str,
+            jobid: str) -> None:
+        try:
+            p = multiprocessing.Process(
+                    target=SubTaskServicer._checkpoint,
+                    args=(
+                        task_instance=task_instance, 
+                        snapshot_dir=snapshot_dir,
+                        checkpoint=checkpoint,
+                        checkpoint_id=checkpoint_id,
+                        job_manager_enpoint=job_manager_enpoint,
+                        subtask_name=subtask_name,
+                        jobid=jobid))
+            p.start()
+            p.join()
+        except Exception as e:
+            _LOGGER.critical(
+                    "Failed: {} checkpoint_with_copy_on_write failed (reason: {})".format(
+                        subtask_name, e), exc_info=True)
+            os._exit(-1)
 
     @staticmethod
     def _checkpoint(
