@@ -46,8 +46,8 @@ with open("./resources/document-words.txt") as f:
         out = que.get()
         #  print(out)
         et = time()
-        f.write("P[{}] latency: {}ms".format(
-            datetime.timestamp(datetime.now()), int((et - st) * 1000)))
+        f.write("{} P[{}] latency: {}ms".format(
+            idx, datetime.timestamp(datetime.now()), int((et - st) * 1000)))
         f.flush()
         if idx % 10 == 0:
             print("processed {} lines".format(idx))
