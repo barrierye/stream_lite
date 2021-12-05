@@ -623,6 +623,7 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
             err_msg: str = "") -> None:
         client = JobManagerClient()
         client.connect(job_manager_enpoint)
+        print("{} RUN client".format(subtask_name))
         client.acknowledgeCheckpoint(
                 subtask_name=subtask_name,
                 jobid=jobid,

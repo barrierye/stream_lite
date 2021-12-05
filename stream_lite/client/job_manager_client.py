@@ -54,6 +54,7 @@ class JobManagerClient(ClientBase):
             state: serializator.SerializableFile,
             err_code: int = 0, 
             err_msg: str = "") -> None:
+        print("Client in")
         resp = self.stub.acknowledgeCheckpoint(
                 job_manager_pb2.AcknowledgeCheckpointRequest(
                     status=common_pb2.Status(
@@ -63,8 +64,10 @@ class JobManagerClient(ClientBase):
                     jobid=jobid,
                     checkpoint_id=checkpoint_id,
                     state=state.instance_to_proto()))
+        print("Client out")
         if resp.status.err_code != 0:
             raise Exception(resp.status.message)
+        print("Client !")
 
     def acknowledgeMigrate(self, 
             subtask_name: str, 
