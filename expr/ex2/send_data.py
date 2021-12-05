@@ -46,7 +46,7 @@ with open("./resources/document-words.txt") as f:
         out = que.get()
         #  print(out)
         et = time()
-        output = "{} P[{}] latency: {}ms".format(
+        output = "{},{},{}".format(
                 idx, datetime.timestamp(datetime.now()), int((et - st) * 1000))
         print(output)
         out2file.append(output)
