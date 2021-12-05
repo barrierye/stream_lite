@@ -41,9 +41,10 @@ if __name__ == '__main__':
     elif step == "step2":
         jobid = client.submitJob(
                 yaml_path=conf_path, 
-                periodicity_checkpoint_interval_s=5,
+                periodicity_checkpoint_interval_s=15,
                 auto_migrate=True)
     elif step == "step3":
+        # WILL BE REMOVED
         jobid = client.submitJob(
                 yaml_path=conf_path, 
                 periodicity_checkpoint_interval_s=5,
