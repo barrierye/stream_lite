@@ -127,6 +127,7 @@ class CheckpointHelper(PeriodicExecutorBase):
                         partition_idx=partition_idx)
 
 
+"""
 class MigrateHelper(PeriodicExecutorBase):
     """
     工具类（仅被 job_manager 使用）: 周期性地migrate
@@ -172,13 +173,13 @@ class MigrateHelper(PeriodicExecutorBase):
 
             # 确认迁移完成
             resource_manager_client.doMigrateLastTime()
+"""
 
 
 class PrecopyAndMigrateHelper(PeriodicExecutorBase):
     """
     工具类（仅被 job_manager 使用）: 周期性地checkpoint并preCopy, 然后migrate
     """
-
     def __init__(self, 
             jobid: str,
             job_manager_endpoint: str,
@@ -217,7 +218,7 @@ class PrecopyAndMigrateHelper(PeriodicExecutorBase):
             migrate_infos, latency_diff = \
                     resource_manager_client.getAutoMigrateSubtasks(jobid)
 
-            if latency_diff <= latency_threshold_ms:
+            if migrate_infos:
                 if next_streaming_name is None:
                     next_streaming_name = streaming_name_generator.next()
 
@@ -234,9 +235,6 @@ class PrecopyAndMigrateHelper(PeriodicExecutorBase):
                         migrate_cls_name=migrate_cls_name,
                         migrate_partition_idx=migrate_partition_idx,
                         new_streaming_name=next_streaming_name)
-
-                if migrate_infos:
-                    _LOGGER.info("Doing preCopy...")
 
                 # 逐subtask预备份
                 for migrate_info in migrate_infos:
@@ -267,10 +265,6 @@ class PrecopyAndMigrateHelper(PeriodicExecutorBase):
                     cmd = "scp {} root@{}:{}".format(local_full_fn, endpoint, remote_full_fn)
                     print("run {}".format(cmd))
                     os.system(cmd)
-            else:
-                if next_streaming_name is None:
-                    continue
-                _LOGGER.info("Doing migrate...")
 
                 # 逐subtask迁移
                 for migrate_info in migrate_infos:
@@ -292,3 +286,4 @@ class PrecopyAndMigrateHelper(PeriodicExecutorBase):
                 # 确认迁移完成
                 resource_manager_client.doMigrateLastTime()
                 next_streaming_name = None
+

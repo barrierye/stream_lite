@@ -141,8 +141,8 @@ class JobManagerServicer(job_manager_pb2_grpc.JobManagerServiceServicer):
                             jobid=jobid,
                             job_manager_endpoint=self.addr,
                             resource_manager_enpoint=self.resource_manager_enpoint,
-                            #  latency_threshold_ms=1,
-                            #  snapshot_dir=self.snapshot_dir,
+                            latency_threshold_ms=1,
+                            snapshot_dir=self.snapshot_dir,
                             interval=periodicity_checkpoint_interval_s)
                     self.periodic_executor_helper.run_on_standalone_process(
                             is_process=stream_lite.config.IS_PROCESS)
