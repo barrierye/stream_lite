@@ -713,6 +713,7 @@ class SubTaskServicer(subtask_pb2_grpc.SubTaskServiceServicer):
                 args=(task_instance, snapshot_dir,
                     checkpoint, checkpoint_id,
                     job_manager_enpoint, subtask_name, jobid))
+        p.daemon = True
         p.start()
 
     @staticmethod
