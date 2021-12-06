@@ -130,6 +130,7 @@ class OutputDispenser(object):
                     new_cls_name = migrate.new_cls_name
                     new_partition_idx = migrate.new_partition_idx
                     new_endpoint = migrate.new_endpoint
+                    #TODO: IndexError: list index out of range
                     if new_cls_name == downstream_cls_names[0]:
                         partitions[new_partition_idx][1].connect(new_endpoint)
                         partitions[new_partition_idx][1].run_on_standalone_thread()
