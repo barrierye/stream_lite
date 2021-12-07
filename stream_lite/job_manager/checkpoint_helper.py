@@ -207,8 +207,16 @@ class PrecopyAndMigrateHelper(PeriodicExecutorBase):
         streaming_name_generator = StreamingNameGenerator()
         next_streaming_name = None
         checkpoint_id = -1
+        
+        next_time = time.time() + interval
+
         while True:
-            time.sleep(interval)
+            now_time = time.time()
+            if now_time < next_time:
+                time.sleep(next_time - now_time)
+                next_time = time.time() + interval
+            else:
+                next_time = time.time() + interval
             
             # 获取自动迁移信息
             migrate_infos, latency_diff = \

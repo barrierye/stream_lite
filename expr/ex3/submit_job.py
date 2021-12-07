@@ -29,13 +29,13 @@ if __name__ == '__main__':
     if step == "step1":
         jobid = client.submitJob(
                 yaml_path=conf_path, 
-                periodicity_checkpoint_interval_s=5,
+                periodicity_checkpoint_interval_s=20,
                 auto_migrate=True,
                 enable_precopy=False)
     elif step == "step2":
         jobid = client.submitJob(
                 yaml_path=conf_path, 
-                periodicity_checkpoint_interval_s=5,
+                periodicity_checkpoint_interval_s=20,
                 auto_migrate=True,
                 enable_precopy=True)
     else:
