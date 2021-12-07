@@ -92,7 +92,7 @@ class GreedyStrategy(StrategyBase):
                         datetime.timestamp(datetime.now()), total_latency, shortest_latency))
             # 匹配一下
             if len(chain_graph) < len(path):
-                return []
+                return [], -1
             else:
                 for idx, chain_node in enumerate(chain_graph):
                     subtask_name_set = chain_node[0]
