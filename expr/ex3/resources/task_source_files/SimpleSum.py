@@ -16,7 +16,7 @@ class SimpleSum(OperatorBase):
         self.register_var("counter")
 
     def init(self, resource_path_dict):
-        self.useless_state = str(2**100000) * 500
+        self.useless_state = str(2**100000) * 200 #500
         self.register_var("useless_state")
 
     def compute(self, data: str) -> Tuple[str, int]:

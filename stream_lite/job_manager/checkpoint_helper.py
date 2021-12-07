@@ -213,6 +213,9 @@ class PrecopyAndMigrateHelper(PeriodicExecutorBase):
             # 获取自动迁移信息
             migrate_infos, latency_diff = \
                     resource_manager_client.getAutoMigrateSubtasks(jobid)
+
+            if not migrate_infos:
+                continue
             if latency_diff <= latency_threshold_ms or next_streaming_name is None:
                 if next_streaming_name is None:
                     next_streaming_name = streaming_name_generator.next()
