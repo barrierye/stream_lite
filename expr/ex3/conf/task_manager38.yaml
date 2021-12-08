@@ -1,8 +1,8 @@
 resource_manager_enpoint: "192.168.105.83:8975"
 name: TM_38
 coord:
-  x: 116.405419
-  y: 39.913828
+  x: -20
+  y: 20
 resource:
   slot_number: 8
 home_path: /root/stream_lite/expr/ex3

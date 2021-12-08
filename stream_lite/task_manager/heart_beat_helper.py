@@ -59,7 +59,8 @@ class HeartBeatHelper(object):
                     task_manager_endpoint=endpoint,
                     coord_x=coord.x,
                     coord_y=coord.y,
-                    peers=peer_latencies)
+                    peers=peer_latencies,
+                    max_nearby_num=2)
 
             # update peers
             new_peers = {}
